@@ -1,0 +1,389 @@
+ // Veloce — Prisma Schema
+// Multi-university academic notes marketplace
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// Institutional hierarchy
+// ─────────────────────────────────────────────
+
+model University {
+  id          String       @id @default(uuid())
+  name        String
+  slug        String       @unique // e.g. "babcock", "unilag" — used for routing
+  departments Department[]
+  users       User[]
+  createdAt   DateTime     @default(now())
+}
+
+model Department {
+  id           String     @id @default(uuid())
+  name         String
+  universityId String
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  courses      Course[]
+
+  @@unique([universityId, name])
+}
+
+model Course {
+  id           String     @id @default(uuid())
+  name         String
+  code         String // e.g. "COS 201"
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  blocks       Block[]
+  requests     BlockRequest[]
+
+  @@unique([departmentId, code])
+}
+
+model Block {
+  id        String         @id @default(uuid())
+  courseId  String
+  course    Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title     String // e.g. "Block 1: Foundations" — freely named by the scribe who creates it
+  order     Int // sequence within the course (1, 2, 3...)
+  price     Int            @default(1000) // Naira, kobo-free flat price
+  topics    Topic[] // at least 3 required at creation — what this block actually covers
+  notes     Note[]
+  requests  BlockRequest[]
+  purchases Purchase[]
+  reports   Report[]
+  createdAt DateTime       @default(now())
+
+  @@unique([courseId, order])
+}
+
+// A short outline item describing what a block covers — shown to students
+// browsing before they buy. Every block needs at least 3 of these.
+model Topic {
+  id      String @id @default(uuid())
+  blockId String
+  block   Block  @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  title   String
+  order   Int
+
+  @@unique([blockId, order])
+}
+
+// ─────────────────────────────────────────────
+// Users & roles
+// ─────────────────────────────────────────────
+
+enum UserRole {
+  STUDENT
+  SCRIBE
+  ADMIN
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  role         UserRole @default(STUDENT)
+
+  universityId String
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  departmentId String? // student's own department, optional
+  level        String? // e.g. "200L"
+
+  // Scribe-facing public reputation (only meaningful when role = SCRIBE)
+  ratingAvg    Float? // rolling average, denormalized for fast profile reads
+  ratingCount  Int        @default(0)
+
+  // Set whenever an admin demotes this user from SCRIBE back to STUDENT;
+  // cleared again if a later appeal or re-application is approved. Powers
+  // both "is this person eligible to appeal at all" and the once-a-month
+  // appeal cooldown (alongside ScribeApplication.reviewedAt).
+  demotedAt DateTime?
+
+  // Bank details for withdrawals — only meaningful when role = SCRIBE.
+  // accountName is what Paystack's own account-resolve API returned, not
+  // freely typed, so it should always match the real name on the account.
+  // payoutRecipientCode is Paystack's transfer-recipient id, created once
+  // and cached here so we never re-register the same account twice.
+  bankCode             String?
+  bankName             String?
+  accountNumber        String?
+  accountName          String?
+  payoutRecipientCode  String?
+
+  scribeApplications ScribeApplication[]
+  notes              Note[]               @relation("ScribeNotes")
+  purchases         Purchase[]
+  requestVotes      RequestVote[]
+  reviews           Review[]
+  payouts           Payout[]
+  following         Follow[]           @relation("Following") // scribes this user follows
+  followers         Follow[]           @relation("Followers") // followers of this user (meaningful when role = SCRIBE)
+  reportsFiled      Report[]           @relation("ReportsFiled")
+  reportsReceived   Report[]           @relation("ReportsReceived")
+
+  createdAt          DateTime           @default(now())
+  receivedMessages   AdminMessage[]     @relation("MessageRecipient")
+  sentMessages       AdminMessage[]     @relation("MessageSender")
+}
+// One-way messages from an Admin to a specific user — e.g. explaining a
+// rejected application or a demotion. No reply thread by design.
+// senderId is nullable so automated system messages (new-account welcome)
+// can be created with no admin actor behind them; the UI shows those as
+// coming from "Veloce" when sender is null.
+model AdminMessage {
+  id          String    @id @default(uuid())
+  recipientId String
+  recipient   User      @relation("MessageRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  senderId    String?
+  sender      User?     @relation("MessageSender", fields: [senderId], references: [id], onDelete: SetNull)
+  subject     String
+  body        String
+  readAt      DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// APPLICATION = student applying to become a scribe for the first time.
+// APPEAL = a demoted former scribe asking to be reinstated. Same shape,
+// same review workflow, kept in one model/table and distinguished by type.
+// userId is intentionally NOT unique — a person can have many rows over
+// time (rejected application -> reapplied later; demoted -> appealed
+// months apart, etc). Cooldowns are enforced in the API layer by looking
+// at the most recent row of the relevant type.
+enum ApplicationType {
+  APPLICATION
+  APPEAL
+}
+
+model ScribeApplication {
+  id           String            @id @default(uuid())
+  userId       String
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         ApplicationType   @default(APPLICATION)
+  reason       String
+  status       ApplicationStatus @default(PENDING)
+  submittedAt  DateTime          @default(now())
+  reviewedAt   DateTime?
+  reviewedById String? // admin user id
+
+  @@index([userId, type, submittedAt])
+}
+
+// ─────────────────────────────────────────────
+// Notes (competing uploads per block)
+// ─────────────────────────────────────────────
+
+enum NoteStatus {
+  PENDING_REVIEW // awaiting automated check
+  FLAGGED // automated check flagged it, needs manual review
+  APPROVED // passed checks / manual review
+  LIVE // visible and purchasable
+  REJECTED
+}
+
+model Note {
+  id       String  @id @default(uuid())
+  blockId  String
+  block    Block   @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  scribeId String
+  scribe   User    @relation("ScribeNotes", fields: [scribeId], references: [id], onDelete: Cascade)
+
+  fileUrl String // stored filename on disk — NOT a public URL; access is gated
+  extractedText String? // raw text pulled from the PDF, used by the quality gate
+  status  NoteStatus @default(PENDING_REVIEW)
+  pageCount Int? // total pages — set once, the first time any page gets rendered
+
+  // Automated quality gate results
+  similarityScore  Float? // vs other notes in same block — high score = likely duplicate
+  qualityScore     Float? // AI completeness/quality pass, 0-1
+  flaggedForReview Boolean @default(false)
+
+  // If this note was uploaded to fulfill a demand-feed request
+  fulfillsRequestId String?
+  fulfillsRequest   BlockRequest? @relation(fields: [fulfillsRequestId], references: [id], onDelete: SetNull)
+
+  purchases  Purchase[]
+  reviews    Review[]
+  pageImages NotePageImage[] // cached, un-watermarked page renders — see lib/pdf-render.ts
+
+  createdAt DateTime @default(now())
+}
+
+// A cached, plain (no watermark) render of one page of a note's PDF.
+// Rendering a PDF page to an image is the expensive part, so it happens
+// once per page ever and gets reused for every future viewer; the
+// watermark itself is stamped fresh on top of this at request time (see
+// /api/notes/[id]/page/[num]) since it must always match whoever's
+// actually looking, and must never be cached with the wrong name on it.
+model NotePageImage {
+  id        String   @id @default(uuid())
+  noteId    String
+  note      Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  pageNum   Int
+  imageUrl  String
+  createdAt DateTime @default(now())
+
+  @@unique([noteId, pageNum])
+}
+
+// ─────────────────────────────────────────────
+// Demand feed (requests)
+// ─────────────────────────────────────────────
+
+enum RequestStatus {
+  OPEN
+  FULFILLED
+}
+
+// A request describes content a student WANTS that doesn't exist yet.
+// It only gets a real Block once a scribe fulfills it — courseId is what's
+// required up front; blockId is filled in at fulfillment time.
+model BlockRequest {
+  id             String        @id @default(uuid())
+  courseId       String
+  course         Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  requestedTitle String // what the student wants covered, in their own words
+  status         RequestStatus @default(OPEN)
+  blockId        String? // set once a scribe's upload fulfills this
+  block          Block?        @relation(fields: [blockId], references: [id], onDelete: SetNull)
+  votes          RequestVote[] // one per student who requested this — the demand count
+  claims         Note[] // competing scribe uploads claiming this request
+  createdAt      DateTime      @default(now())
+}
+
+// One row per student who requested a given block — powers the demand counter
+// and lets us know who gets the fulfilled-request discount.
+model RequestVote {
+  id        String       @id @default(uuid())
+  requestId String
+  request   BlockRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  studentId String
+  student   User         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+
+  @@unique([requestId, studentId])
+}
+
+// ─────────────────────────────────────────────
+// Purchases, reviews, payouts
+// ─────────────────────────────────────────────
+
+model Purchase {
+  id              String   @id @default(uuid())
+  buyerId         String
+  buyer           User     @relation(fields: [buyerId], references: [id])
+  noteId          String
+  note            Note     @relation(fields: [noteId], references: [id])
+  blockId         String
+  block           Block    @relation(fields: [blockId], references: [id])
+  amountPaid      Int // actual amount charged, after any discount
+  discountApplied Boolean  @default(false)
+  paystackRef     String   @unique
+  purchasedAt     DateTime @default(now())
+  review          Review?
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  purchaseId String   @unique
+  purchase   Purchase @relation(fields: [purchaseId], references: [id])
+  noteId     String
+  note       Note     @relation(fields: [noteId], references: [id])
+  reviewerId String
+  reviewer   User     @relation(fields: [reviewerId], references: [id])
+  rating     Int // 1-5
+  comment    String?
+  createdAt  DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────
+// Scribe reputation — follows
+// ─────────────────────────────────────────────
+
+// A student following a scribe without necessarily having bought from them —
+// distinct from paid-subscriber count, which comes from Purchase instead.
+model Follow {
+  id         String   @id @default(uuid())
+  followerId String
+  follower   User     @relation("Following", fields: [followerId], references: [id], onDelete: Cascade)
+  scribeId   String
+  scribe     User     @relation("Followers", fields: [scribeId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([followerId, scribeId])
+}
+
+enum PayoutStatus {
+  PENDING // scribe requested, awaiting admin approval
+  PROCESSING // admin approved, Paystack transfer initiated, not yet confirmed
+  PAID
+  FAILED
+}
+
+// A scribe-initiated withdrawal request. One request per calendar month,
+// only submittable in the first 7 days of the month (enforced in the API,
+// not here) — the admin's approval is what actually triggers the Paystack
+// transfer (see lib/paystack.ts initiateTransfer), so this row's status
+// tracks that whole lifecycle: request -> approval -> Paystack's own
+// eventual confirmation via webhook.
+model Payout {
+  id                  String       @id @default(uuid())
+  scribeId            String
+  scribe              User         @relation(fields: [scribeId], references: [id], onDelete: Cascade)
+  amount              Int // Naira — whatever the scribe chose to withdraw, up to their balance
+  status              PayoutStatus @default(PENDING)
+  requestedAt         DateTime     @default(now())
+  processedAt         DateTime? // when an admin approved it and the transfer was initiated
+  processedById       String? // admin user id
+  paidAt              DateTime? // when Paystack's webhook confirmed it actually completed
+  paystackTransferRef String?      @unique // our own reference, passed to Paystack's transfer API
+  failureReason       String?
+  createdAt           DateTime     @default(now())
+
+  @@index([scribeId, requestedAt])
+}
+
+enum ReportType {
+  BLOCK // flagging a block's content (wrong/stolen/low-quality notes, etc.)
+  USER // flagging a specific person for malicious behavior
+}
+
+enum ReportStatus {
+  PENDING
+  DISMISSED // admin looked, no action needed
+  ACTIONED // admin took action (removed content, demoted/warned the user, etc.)
+}
+
+// One record covers both "report this block" and "report this user" — kept
+// in one table since the admin review workflow (list pending, dismiss vs
+// act) is identical either way; `type` plus whichever of blockId /
+// reportedUserId is set tells you which kind it is.
+model Report {
+  id             String       @id @default(uuid())
+  type           ReportType
+  reporterId     String
+  reporter       User         @relation("ReportsFiled", fields: [reporterId], references: [id], onDelete: Cascade)
+  blockId        String?
+  block          Block?       @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  reportedUserId String?
+  reportedUser   User?        @relation("ReportsReceived", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  reason         String
+  status         ReportStatus @default(PENDING)
+  createdAt      DateTime     @default(now())
+  reviewedAt     DateTime?
+  reviewedById   String? // admin user id
+
+  @@index([type, status])
+}
