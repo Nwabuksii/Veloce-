@@ -5,7 +5,9 @@ import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
 import Logo from "@/app/components/Logo";
 import ProfileMenu from "@/app/components/ProfileMenu";
+import { SkeletonList } from "@/app/components/Skeleton";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
+import { toast } from "@/lib/toast";
 
 interface NoteVersion {
   noteId: string;
@@ -19,13 +21,13 @@ interface NoteVersion {
 }
 
 const TRUST_STYLES: Record<string, { bg: string; color: string }> = {
-  NEW: { bg: "#eef3fa", color: "#5e7188" },
-  RISING: { bg: "#fdf3e3", color: "#a5690a" },
-  TRUSTED: { bg: "#e7f6ec", color: "#1b7e4a" },
-  ELITE: { bg: "#f0e9fb", color: "#6b3fa0" },
+  NEW: { bg: "var(--bg-info)", color: "var(--text-secondary)" },
+  RISING: { bg: "var(--bg-warning)", color: "var(--text-warning)" },
+  TRUSTED: { bg: "var(--bg-success)", color: "var(--text-success)" },
+  ELITE: { bg: "var(--bg-pro)", color: "var(--text-pro)" },
 };
 
-export function BlockDetailInner() {
+function BlockDetailInner() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -44,6 +46,10 @@ export function BlockDetailInner() {
   const [reportStatus, setReportStatus] = useState("");
   const [purchasingNoteId, setPurchasingNoteId] = useState<string | null>(null);
   const [reviewsOpenFor, setReviewsOpenFor] = useState<string | null>(null);
+  const [reportingNoteId, setReportingNoteId] = useState<string | null>(null);
+  const [noteReportReason, setNoteReportReason] = useState("");
+  const [noteReportSubmitting, setNoteReportSubmitting] = useState(false);
+  const [noteReportStatus, setNoteReportStatus] = useState<{ noteId: string; message: string } | null>(null);
 
   useEffect(() => {
     const user = getStoredUser();
@@ -62,10 +68,6 @@ export function BlockDetailInner() {
       .then((data) => {
         setBlockTitle(data.blockTitle);
         setPrice(data.price);
-        // A shared link points at one specific scribe's version — when
-        // that's the case, put it first so the person who followed the
-        // link lands directly on it instead of having to find it among
-        // however many other scribes also wrote this block.
         const sorted = highlightNoteId
           ? [...data.notes].sort((a: NoteVersion, b: NoteVersion) =>
               a.noteId === highlightNoteId ? -1 : b.noteId === highlightNoteId ? 1 : 0
@@ -98,7 +100,7 @@ export function BlockDetailInner() {
       });
       window.location.href = data.authorizationUrl;
     } catch (err) {
-      alert(friendlyErrorMessage(err));
+      toast.error(friendlyErrorMessage(err));
       setPurchasingNoteId(null);
     }
   }
@@ -129,6 +131,31 @@ export function BlockDetailInner() {
     }
   }
 
+  async function handleNoteReportSubmit(e: FormEvent, noteId: string) {
+    e.preventDefault();
+
+    if (noteReportReason.trim().length < 10) {
+      toast.error("Tell us a bit more — at least 10 characters.");
+      return;
+    }
+
+    setNoteReportSubmitting(true);
+    try {
+      await apiFetch(`/api/notes/${noteId}/report`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: noteReportReason.trim() }),
+      });
+      setNoteReportStatus({ noteId, message: "Report submitted — an admin will take a look." });
+      setNoteReportReason("");
+      setReportingNoteId(null);
+    } catch (err) {
+      toast.error(friendlyErrorMessage(err));
+    } finally {
+      setNoteReportSubmitting(false);
+    }
+  }
+
   return (
     <div className="page-wrap">
       <div className="app-container" style={{ maxWidth: 640 }}>
@@ -150,7 +177,7 @@ export function BlockDetailInner() {
           </div>
         </div>
 
-        {loading && <p style={{ marginTop: "1rem", color: "#5e7188" }}>Loading...</p>}
+        {loading && <SkeletonList rows={3} />}
         {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}
 
         {!loading && !error && (
@@ -173,8 +200,8 @@ export function BlockDetailInner() {
             </div>
 
             {reporting && (
-              <form onSubmit={handleReportSubmit} style={{ marginTop: "1rem", background: "white", border: "1px solid #e1e8f0", borderRadius: "1rem", padding: "1rem", display: "flex", flexDirection: "column", gap: "0.7rem" }}>
-                <label style={{ fontSize: "0.85rem", color: "#5e7188" }}>
+              <form onSubmit={handleReportSubmit} style={{ marginTop: "1rem", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "1rem", padding: "1rem", display: "flex", flexDirection: "column", gap: "0.7rem" }}>
+                <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
                   Why are you reporting this block? (wrong/stolen content, low quality, etc.)
                 </label>
                 <textarea
@@ -182,7 +209,7 @@ export function BlockDetailInner() {
                   onChange={(e) => setReportReason(e.target.value)}
                   rows={3}
                   placeholder="Explain what's wrong with this block..."
-                  style={{ padding: "0.6rem", borderRadius: "0.6rem", border: "1px solid #d0dae8", fontFamily: "inherit", fontSize: "0.85rem" }}
+                  style={{ padding: "0.6rem", borderRadius: "0.6rem", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem" }}
                 />
                 <div style={{ display: "flex", gap: "0.6rem" }}>
                   <button className="btn btn-primary" type="submit" disabled={reportSubmitting}>
@@ -195,15 +222,15 @@ export function BlockDetailInner() {
               </form>
             )}
             {reportStatus && !reporting && (
-              <p style={{ color: "#1b7e4a", marginTop: "0.6rem", fontSize: "0.85rem" }}>{reportStatus}</p>
+              <p style={{ color: "var(--text-success)", marginTop: "0.6rem", fontSize: "0.85rem" }}>{reportStatus}</p>
             )}
 
             <h3 style={{ marginTop: "1.5rem", fontSize: "1.05rem" }}>
-              <i className="fas fa-file-alt" style={{ color: "#2a7de1" }}></i> Available versions
+              <i className="fas fa-file-alt" style={{ color: "var(--text-info)" }}></i> Available versions
             </h3>
 
             {notes.length === 0 && (
-              <p style={{ color: "#5e7188", marginTop: "0.6rem" }}>No live notes for this block yet.</p>
+              <p style={{ color: "var(--text-secondary)", marginTop: "0.6rem" }}>No live notes for this topic yet.</p>
             )}
 
             <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem", marginTop: "0.8rem" }}>
@@ -213,8 +240,8 @@ export function BlockDetailInner() {
                   <div
                     key={n.noteId}
                     style={{
-                      background: n.noteId === highlightNoteId ? "#eef6ff" : "white",
-                      border: n.noteId === highlightNoteId ? "2px solid #2a7de1" : "1px solid #e1e8f0",
+                      background: n.noteId === highlightNoteId ? "var(--bg-info)" : "var(--surface)",
+                      border: n.noteId === highlightNoteId ? "2px solid var(--text-info)" : "1px solid var(--border-blue)",
                       borderRadius: "1rem",
                       padding: "1rem",
                       display: "flex",
@@ -225,13 +252,13 @@ export function BlockDetailInner() {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.6rem" }}>
                     <div>
                       {n.noteId === highlightNoteId && (
-                        <div style={{ fontSize: "0.75rem", color: "#2a7de1", fontWeight: 600, marginBottom: "0.2rem" }}>
+                        <div style={{ fontSize: "0.75rem", color: "var(--text-info)", fontWeight: 600, marginBottom: "0.2rem" }}>
                           <i className="fas fa-share"></i> Shared with you
                         </div>
                       )}
                       <button
                         onClick={() => router.push(`/scribe/${n.scribeId}`)}
-                        style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontWeight: 600, color: "#1a2b3c" }}
+                        style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontWeight: 600, color: "var(--text-primary)" }}
                       >
                         {n.scribeName}
                       </button>
@@ -250,10 +277,16 @@ export function BlockDetailInner() {
                         </span>
                         <button
                           onClick={() => setReviewsOpenFor((cur) => (cur === n.noteId ? null : n.noteId))}
-                          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.8rem", color: "#5e7188", textDecoration: "underline" }}
+                          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.8rem", color: "var(--text-secondary)", textDecoration: "underline" }}
                         >
-                          <i className="fas fa-star" style={{ color: "#e0a63e" }}></i>{" "}
+                          <i className="fas fa-star" style={{ color: "var(--star)" }}></i>{" "}
                           {n.noteAvgRating != null ? `${n.noteAvgRating.toFixed(1)} (${n.noteRatingCount})` : "No ratings yet"}
+                        </button>
+                        <button
+                          onClick={() => setReportingNoteId((cur) => (cur === n.noteId ? null : n.noteId))}
+                          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.8rem", color: "var(--text-secondary)" }}
+                        >
+                          <i className="fas fa-flag"></i> Report this version
                         </button>
                       </div>
                     </div>
@@ -275,6 +308,35 @@ export function BlockDetailInner() {
                     </div>
 
                     {reviewsOpenFor === n.noteId && <NoteReviews noteId={n.noteId} />}
+
+                    {reportingNoteId === n.noteId && (
+                      <form
+                        onSubmit={(e) => handleNoteReportSubmit(e, n.noteId)}
+                        style={{ borderTop: "1px solid var(--border-blue)", paddingTop: "0.7rem", display: "flex", flexDirection: "column", gap: "0.6rem" }}
+                      >
+                        <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                          Why are you reporting {n.scribeName}&apos;s version specifically?
+                        </label>
+                        <textarea
+                          value={noteReportReason}
+                          onChange={(e) => setNoteReportReason(e.target.value)}
+                          rows={2}
+                          placeholder="Explain what's wrong with this specific version..."
+                          style={{ padding: "0.5rem", borderRadius: "0.6rem", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem", background: "var(--surface)", color: "var(--text-primary)" }}
+                        />
+                        <div style={{ display: "flex", gap: "0.6rem" }}>
+                          <button className="btn btn-primary" type="submit" disabled={noteReportSubmitting}>
+                            {noteReportSubmitting ? "Submitting..." : "Submit report"}
+                          </button>
+                          <button className="btn" type="button" onClick={() => setReportingNoteId(null)}>
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                    {noteReportStatus?.noteId === n.noteId && (
+                      <p style={{ color: "var(--text-success)", fontSize: "0.8rem" }}>{noteReportStatus.message}</p>
+                    )}
                   </div>
                 );
               })}
@@ -297,20 +359,20 @@ function NoteReviews({ noteId }: { noteId: string }) {
   }, [noteId]);
 
   return (
-    <div style={{ borderTop: "1px solid #e1e8f0", paddingTop: "0.7rem" }}>
-      {error && <p style={{ color: "#b13e3e", fontSize: "0.85rem" }}>{error}</p>}
-      {!error && reviews === null && <p style={{ color: "#5e7188", fontSize: "0.85rem" }}>Loading reviews...</p>}
+    <div style={{ borderTop: "1px solid var(--border-blue)", paddingTop: "0.7rem" }}>
+      {error && <p style={{ color: "var(--text-danger)", fontSize: "0.85rem" }}>{error}</p>}
+      {!error && reviews === null && <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>Loading reviews...</p>}
       {!error && reviews && reviews.length === 0 && (
-        <p style={{ color: "#5e7188", fontSize: "0.85rem" }}>No reviews yet.</p>
+        <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>No reviews yet.</p>
       )}
       {!error && reviews && reviews.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
           {reviews.map((r, i) => (
             <div key={i} style={{ fontSize: "0.85rem" }}>
-              <span style={{ color: "#e0a63e" }}>{"★".repeat(r.rating)}</span>
-              <span style={{ color: "#d0dae8" }}>{"★".repeat(5 - r.rating)}</span>
-              {r.comment && <span style={{ color: "#3b4c62", marginLeft: "0.5rem" }}>{r.comment}</span>}
-              <span style={{ color: "#a3b1c2", marginLeft: "0.5rem", fontSize: "0.78rem" }}>
+              <span style={{ color: "var(--star)" }}>{"★".repeat(r.rating)}</span>
+              <span style={{ color: "var(--border-blue)" }}>{"★".repeat(5 - r.rating)}</span>
+              {r.comment && <span style={{ color: "var(--text-secondary)", marginLeft: "0.5rem" }}>{r.comment}</span>}
+              <span style={{ color: "var(--text-muted)", marginLeft: "0.5rem", fontSize: "0.78rem" }}>
                 {new Date(r.createdAt).toLocaleDateString()}
               </span>
             </div>
@@ -321,7 +383,7 @@ function NoteReviews({ noteId }: { noteId: string }) {
   );
 }
 
-function BlockDetailPage() {
+export default function BlockDetailPage() {
   return (
     <Suspense fallback={null}>
       <BlockDetailInner />
