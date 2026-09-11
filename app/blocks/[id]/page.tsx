@@ -321,7 +321,7 @@ function NoteReviews({ noteId }: { noteId: string }) {
   );
 }
 
-export default function BlockDetailPage() {
+function BlockDetailPage() {
   return (
     <Suspense fallback={null}>
       <BlockDetailInner />
