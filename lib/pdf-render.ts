@@ -59,7 +59,13 @@ export async function getPdfPageCount(pdfBuffer: Buffer): Promise<number> {
  */
 export async function renderPdfPageToImage(pdfBuffer: Buffer, pageNum: number): Promise<Buffer> {
   const canvasFactory = new NodeCanvasFactory();
-  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(pdfBuffer), canvasFactory }).promise;
+  // `canvasFactory` is a real, supported option at runtime in pdfjs-dist's
+  // Node build, but its bundled TypeScript types don't declare it — hence
+  // the cast rather than a change in behavior.
+  const doc = await pdfjsLib.getDocument({
+    data: new Uint8Array(pdfBuffer),
+    canvasFactory,
+  } as any).promise;
 
   try {
     const page = await doc.getPage(pageNum);
@@ -68,7 +74,7 @@ export async function renderPdfPageToImage(pdfBuffer: Buffer, pageNum: number): 
     const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
     const context = canvas.getContext("2d") as unknown as CanvasRenderingContext2D;
 
-    await page.render({ canvasContext: context, viewport, canvasFactory }).promise;
+    await page.render({ canvasContext: context, viewport, canvasFactory } as any).promise;
 
     return await canvas.encode("jpeg", JPEG_QUALITY);
   } finally {
