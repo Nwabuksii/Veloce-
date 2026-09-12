@@ -110,6 +110,14 @@ model User {
   emailVerificationExpiresAt   DateTime?
   lastVerificationEmailSentAt  DateTime? // rate-limits the resend button
   fullName     String
+
+  // Display preference — synced to whatever device/browser the person
+  // signs into, not just localStorage on one machine. See lib/theme.ts.
+  theme        String   @default("light")
+
+  // Coupons: granted 1-per-successful-refund, spent automatically on the
+  // buyer's very next purchase (see app/api/payments/initialize/route.ts).
+  couponBalance Int     @default(0)
   role         UserRole @default(STUDENT)
 
   universityId String
@@ -320,11 +328,24 @@ model Purchase {
   note            Note     @relation(fields: [noteId], references: [id])
   blockId         String
   block           Block    @relation(fields: [blockId], references: [id])
-  amountPaid      Int // actual amount charged, after any discount
+  amountPaid      Int // actual amount charged, after any discount — 0 if redeemedWithCoupon
   discountApplied Boolean  @default(false)
   paystackRef     String   @unique
   purchasedAt     DateTime @default(now())
   review          Review?
+  reports         Report[]
+
+  // Refunds: access is revoked and this purchase drops out of every
+  // earnings/revenue calculation entirely once refunded — see
+  // lib/pricing.ts and lib/note-access.ts.
+  refundedAt      DateTime?
+
+  // Coupon redemptions: the buyer paid nothing (amountPaid is 0), but the
+  // scribe is still paid as if it were a normal sale — scribeCutOverride
+  // holds exactly what they're owed, computed once at redemption time from
+  // whatever the note would have normally cost.
+  redeemedWithCoupon Boolean @default(false)
+  scribeCutOverride  Int?
 }
 
 model Review {
@@ -390,6 +411,7 @@ model Payout {
 enum ReportType {
   BLOCK // flagging a block's content (wrong/stolen/low-quality notes, etc.)
   USER // flagging a specific person for malicious behavior
+  REFUND // buyer wants their money back on a specific purchase
 }
 
 enum ReportStatus {
@@ -417,6 +439,10 @@ model Report {
   // versions that block has.
   noteId         String?
   note           Note?        @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  // Set for REFUND-type reports — lets the admin see exactly what was
+  // bought and when, alongside when it was reported.
+  purchaseId     String?
+  purchase       Purchase?    @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
   reason         String
   status         ReportStatus @default(PENDING)
   createdAt      DateTime     @default(now())

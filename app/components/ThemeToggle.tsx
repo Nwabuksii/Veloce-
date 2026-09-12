@@ -1,14 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getStoredTheme, applyTheme, Theme } from "@/lib/theme";
+import { getStoredTheme, applyTheme, syncThemeToServer, Theme } from "@/lib/theme";
+import { getStoredUser, saveUser } from "@/lib/client-session";
 
 export default function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>("light");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setTheme(getStoredTheme());
+    // The server (this device's last login) is the source of truth for
+    // "what theme does this person actually want" — localStorage is just
+    // a fast local cache of that, used for the no-flash boot script.
+    // Prefer whichever we actually have.
+    const serverTheme = getStoredUser()?.theme;
+    setTheme(serverTheme ?? getStoredTheme());
     setMounted(true);
   }, []);
 
@@ -16,6 +22,12 @@ export default function ThemeToggle() {
     const next: Theme = theme === "dark" ? "light" : "dark";
     setTheme(next);
     applyTheme(next);
+    syncThemeToServer(next);
+
+    // Keep the cached user object in sync too, so the next page load in
+    // this browser (which reads getStoredUser() first) sees it immediately.
+    const user = getStoredUser();
+    if (user) saveUser({ ...user, theme: next });
   }
 
   if (!mounted) {

@@ -1,11 +1,14 @@
 {
-  "/dashboard/page": "app/dashboard/page.js",
   "/scribe/[id]/page": "app/scribe/[id]/page.js",
-  "/blocks/[id]/page": "app/blocks/[id]/page.js",
-  "/admin/reports/page": "app/admin/reports/page.js",
-  "/login/page": "app/login/page.js",
-  "/api/auth/login/route": "app/api/auth/login/route.js",
+  "/admin/moderation/page": "app/admin/moderation/page.js",
+  "/scribe/workspace/page": "app/scribe/workspace/page.js",
+  "/scribe/earnings/page": "app/scribe/earnings/page.js",
+  "/scribe/upload/page": "app/scribe/upload/page.js",
   "/api/messages/unread-count/route": "app/api/messages/unread-count/route.js",
+  "/api/scribe/notes/route": "app/api/scribe/notes/route.js",
+  "/requests/mine/page": "app/requests/mine/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
   "/api/blocks/route": "app/api/blocks/route.js",
-  "/api/scribe/courses/route": "app/api/scribe/courses/route.js"
+  "/api/scribe/courses/route": "app/api/scribe/courses/route.js",
+  "/api/account/route": "app/api/account/route.js"
 }

@@ -13,7 +13,11 @@ export async function checkNoteAccess(user: TokenPayload, noteId: string) {
   const allowed =
     isOwner || isAdmin
       ? true
-      : Boolean(await prisma.purchase.findFirst({ where: { buyerId: user.sub, noteId: note.id } }));
+      : Boolean(
+          await prisma.purchase.findFirst({
+            where: { buyerId: user.sub, noteId: note.id, refundedAt: null },
+          })
+        );
 
   return { note, allowed };
 }

@@ -20,7 +20,7 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
       notes: {
         where: { status: "LIVE" },
         include: {
-          scribe: { select: { id: true, fullName: true, bannedAt: true } },
+          scribe: { select: { id: true, fullName: true } },
           reviews: { select: { rating: true } },
         },
         orderBy: { createdAt: "asc" },
@@ -49,7 +49,7 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
       select: { scribeId: true },
     }),
     prisma.purchase.findMany({
-      where: { buyerId: user.sub, blockId },
+      where: { buyerId: user.sub, blockId, refundedAt: null },
       select: { noteId: true },
     }),
   ]);
@@ -69,12 +69,7 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
   }
   const rejectedScribeIds = new Set(rejectedByScribe.map((n) => n.scribeId));
 
-  const notes = block.notes
-    // A banned scribe's version disappears for everyone browsing this
-    // block — EXCEPT for a student who already bought it, who keeps full
-    // access to what they paid for (same exception as the dashboard listing).
-    .filter((n) => !n.scribe.bannedAt || ownedNoteIds.has(n.id))
-    .map((n) => {
+  const notes = block.notes.map((n) => {
     const noteRatingCount = n.reviews.length;
     const noteAvgRating = noteRatingCount
       ? n.reviews.reduce((s, r) => s + r.rating, 0) / noteRatingCount

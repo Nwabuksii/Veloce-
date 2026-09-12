@@ -14,6 +14,8 @@ interface BlockEarning {
   courseCode: string;
   salesCount: number;
   earnings: number;
+  pending: number;
+  pendingCount: number;
 }
 
 interface BankAccount {
@@ -76,6 +78,9 @@ export default function ScribeEarningsPage() {
   const router = useRouter();
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [totalSales, setTotalSales] = useState(0);
+  const [pendingEarnings, setPendingEarnings] = useState(0);
+  const [pendingSales, setPendingSales] = useState(0);
+  const [refundWindowMinutes, setRefundWindowMinutes] = useState(30);
   const [byBlock, setByBlock] = useState<BlockEarning[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -120,6 +125,9 @@ export default function ScribeEarningsPage() {
       .then((data) => {
         setTotalEarnings(data.totalEarnings);
         setTotalSales(data.totalSales);
+        setPendingEarnings(data.pendingEarnings);
+        setPendingSales(data.pendingSales);
+        setRefundWindowMinutes(data.refundWindowMinutes);
         setByBlock(data.byBlock);
       })
       .catch((err) => setError(friendlyErrorMessage(err)))
@@ -244,6 +252,34 @@ export default function ScribeEarningsPage() {
                 From {totalSales} sale{totalSales === 1 ? "" : "s"} · ₦{balance.toLocaleString()} available to withdraw
               </div>
             </div>
+
+            {pendingSales > 0 && (
+              <div
+                style={{
+                  marginTop: "0.8rem",
+                  background: "var(--bg-warning)",
+                  border: "1px solid var(--text-warning)",
+                  borderRadius: "0.9rem",
+                  padding: "1rem",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "0.6rem",
+                }}
+              >
+                <div>
+                  <div style={{ fontWeight: 600, color: "var(--text-warning)" }}>
+                    <i className="fas fa-hourglass-half"></i> ₦{pendingEarnings.toLocaleString()} verifying
+                  </div>
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>
+                    {pendingSales} recent sale{pendingSales === 1 ? "" : "s"} — moves to your available balance{" "}
+                    {refundWindowMinutes} minutes after purchase, as long as the buyer doesn't request a refund. You'll
+                    get a message if one does.
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Bank account */}
             <h3 style={{ marginTop: "1.5rem", fontSize: "1.05rem" }}>
@@ -383,9 +419,15 @@ export default function ScribeEarningsPage() {
                     <div style={{ fontWeight: 600, fontSize: "0.92rem" }}>{b.blockTitle}</div>
                     <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
                       {b.courseCode} · {b.salesCount} sold
+                      {b.pendingCount > 0 && ` · ${b.pendingCount} verifying`}
                     </div>
                   </div>
-                  <div style={{ fontWeight: 700, color: "var(--text-success)" }}>₦{b.earnings.toLocaleString()}</div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontWeight: 700, color: "var(--text-success)" }}>₦{b.earnings.toLocaleString()}</div>
+                    {b.pending > 0 && (
+                      <div style={{ fontSize: "0.75rem", color: "var(--text-warning)" }}>+₦{b.pending.toLocaleString()} pending</div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

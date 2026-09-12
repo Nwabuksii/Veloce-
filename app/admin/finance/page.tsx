@@ -18,6 +18,8 @@ interface Transaction {
   courseCode: string;
   amountPaid: number;
   discountApplied: boolean;
+  refunded: boolean;
+  redeemedWithCoupon: boolean;
   purchasedAt: string;
 }
 
@@ -28,6 +30,9 @@ interface FinanceData {
   transactionCount: number;
   scribeSharePercent: number;
   platformSharePercent: number;
+  couponsIssued: number;
+  couponsRedeemed: number;
+  couponsOutstanding: number;
   recentTransactions: Transaction[];
 }
 
@@ -147,6 +152,15 @@ export default function AdminFinancePage() {
             </div>
 
             <h2 style={{ marginTop: "2rem" }}>
+              <i className="fas fa-ticket" style={{ color: "var(--star)" }}></i> Coupons
+            </h2>
+            <div className="stat-row" style={{ marginTop: "0.8rem" }}>
+              <StatCard label="Issued" value={String(data.couponsIssued)} sub="1 per successful refund" />
+              <StatCard label="Redeemed" value={String(data.couponsRedeemed)} sub="used on a free purchase" />
+              <StatCard label="Outstanding" value={String(data.couponsOutstanding)} sub="sitting unused right now" />
+            </div>
+
+            <h2 style={{ marginTop: "2rem" }}>
               <i className="fas fa-receipt" style={{ color: "var(--text-info)" }}></i> Recent transactions
             </h2>
 
@@ -167,8 +181,16 @@ export default function AdminFinancePage() {
                         </div>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.7rem" }}>
-                        {t.discountApplied && <span className="pill pill-info">Discount</span>}
-                        <span className="pill pill-success">Paid</span>
+                        {t.discountApplied && <span className="pill pill-info">Fixed request price</span>}
+                        {t.refunded ? (
+                          <span className="pill" style={{ background: "var(--bg-danger)", color: "var(--text-danger)" }}>Refunded</span>
+                        ) : t.redeemedWithCoupon ? (
+                          <span className="pill" style={{ background: "var(--bg-pro)", color: "var(--text-pro)" }}>
+                            <i className="fas fa-ticket"></i> Coupon
+                          </span>
+                        ) : (
+                          <span className="pill pill-success">Paid</span>
+                        )}
                         <div className="tx-row-amount">
                           <div className="amount">₦{t.amountPaid.toLocaleString()}</div>
                           <div className="date">{new Date(t.purchasedAt).toLocaleDateString()}</div>

@@ -8,6 +8,8 @@ import ProfileMenu from "@/app/components/ProfileMenu";
 import { friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
 import { SkeletonList } from "@/app/components/Skeleton";
+import CouponBadge from "@/app/components/CouponBadge";
+import CouponConfirmDialog from "@/app/components/CouponConfirmDialog";
 
 interface BlockView {
   id: string;
@@ -54,6 +56,9 @@ export default function DashboardPage() {
   const [pickerLoading, setPickerLoading] = useState(false);
   const [pickerSearch, setPickerSearch] = useState("");
   const [pickerTrustFilter, setPickerTrustFilter] = useState("");
+  const [couponBalance, setCouponBalance] = useState<number | null>(null);
+  const [pendingCouponBuy, setPendingCouponBuy] = useState<{ block: BlockView; noteId?: string } | null>(null);
+  const [couponConfirming, setCouponConfirming] = useState(false);
 
   async function loadBlocks() {
     const params = new URLSearchParams();
@@ -87,6 +92,11 @@ export default function DashboardPage() {
       .then((data) => setCourses(data.courses || []))
       .catch(() => setCourses([]));
 
+    fetch("/api/account")
+      .then((res) => res.json())
+      .then((data) => setCouponBalance(data.user?.couponBalance ?? 0))
+      .catch(() => setCouponBalance(0));
+
     loadBlocks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
@@ -115,10 +125,36 @@ export default function DashboardPage() {
         return;
       }
 
+      if (data.freeViaCoupon) {
+        toast.success("Coupon used — no charge!");
+        router.push(`/notes/${data.noteId}/read`);
+        return;
+      }
+
       window.location.href = data.authorizationUrl; // off to real Paystack checkout
     } catch {
       toast.error("Something went wrong starting checkout. Try again.");
     }
+  }
+
+  // A coupon purchase skips Paystack entirely, so there's no external
+  // checkout page to give someone a natural "wait, cancel that" moment —
+  // this dialog is that moment. Real (non-coupon) purchases go straight
+  // through, since Paystack's own page already provides that pause.
+  function handleBuyClick(block: BlockView, noteId?: string) {
+    if (couponBalance != null && couponBalance > 0) {
+      setPendingCouponBuy({ block, noteId });
+      return;
+    }
+    handlePurchaseClick(block, noteId);
+  }
+
+  async function confirmCouponBuy() {
+    if (!pendingCouponBuy) return;
+    setCouponConfirming(true);
+    await handlePurchaseClick(pendingCouponBuy.block, pendingCouponBuy.noteId);
+    setCouponConfirming(false);
+    setPendingCouponBuy(null);
   }
 
   async function openVersionPicker(block: BlockView) {
@@ -151,6 +187,7 @@ export default function DashboardPage() {
               </h1>
               <div className="logo-sub">Babcock · pilot</div>
             </div>
+            <CouponBadge count={couponBalance} />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
             {user?.role === "STUDENT" && (
@@ -218,13 +255,21 @@ export default function DashboardPage() {
 
           <div className="card-grid">
             {blocks.map((block) => (
-              <div key={block.id} className={`block-card ${block.unlocked ? "unlocked" : "locked"}`}>
+              <div
+                key={block.id}
+                className={`block-card ${block.unlocked ? "unlocked" : "locked"}`}
+                onClick={() => router.push(`/blocks/${block.id}`)}
+                style={{ cursor: "pointer" }}
+              >
                 <div className="badge">{block.courseCode}</div>
                 <h3>{block.title}</h3>
                 <div className="meta">{block.courseName}</div>
                 {block.scribeName && (
                   <button
-                    onClick={() => router.push(`/scribe/${block.scribeId}`)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/scribe/${block.scribeId}`);
+                    }}
                     style={{
                       background: "none",
                       border: "none",
@@ -248,15 +293,26 @@ export default function DashboardPage() {
                   </ul>
                 )}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  {block.discountedPrice != null ? (
-                    <span>
-                      <span className="price-tag" style={{ textDecoration: "line-through", color: "var(--text-muted)", marginRight: "0.4rem" }}>
-                        ₦{block.price.toLocaleString()}
-                      </span>
-                      <span className="price-tag" style={{ color: "var(--text-success)" }}>
-                        ₦{block.discountedPrice.toLocaleString()}
-                      </span>
+                  {!block.unlocked && couponBalance != null && couponBalance > 0 ? (
+                    <span className="price-tag" style={{ color: "var(--text-pro)", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
+                      <i className="fas fa-ticket"></i> Use coupon
                     </span>
+                  ) : block.discountedPrice != null ? (
+                    block.discountedPrice < block.price ? (
+                      <span>
+                        <span className="price-tag" style={{ textDecoration: "line-through", color: "var(--text-muted)", marginRight: "0.4rem" }}>
+                          ₦{block.price.toLocaleString()}
+                        </span>
+                        <span className="price-tag" style={{ color: "var(--text-success)" }}>
+                          ₦{block.discountedPrice.toLocaleString()}
+                        </span>
+                      </span>
+                    ) : (
+                      <span>
+                        <span className="price-tag">₦{block.discountedPrice.toLocaleString()}</span>
+                        <span className="pill pill-info" style={{ marginLeft: "0.5rem" }}>Fixed price</span>
+                      </span>
+                    )
                   ) : (
                     <span className="price-tag">₦{block.price.toLocaleString()}</span>
                   )}
@@ -267,7 +323,7 @@ export default function DashboardPage() {
                           <i className="fas fa-check-circle"></i>
                         </span>
                       )}
-                      <button className="btn btn-primary" onClick={() => openVersionPicker(block)}>
+                      <button className="btn btn-primary" onClick={(e) => { e.stopPropagation(); openVersionPicker(block); }}>
                         <i className="fas fa-layer-group"></i> {block.liveNoteCount} versions
                       </button>
                     </div>
@@ -276,8 +332,12 @@ export default function DashboardPage() {
                       <i className="fas fa-check-circle"></i> unlocked
                     </span>
                   ) : (
-                    <button className="btn btn-primary" onClick={() => handlePurchaseClick(block)}>
-                      <i className="fas fa-lock"></i> purchase
+                    <button className="btn btn-primary" onClick={(e) => { e.stopPropagation(); handleBuyClick(block); }}>
+                      {couponBalance != null && couponBalance > 0 ? (
+                        <><i className="fas fa-ticket"></i> use coupon</>
+                      ) : (
+                        <><i className="fas fa-lock"></i> purchase</>
+                      )}
                     </button>
                   )}
                 </div>
@@ -414,10 +474,14 @@ export default function DashboardPage() {
                             onClick={() => {
                               const block = pickerBlock;
                               setPickerBlock(null);
-                              if (block) handlePurchaseClick(block, n.noteId);
+                              if (block) handleBuyClick(block, n.noteId);
                             }}
                           >
-                            <i className="fas fa-lock"></i> buy
+                            {couponBalance != null && couponBalance > 0 ? (
+                              <><i className="fas fa-ticket"></i> use coupon</>
+                            ) : (
+                              <><i className="fas fa-lock"></i> buy</>
+                            )}
                           </button>
                         )}
                       </div>
@@ -429,6 +493,15 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {pendingCouponBuy && (
+        <CouponConfirmDialog
+          itemLabel={pendingCouponBuy.block.title}
+          confirming={couponConfirming}
+          onConfirm={confirmCouponBuy}
+          onCancel={() => setPendingCouponBuy(null)}
+        />
+      )}
     </div>
   );
 }

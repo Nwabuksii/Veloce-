@@ -72,6 +72,22 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest) => {
       where: { id: blockRequest.id },
       data: { blockId: block.id, status: "FULFILLED" },
     });
+
+    const voters = await prisma.requestVote.findMany({
+      where: { requestId: blockRequest.id },
+      select: { studentId: true },
+    });
+
+    if (voters.length > 0) {
+      await prisma.adminMessage.createMany({
+        data: voters.map((v) => ({
+          recipientId: v.studentId,
+          senderId: null,
+          subject: `Your request was fulfilled — "${block.title}"`,
+          body: `Good news — "${blockRequest!.requestedTitle}" for ${course.code} now has notes available: "${block.title}". Head to the block to check it out.`,
+        })),
+      });
+    }
   }
 
   return NextResponse.json({ block });

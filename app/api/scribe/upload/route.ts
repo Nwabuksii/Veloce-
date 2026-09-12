@@ -38,7 +38,8 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
     }
 
     // If this block was created to fulfill a demand-feed request, tag the
-    // note with it so buyers who voted for it can get their discount.
+    // note with it so it always sells at the fixed request-fulfillment
+    // price (see lib/pricing.ts), for any buyer — not just those who voted.
     const fulfilledRequest = await prisma.blockRequest.findFirst({
       where: { blockId: block.id, status: "FULFILLED" },
     });

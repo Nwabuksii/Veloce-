@@ -386,7 +386,7 @@ export default function ScribeUploadPage() {
 
                 {openRequests.length > 0 && (
                   <label style={{ fontSize: "0.85rem", fontWeight: 500 }}>
-                    Fulfill an open request? (optional — buyers who asked for it get a discount)
+                    Fulfill an open request? (optional — this note sells at a fixed ₦900, ₦600 of which is yours)
                     <select
                       value={fulfillsRequestId}
                       onChange={(e) => setFulfillsRequestId(e.target.value)}

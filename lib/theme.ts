@@ -15,6 +15,24 @@ export function applyTheme(theme: Theme) {
 }
 
 /**
+ * Persists the theme to the user's profile server-side, so it follows
+ * them to any device/browser they log into next — localStorage alone is
+ * per-browser only. Best-effort: if this fails (e.g. offline), the local
+ * change still applies immediately, it just won't have synced yet.
+ */
+export async function syncThemeToServer(theme: Theme) {
+  try {
+    await fetch("/api/account", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ theme }),
+    });
+  } catch {
+    // best-effort — local theme already applied regardless
+  }
+}
+
+/**
  * Inline script injected into <head> so the correct theme is applied
  * before first paint (no flash of the wrong theme on load).
  */

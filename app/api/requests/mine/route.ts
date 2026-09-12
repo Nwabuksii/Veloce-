@@ -11,23 +11,30 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
           course: true,
           votes: true,
           block: true,
+          claims: { where: { status: "LIVE" }, select: { id: true, blockId: true } },
         },
       },
     },
     orderBy: { createdAt: "desc" },
   });
 
-  const result = votes.map((v) => ({
-    id: v.request.id,
-    requestedTitle: v.request.requestedTitle,
-    courseCode: v.request.course.code,
-    courseName: v.request.course.name,
-    status: v.request.status,
-    voteCount: v.request.votes.length,
-    fulfilledBlock: v.request.block
-      ? { id: v.request.block.id, title: v.request.block.title, price: v.request.block.price }
-      : null,
-  }));
+  const result = votes.map((v) => {
+    const fulfillingNote = v.request.block
+      ? v.request.claims.find((n) => n.blockId === v.request.blockId)
+      : null;
+
+    return {
+      id: v.request.id,
+      requestedTitle: v.request.requestedTitle,
+      courseCode: v.request.course.code,
+      courseName: v.request.course.name,
+      status: v.request.status,
+      voteCount: v.request.votes.length,
+      fulfilledBlock: v.request.block
+        ? { id: v.request.block.id, title: v.request.block.title, price: v.request.block.price, noteId: fulfillingNote?.id ?? null }
+        : null,
+    };
+  });
 
   return NextResponse.json({ requests: result });
 });

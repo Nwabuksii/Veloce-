@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
   });
 
   const res = NextResponse.json({
-    user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role },
+    user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role, theme: user.theme },
   });
   res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions());
   return res;

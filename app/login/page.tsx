@@ -3,6 +3,7 @@
 import { useState, FormEvent, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { saveUser } from "@/lib/client-session";
+import { applyTheme } from "@/lib/theme";
 import Logo from "@/app/components/Logo";
 import { apiFetch, friendlyErrorMessage, ApiError } from "@/lib/api-client";
 
@@ -42,6 +43,7 @@ function LoginForm() {
       });
 
       saveUser(data.user);
+      applyTheme(data.user.theme === "dark" ? "dark" : "light");
       router.push(safeReturnTo(searchParams.get("returnTo")));
     } catch (err) {
       setError(friendlyErrorMessage(err));

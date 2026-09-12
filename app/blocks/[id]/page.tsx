@@ -8,6 +8,7 @@ import ProfileMenu from "@/app/components/ProfileMenu";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
+import CouponConfirmDialog from "@/app/components/CouponConfirmDialog";
 
 interface NoteVersion {
   noteId: string;
@@ -50,6 +51,9 @@ function BlockDetailInner() {
   const [noteReportReason, setNoteReportReason] = useState("");
   const [noteReportSubmitting, setNoteReportSubmitting] = useState(false);
   const [noteReportStatus, setNoteReportStatus] = useState<{ noteId: string; message: string } | null>(null);
+  const [couponBalance, setCouponBalance] = useState<number | null>(null);
+  const [pendingCouponNoteId, setPendingCouponNoteId] = useState<string | null>(null);
+  const [couponConfirming, setCouponConfirming] = useState(false);
 
   useEffect(() => {
     const user = getStoredUser();
@@ -59,6 +63,10 @@ function BlockDetailInner() {
       return;
     }
     load();
+    fetch("/api/account")
+      .then((res) => res.json())
+      .then((data) => setCouponBalance(data.user?.couponBalance ?? 0))
+      .catch(() => setCouponBalance(0));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, blockId]);
 
@@ -102,11 +110,37 @@ function BlockDetailInner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ blockId, noteId }),
       });
+
+      if (data.freeViaCoupon) {
+        toast.success("Coupon used — no charge!");
+        router.push(`/notes/${data.noteId}/read`);
+        return;
+      }
+
       window.location.href = data.authorizationUrl;
     } catch (err) {
       toast.error(friendlyErrorMessage(err));
       setPurchasingNoteId(null);
     }
+  }
+
+  // Coupon purchases skip Paystack entirely, so there's no external
+  // checkout page to give someone a natural "wait, cancel that" moment —
+  // this dialog is that moment instead.
+  function handleBuyClick(noteId: string) {
+    if (couponBalance != null && couponBalance > 0) {
+      setPendingCouponNoteId(noteId);
+      return;
+    }
+    handlePurchase(noteId);
+  }
+
+  async function confirmCouponBuy() {
+    if (!pendingCouponNoteId) return;
+    setCouponConfirming(true);
+    await handlePurchase(pendingCouponNoteId);
+    setCouponConfirming(false);
+    setPendingCouponNoteId(null);
   }
 
   async function handleReportSubmit(e: FormEvent) {
@@ -302,11 +336,15 @@ function BlockDetailInner() {
                     ) : (
                       <button
                         className="btn btn-primary"
-                        onClick={() => handlePurchase(n.noteId)}
+                        onClick={() => handleBuyClick(n.noteId)}
                         disabled={purchasingNoteId === n.noteId}
                       >
-                        <i className="fas fa-lock"></i>{" "}
-                        {purchasingNoteId === n.noteId ? "Redirecting..." : `Buy for ₦${price.toLocaleString()}`}
+                        <i className={couponBalance != null && couponBalance > 0 ? "fas fa-ticket" : "fas fa-lock"}></i>{" "}
+                        {purchasingNoteId === n.noteId
+                          ? "Redirecting..."
+                          : couponBalance != null && couponBalance > 0
+                          ? "Use coupon"
+                          : `Buy for ₦${price.toLocaleString()}`}
                       </button>
                     )}
                     </div>
@@ -348,6 +386,15 @@ function BlockDetailInner() {
           </div>
         )}
       </div>
+
+      {pendingCouponNoteId && (
+        <CouponConfirmDialog
+          itemLabel={`${blockTitle} — ${notes.find((n) => n.noteId === pendingCouponNoteId)?.scribeName ?? "this version"}`}
+          confirming={couponConfirming}
+          onConfirm={confirmCouponBuy}
+          onCancel={() => setPendingCouponNoteId(null)}
+        />
+      )}
     </div>
   );
 }

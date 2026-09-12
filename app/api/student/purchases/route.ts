@@ -9,6 +9,7 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
       block: { include: { course: true } },
       note: { include: { scribe: { select: { fullName: true } } } },
       review: true,
+      reports: { where: { type: "REFUND" }, select: { status: true }, orderBy: { createdAt: "desc" }, take: 1 },
     },
     orderBy: { purchasedAt: "desc" },
   });
@@ -23,6 +24,9 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
     scribeName: p.note.scribe.fullName,
     purchasedAt: p.purchasedAt,
     review: p.review ? { rating: p.review.rating, comment: p.review.comment } : null,
+    refunded: p.refundedAt !== null,
+    redeemedWithCoupon: p.redeemedWithCoupon,
+    refundRequestStatus: p.reports[0]?.status ?? null,
   }));
 
   return NextResponse.json({ purchases: result });

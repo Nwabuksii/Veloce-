@@ -16,6 +16,7 @@ export interface StoredUser {
   email: string;
   fullName: string;
   role: "STUDENT" | "SCRIBE" | "ADMIN";
+  theme?: "light" | "dark";
 }
 
 const USER_KEY = "veloce_user";

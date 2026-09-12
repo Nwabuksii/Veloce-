@@ -15,7 +15,7 @@ interface RequestView {
   courseName: string;
   status: "OPEN" | "FULFILLED";
   voteCount: number;
-  fulfilledBlock: { id: string; title: string; price: number } | null;
+  fulfilledBlock: { id: string; title: string; price: number; noteId: string | null } | null;
 }
 
 export default function MyRequestsPage() {
@@ -108,8 +108,17 @@ export default function MyRequestsPage() {
                     <i className="fas fa-check-circle"></i> Fulfilled
                   </span>
                   <div>
-                    <button className="btn btn-primary" onClick={() => router.push("/dashboard")}>
-                      View in catalog (your discount applies)
+                    <button
+                      className="btn btn-primary"
+                      onClick={() =>
+                        router.push(
+                          r.fulfilledBlock!.noteId
+                            ? `/blocks/${r.fulfilledBlock!.id}?note=${r.fulfilledBlock!.noteId}`
+                            : `/blocks/${r.fulfilledBlock!.id}`
+                        )
+                      }
+                    >
+                      View this version
                     </button>
                   </div>
                 </div>

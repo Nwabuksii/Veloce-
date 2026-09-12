@@ -11,13 +11,14 @@ import { toast } from "@/lib/toast";
 
 interface ReportItem {
   id: string;
-  type: "BLOCK" | "USER";
+  type: "BLOCK" | "USER" | "REFUND";
   reason: string;
   createdAt: string;
   reporter: { id: string; fullName: string; email: string };
   block: { id: string; title: string; course: { code: string; name: string } } | null;
   reportedUser: { id: string; fullName: string; email: string; role: string } | null;
   note: { id: string; scribe: { id: string; fullName: string } } | null;
+  purchase: { id: string; purchasedAt: string; amountPaid: number; refundedAt: string | null; redeemedWithCoupon: boolean } | null;
 }
 
 export default function AdminReportsPage() {
@@ -29,6 +30,7 @@ export default function AdminReportsPage() {
   const [removingNoteId, setRemovingNoteId] = useState<string | null>(null);
   const [removeReason, setRemoveReason] = useState("");
   const [removeSubmitting, setRemoveSubmitting] = useState(false);
+  const [refunding, setRefunding] = useState<string | null>(null);
 
   useEffect(() => {
     const user = getStoredUser();
@@ -89,6 +91,21 @@ export default function AdminReportsPage() {
       toast.error(friendlyErrorMessage(err));
     } finally {
       setRemoveSubmitting(false);
+    }
+  }
+
+  async function handleRefund(purchaseId: string) {
+    setRefunding(purchaseId);
+    try {
+      const data = await apiFetch(`/api/admin/purchases/${purchaseId}/refund`, {
+        method: "POST",
+      });
+      toast.success(`Refunded. ₦${data.scribeCutReversed.toLocaleString()} reversed from the scribe, buyer got 1 coupon.`);
+      setReports((prev) => prev.filter((r) => r.purchase?.id !== purchaseId));
+    } catch (err) {
+      toast.error(friendlyErrorMessage(err));
+    } finally {
+      setRefunding(null);
     }
   }
 
@@ -182,6 +199,14 @@ export default function AdminReportsPage() {
                       <i className="fas fa-user-pen"></i> Reported version: {r.note.scribe.fullName}
                     </div>
                   )}
+                  {r.purchase && (
+                    <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>
+                      <i className="fas fa-receipt"></i> Bought {new Date(r.purchase.purchasedAt).toLocaleDateString()} for{" "}
+                      {r.purchase.redeemedWithCoupon ? "a coupon (free)" : `₦${r.purchase.amountPaid.toLocaleString()}`}
+                      {" · "}reported {new Date(r.createdAt).toLocaleDateString()}
+                      {r.purchase.refundedAt && <span style={{ color: "var(--text-danger)" }}> · already refunded</span>}
+                    </div>
+                  )}
                   {r.note ? (
                     <div>
                       <button
@@ -214,6 +239,16 @@ export default function AdminReportsPage() {
                 </div>
 
                 <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
+                  {r.purchase && !r.purchase.refundedAt && (
+                    <button
+                      className="btn press-on-tap"
+                      style={{ background: "var(--accent)", borderColor: "var(--accent)", color: "white" }}
+                      disabled={refunding === r.purchase.id}
+                      onClick={() => handleRefund(r.purchase!.id)}
+                    >
+                      <i className="fas fa-hand-holding-dollar"></i> {refunding === r.purchase.id ? "Refunding..." : "Refund"}
+                    </button>
+                  )}
                   {r.note && (
                     <button
                       className="btn press-on-tap"

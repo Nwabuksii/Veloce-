@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
-import { applyRequestDiscount } from "@/lib/pricing";
+import { REQUEST_FULFILLED_PRICE } from "@/lib/pricing";
 
 // Returns blocks within the student's own university, with an "unlocked"
 // flag based on whether they've already purchased it, and a "discountEligible"
@@ -15,7 +15,7 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
   const courseId = url.searchParams.get("courseId");
   const departmentId = url.searchParams.get("departmentId");
 
-  const [blocks, purchases, myVotedRequestIds] = await Promise.all([
+  const [blocks, purchases] = await Promise.all([
     prisma.block.findMany({
       where: {
         course: {
@@ -38,7 +38,7 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
         course: true,
         topics: { orderBy: { order: "asc" } },
         notes: {
-          where: { status: "LIVE", scribe: { bannedAt: null } },
+          where: { status: "LIVE" },
           select: { fulfillsRequestId: true, scribeId: true, scribe: { select: { fullName: true } } },
           orderBy: { createdAt: "asc" },
         },
@@ -46,31 +46,28 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
       orderBy: [{ courseId: "asc" }, { order: "asc" }],
     }),
     prisma.purchase.findMany({
-      where: { buyerId: user.sub },
+      where: { buyerId: user.sub, refundedAt: null },
       select: { blockId: true },
-    }),
-    prisma.requestVote.findMany({
-      where: { studentId: user.sub },
-      select: { requestId: true },
     }),
   ]);
 
   const purchasedIds = new Set(purchases.map((p) => p.blockId));
-  const votedRequestIds = new Set(myVotedRequestIds.map((v) => v.requestId));
 
-  const result = blocks
-    .filter((b) => b.notes.length > 0) // a block with nothing but banned scribes' notes shouldn't appear in browse at all — even if the student already purchased it, that stays fully accessible via the separate Purchases page, which this filter doesn't touch
-    .map((b) => {
-    const discountEligible = b.notes.some(
-      (n) => n.fulfillsRequestId && votedRequestIds.has(n.fulfillsRequestId)
-    );
+  const result = blocks.map((b) => {
+    // Fixed pricing now applies to every buyer of a request-fulfilling
+    // note, not just students who voted for that specific request — see
+    // lib/pricing.ts. This is still a block-level approximation: if a
+    // block has several scribe versions and only some fulfill a request,
+    // the exact price still depends on which version gets bought, same
+    // as before.
+    const hasFulfillmentPricing = b.notes.some((n) => n.fulfillsRequestId);
     const scribe = b.notes[0];
 
     return {
       id: b.id,
       title: b.title,
       price: b.price,
-      discountedPrice: discountEligible ? applyRequestDiscount(b.price) : null,
+      discountedPrice: hasFulfillmentPricing ? REQUEST_FULFILLED_PRICE : null,
       courseName: b.course.name,
       courseCode: b.course.code,
       unlocked: purchasedIds.has(b.id),

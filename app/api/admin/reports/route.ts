@@ -12,6 +12,7 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, user) => {
       block: { select: { id: true, title: true, course: { select: { code: true, name: true } } } },
       reportedUser: { select: { id: true, fullName: true, email: true, role: true } },
       note: { select: { id: true, scribe: { select: { id: true, fullName: true } } } },
+      purchase: { select: { id: true, purchasedAt: true, amountPaid: true, refundedAt: true, redeemedWithCoupon: true } },
     },
     orderBy: { createdAt: "asc" },
   });
