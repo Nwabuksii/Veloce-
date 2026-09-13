@@ -170,6 +170,7 @@ model User {
   createdAt          DateTime           @default(now())
   receivedMessages   AdminMessage[]     @relation("MessageRecipient")
   sentMessages       AdminMessage[]     @relation("MessageSender")
+  feedback           Feedback[]
 }
 // One-way messages from an Admin to a specific user — e.g. explaining a
 // rejected application or a demotion. No reply thread by design.
@@ -344,6 +345,12 @@ model Purchase {
   // scribe is still paid as if it were a normal sale — scribeCutOverride
   // holds exactly what they're owed, computed once at redemption time from
   // whatever the note would have normally cost.
+  // Set alongside refundedAt specifically when a Paystack chargeback/dispute
+  // triggers the reversal (see app/api/webhooks/paystack/route.ts), so the
+  // admin finance page can tell "I approved this refund" apart from "the
+  // buyer's bank clawed this back without asking us." No coupon is granted
+  // for a dispute — see the webhook handler for why.
+  disputedAt         DateTime?
   redeemedWithCoupon Boolean @default(false)
   scribeCutOverride  Int?
 }
@@ -450,4 +457,24 @@ model Report {
   reviewedById   String? // admin user id
 
   @@index([type, status])
+}
+
+// Free-text "what do you think of the site" feedback from any logged-in
+// user. Deliberately just a message + who + when — no categories, ratings,
+// or status workflow. Read by admins at /admin/feedback.
+model Feedback {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   String
+  createdAt DateTime @default(now())
+}
+
+// Deliberately simple, DB-backed rate limiting — see lib/rate-limit.ts for
+// why this beats an in-memory counter on a serverless host like Vercel.
+// One row per (bucket + identifier) key, e.g. "login:102.67.15.8".
+model RateLimitHit {
+  key         String   @id
+  count       Int      @default(1)
+  windowStart DateTime @default(now())
 }

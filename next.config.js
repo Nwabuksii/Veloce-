@@ -10,4 +10,14 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+const { withSentryConfig } = require("@sentry/nextjs");
+
+// withSentryConfig only uploads source maps (for readable stack traces in
+// Sentry) if SENTRY_AUTH_TOKEN/SENTRY_ORG/SENTRY_PROJECT are all set — with
+// none of them set, the build just proceeds normally without that step.
+// Nothing here breaks a build that doesn't have Sentry configured yet.
+module.exports = withSentryConfig(nextConfig, {
+  silent: true,
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+});

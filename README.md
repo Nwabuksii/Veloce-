@@ -23,6 +23,8 @@ This is the Phase 1 foundation: project setup + database schema.
    - `DATABASE_URL` — your existing Neon connection string
    - `JWT_SECRET` — any long random string (e.g. `openssl rand -base64 32`)
    - `PAYSTACK_SECRET_KEY` / `PAYSTACK_PUBLIC_KEY` — from your Paystack dashboard (use test keys first)
+   - `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` — from a Sentry.io project (Settings -> Client Keys (DSN)); same value in both, one for server code, one for the browser. Leave both unset and the app runs fine without error monitoring — nothing breaks, you just won't get alerted when something goes wrong.
+   - `SENTRY_ORG` / `SENTRY_PROJECT` — (optional) only needed if you want readable stack traces in Sentry instead of minified ones; found in your Sentry project's URL
 
 3. **Push the schema to your Neon database**
    ```bash
