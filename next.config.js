@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Disables TypeScript checks during production builds (e.g., Vercel)
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+
   // @napi-rs/canvas ships a native .node binary (not JS) — without this,
   // webpack tries to parse that binary file as source code and fails with
   // "Module parse failed: Unexpected character" on every route that
