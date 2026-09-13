@@ -19,6 +19,10 @@ interface NoteVersion {
   noteAvgRating: number | null;
   noteRatingCount: number;
   owned: boolean;
+  purchaseId: string | null;
+  myReview: { rating: number; comment: string | null } | null;
+  price: number;
+  isRequestFulfillment: boolean;
 }
 
 const TRUST_STYLES: Record<string, { bg: string; color: string }> = {
@@ -224,7 +228,9 @@ function BlockDetailInner() {
               <div>
                 <h2 style={{ fontSize: "1.4rem" }}>{blockTitle}</h2>
                 <span className="price-tag" style={{ marginTop: "0.4rem", display: "inline-block" }}>
-                  ₦{price.toLocaleString()}
+                  {notes.length > 0 && new Set(notes.map((n) => n.price)).size > 1
+                    ? `From ₦${Math.min(...notes.map((n) => n.price)).toLocaleString()}`
+                    : `₦${(notes[0]?.price ?? price).toLocaleString()}`}
                 </span>
               </div>
               <div style={{ display: "flex", gap: "0.6rem" }}>
@@ -271,21 +277,18 @@ function BlockDetailInner() {
               <p style={{ color: "var(--text-secondary)", marginTop: "0.6rem" }}>No live notes for this topic yet.</p>
             )}
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem", marginTop: "0.8rem" }}>
+            <div className="ledger-list" style={{ marginTop: "0.8rem" }}>
               {notes.map((n) => {
                 const trustStyle = TRUST_STYLES[n.trustLevel] || TRUST_STYLES.NEW;
                 return (
                   <div
                     key={n.noteId}
-                    style={{
-                      background: n.noteId === highlightNoteId ? "var(--bg-info)" : "var(--surface)",
-                      border: n.noteId === highlightNoteId ? "2px solid var(--text-info)" : "1px solid var(--border-blue)",
-                      borderRadius: "1rem",
-                      padding: "1rem",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "0.6rem",
-                    }}
+                    className="ledger-row"
+                    style={
+                      n.noteId === highlightNoteId
+                        ? { background: "var(--bg-info)", borderLeftColor: "var(--text-info)" }
+                        : undefined
+                    }
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.6rem" }}>
                     <div>
@@ -301,18 +304,10 @@ function BlockDetailInner() {
                         {n.scribeName}
                       </button>
                       <div style={{ display: "flex", gap: "0.6rem", alignItems: "center", marginTop: "0.3rem" }}>
-                        <span
-                          style={{
-                            background: trustStyle.bg,
-                            color: trustStyle.color,
-                            padding: "0.15rem 0.7rem",
-                            borderRadius: "30px",
-                            fontSize: "0.75rem",
-                            fontWeight: 600,
-                          }}
-                        >
+                        <span className="seal" style={{ background: trustStyle.bg, color: trustStyle.color, borderRadius: "3px" }}>
                           {n.trustLabel}
                         </span>
+                        {n.isRequestFulfillment && <span className="seal">Fixed request price</span>}
                         <button
                           onClick={() => setReviewsOpenFor((cur) => (cur === n.noteId ? null : n.noteId))}
                           style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.8rem", color: "var(--text-secondary)", textDecoration: "underline" }}
@@ -344,12 +339,22 @@ function BlockDetailInner() {
                           ? "Redirecting..."
                           : couponBalance != null && couponBalance > 0
                           ? "Use coupon"
-                          : `Buy for ₦${price.toLocaleString()}`}
+                          : `Buy for ₦${n.price.toLocaleString()}`}
                       </button>
                     )}
                     </div>
 
-                    {reviewsOpenFor === n.noteId && <NoteReviews noteId={n.noteId} />}
+                    {reviewsOpenFor === n.noteId && (
+                      <NoteReviews
+                        noteId={n.noteId}
+                        owned={n.owned}
+                        purchaseId={n.purchaseId}
+                        myReview={n.myReview}
+                        onReviewed={(rating, comment) =>
+                          setNotes((prev) => prev.map((note) => (note.noteId === n.noteId ? { ...note, myReview: { rating, comment } } : note)))
+                        }
+                      />
+                    )}
 
                     {reportingNoteId === n.noteId && (
                       <form
@@ -399,9 +404,24 @@ function BlockDetailInner() {
   );
 }
 
-function NoteReviews({ noteId }: { noteId: string }) {
+function NoteReviews({
+  noteId,
+  owned,
+  purchaseId,
+  myReview,
+  onReviewed,
+}: {
+  noteId: string;
+  owned: boolean;
+  purchaseId: string | null;
+  myReview: { rating: number; comment: string | null } | null;
+  onReviewed: (rating: number, comment: string | null) => void;
+}) {
   const [reviews, setReviews] = useState<{ rating: number; comment: string | null; createdAt: string }[] | null>(null);
   const [error, setError] = useState("");
+  const [draftRating, setDraftRating] = useState(0);
+  const [draftComment, setDraftComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     apiFetch(`/api/notes/${noteId}/reviews`)
@@ -409,8 +429,81 @@ function NoteReviews({ noteId }: { noteId: string }) {
       .catch((err) => setError(friendlyErrorMessage(err)));
   }, [noteId]);
 
+  async function submitReview() {
+    if (!purchaseId || !draftRating) return;
+    setSubmitting(true);
+    try {
+      await apiFetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ purchaseId, rating: draftRating, comment: draftComment || undefined }),
+      });
+      onReviewed(draftRating, draftComment || null);
+      setReviews((prev) => [{ rating: draftRating, comment: draftComment || null, createdAt: new Date().toISOString() }, ...(prev ?? [])]);
+      toast.success("Review submitted");
+    } catch (err) {
+      toast.error(friendlyErrorMessage(err));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <div style={{ borderTop: "1px solid var(--border-blue)", paddingTop: "0.7rem" }}>
+      {/* Second door to leave a review — the first is the Purchases page.
+          Only the actual buyer sees this, and only until they've reviewed. */}
+      {owned && purchaseId && (
+        <div style={{ marginBottom: "0.8rem" }}>
+          {myReview ? (
+            <div style={{ fontSize: "0.85rem" }}>
+              <span style={{ color: "var(--text-secondary)" }}>Your review: </span>
+              <span style={{ color: "var(--star)" }}>{"★".repeat(myReview.rating)}</span>
+              <span style={{ color: "var(--border-blue)" }}>{"★".repeat(5 - myReview.rating)}</span>
+              {myReview.comment && <span style={{ marginLeft: "0.5rem" }}>{myReview.comment}</span>}
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+              <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>Leave a review</div>
+              <div style={{ display: "flex", gap: "0.2rem" }}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setDraftRating(star)}
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: "1.1rem" }}
+                  >
+                    <span style={{ color: star <= draftRating ? "var(--star)" : "var(--border-blue)" }}>★</span>
+                  </button>
+                ))}
+              </div>
+              <textarea
+                value={draftComment}
+                onChange={(e) => setDraftComment(e.target.value)}
+                rows={2}
+                placeholder="Optional comment..."
+                style={{
+                  padding: "0.5rem",
+                  borderRadius: "0.6rem",
+                  border: "1px solid var(--border-blue)",
+                  fontFamily: "inherit",
+                  fontSize: "0.85rem",
+                  background: "var(--surface)",
+                  color: "var(--text-primary)",
+                }}
+              />
+              <button
+                className="btn press-on-tap"
+                style={{ width: "fit-content" }}
+                disabled={!draftRating || submitting}
+                onClick={submitReview}
+              >
+                {submitting ? "Submitting..." : "Submit review"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {error && <p style={{ color: "var(--text-danger)", fontSize: "0.85rem" }}>{error}</p>}
       {!error && reviews === null && <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>Loading reviews...</p>}
       {!error && reviews && reviews.length === 0 && (
