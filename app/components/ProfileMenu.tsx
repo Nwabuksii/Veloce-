@@ -101,6 +101,7 @@ export default function ProfileMenu() {
           <MenuItem icon="fa-user-check" label="Following" onClick={() => go("/following")} />
           <MenuItem icon="fa-hand-point-up" label="Request a block" onClick={() => go("/requests")} />
           <MenuItem icon="fa-list-check" label="My requests" onClick={() => go("/requests/mine")} />
+          <MenuItem icon="fa-comment-dots" label="Feedback" onClick={() => go("/feedback")} />
 
           {user.role === "STUDENT" && (
             <MenuItem icon="fa-undo" label="Appeal reinstatement" onClick={() => go("/scribe/appeal")} />
@@ -120,14 +121,6 @@ export default function ProfileMenu() {
             <>
               <Divider />
               <MenuItem icon="fa-user-cog" label="Admin panel" onClick={() => go("/admin")} />
-              <MenuItem icon="fa-undo" label="Review appeals" onClick={() => go("/admin/appeals")} />
-              <MenuItem icon="fa-flag" label="Moderation queue" onClick={() => go("/admin/moderation")} />
-              <MenuItem icon="fa-exclamation-triangle" label="Reports" onClick={() => go("/admin/reports")} />
-              <MenuItem icon="fa-money-bill-wave" label="Payouts" onClick={() => go("/admin/payouts")} />
-              <MenuItem icon="fa-ban" label="Manage users (ban)" onClick={() => go("/admin/users")} />
-              <MenuItem icon="fa-user-minus" label="Manage scribes" onClick={() => go("/admin/scribes")} />
-              <MenuItem icon="fa-chart-line" label="Financial ledger" onClick={() => go("/admin/finance")} />
-              <MenuItem icon="fa-envelope-open-text" label="Message a user" onClick={() => go("/admin/messages")} />
             </>
           )}
 

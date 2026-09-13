@@ -1,86 +1,105 @@
-* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font-archivo), -apple-system, sans-serif; }
 html { color-scheme: light; }
 
+/* ================================================================
+   "The Ledger" — Veloce's design system.
+   Same variable names as before on purpose: every component file
+   already references these, so re-pointing the values is enough to
+   re-skin the whole app without touching 40+ files individually.
+   Structural changes (rule-lines instead of shadow-cards, mono for
+   data) live in the component classes further down, not here.
+   ================================================================ */
 :root {
-  --ink: #18181b;
-  --ink-hover: #27272a;
-  --accent: #f59e0b;
-  --accent-light: #fbbf24;
-  --accent-dark: #b45309;
-  --stone-light: #e7e5e4;
-  --stone-mid: #a8a29e;
-  --stone-dark: #57534e;
-  --text-primary: #18181b;
-  --text-secondary: #78716c;
-  --text-muted: #9aa8ba;
-  --bg-page: #fafaf9;
-  --bg-pill: #fef3c7;
-  --border: #d6d3d1;
-  --border-light: #e7e5e4;
-  --border-blue: #d0dae8;
-  --surface: #ffffff;
+  --ink: #16213A;
+  --ink-hover: #1F2E4D;
+  --accent: #B23A2E;
+  --accent-light: #C65A4E;
+  --accent-dark: #8A2A20;
+  --stone-light: #EDE6D6;
+  --stone-mid: #C9BFA8;
+  --stone-dark: #6B6252;
+  --text-primary: #16213A;
+  --text-secondary: #6B6252;
+  --text-muted: #9C9A8C;
+  --bg-page: #F6F1E7;
+  --bg-pill: #F3E4C4;
+  --border: #D8CFB8;
+  --border-light: #E3DBC7;
+  --border-blue: #D8CFB8;
+  --surface: #FBF8F0;
 
-  --text-danger: #b13e3e;
-  --text-success: #1b7e4a;
-  --text-info: #2a7de1;
-  --text-warning: #a5690a;
-  --text-pro: #6b3fa0;
-  --bg-danger: #fdecec;
-  --bg-success: #e7f6ec;
-  --bg-info: #eef3fa;
-  --bg-warning: #fdf3e3;
-  --bg-pro: #f0e9fb;
-  --star: #e0a63e;
-  --accent-glow: rgba(245,158,11,0.15);
-  --accent-glow-strong: rgba(245,158,11,0.3);
+  --text-danger: #B23A2E;
+  --text-success: #3F6B4A;
+  --text-info: #3A5A78;
+  --text-warning: #A5690A;
+  --text-pro: #7A4A6B;
+  --bg-danger: #F3E2DE;
+  --bg-success: #E5EDE6;
+  --bg-info: #E7E9E0;
+  --bg-warning: #FBF0DC;
+  --bg-pro: #EDE5E9;
+  --star: #B8863B;
+  --accent-glow: rgba(178,58,46,0.15);
+  --accent-glow-strong: rgba(178,58,46,0.3);
 }
 
 html[data-theme="dark"] {
   color-scheme: dark;
-  --ink: #061410;
-  --ink-hover: #0b1f19;
-  --accent: #22c55e;
-  --accent-light: #4ade80;
-  --accent-dark: #15803d;
-  --stone-light: #10211b;
-  --stone-mid: #2c463c;
-  --stone-dark: #7fa694;
-  --text-primary: #f2fbf6;
-  --text-secondary: #9fb8ac;
-  --text-muted: #6b8578;
-  --bg-page: #05100c;
-  --bg-pill: #0f2e22;
-  --border: #17352a;
-  --border-light: #17352a;
-  --border-blue: #17352a;
-  --surface: #0a1c15;
+  --ink: #2A3A5C;
+  --ink-hover: #34456B;
+  --accent: #C65A4E;
+  --accent-light: #D97A6E;
+  --accent-dark: #B23A2E;
+  --stone-light: #2A2D35;
+  --stone-mid: #565A64;
+  --stone-dark: #A8A296;
+  --text-primary: #EDE6D6;
+  --text-secondary: #A8A296;
+  --text-muted: #75726A;
+  --bg-page: #14161C;
+  --bg-pill: #3A3020;
+  --border: #3A3D46;
+  --border-light: #3A3D46;
+  --border-blue: #3A3D46;
+  --surface: #1C1E26;
 
-  --text-danger: #f87171;
-  --text-success: #4ade80;
-  --text-info: #34d399;
-  --text-warning: #fbbf24;
-  --text-pro: #c4b5fd;
-  --bg-danger: #2a1414;
-  --bg-success: #0f2e22;
-  --bg-info: #0f2e22;
-  --bg-warning: #2a2210;
-  --bg-pro: #201a33;
-  --star: #fbbf24;
-  --accent-glow: rgba(34,197,94,0.2);
-  --accent-glow-strong: rgba(34,197,94,0.35);
+  --text-danger: #D97A6E;
+  --text-success: #6FA57E;
+  --text-info: #7A9BB8;
+  --text-warning: #D4A24C;
+  --text-pro: #A57AA0;
+  --bg-danger: #3A2622;
+  --bg-success: #22332A;
+  --bg-info: #262A24;
+  --bg-warning: #332B1C;
+  --bg-pro: #2E2530;
+  --star: #D4A24C;
+  --accent-glow: rgba(198,90,78,0.2);
+  --accent-glow-strong: rgba(198,90,78,0.35);
 }
 
 
 body { background: var(--bg-page); min-height: 100vh; color: var(--text-primary); }
+
+/* Anything tabular or factual — course codes, prices, stats — sets in
+   mono, never the body typeface. This is the single most ownable visual
+   signature in the whole redesign: it comes directly from treating
+   Veloce's data (course codes, a ledger of prices) as what it actually
+   is, not from decoration. */
+.mono, .price-tag, .course-code {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
 
 .app-container {
   max-width: 1350px;
   width: 100%;
   margin: 0 auto;
   background: var(--surface);
-  border-radius: 0.9rem;
+  border-radius: 2px;
+  border: 1px solid var(--border-light);
   border-top: 3px solid var(--accent);
-  box-shadow: 0 12px 32px -14px rgba(24,24,27,0.18);
   padding: 1.5rem 2rem 2.5rem;
 }
 
@@ -89,7 +108,7 @@ body { background: var(--bg-page); min-height: 100vh; color: var(--text-primary)
 .logo span { color: var(--accent); }
 .logo-sub { font-size: 0.75rem; color: var(--text-secondary); margin-top: -0.2rem; }
 
-.role-pill { background: var(--bg-pill); padding: 0.4rem 1rem 0.4rem 1.2rem; border-radius: 0.6rem; display: inline-flex; align-items: center; gap: 0.6rem; font-weight: 500; font-size: 0.9rem; color: var(--text-primary); border: 1px solid var(--border); }
+.role-pill { background: var(--bg-pill); padding: 0.4rem 1rem 0.4rem 1.2rem; border-radius: 3px; display: inline-flex; align-items: center; gap: 0.6rem; font-weight: 500; font-size: 0.9rem; color: var(--text-primary); border: 1px solid var(--border); }
 
 .profile-menu-dropdown { right: 0; }
 
@@ -103,10 +122,66 @@ body { background: var(--bg-page); min-height: 100vh; color: var(--text-primary)
 .locked { opacity: 0.7; }
 .unlocked { border-left: 4px solid var(--accent) !important; }
 
-.btn { background: var(--surface); color: var(--text-primary); border: 1px solid var(--border); padding: 0.4rem 1.1rem; border-radius: 0.5rem; font-weight: 500; font-size: 0.8rem; cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 0.4rem; }
-.btn:hover { border-color: var(--stone-dark); background: var(--stone-light); }
+/* --- Ledger rows: the structural replacement for shadow-cards ---
+   A row is a line in the ledger, not a floating card. Structure comes
+   from the rule (border-bottom) between rows, not elevation. Stacks
+   naturally on mobile with no grid breakpoints to maintain. */
+.ledger-list { display: flex; flex-direction: column; border-top: 1px solid var(--border); }
+.ledger-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.1rem 0.2rem;
+  border-bottom: 1px solid var(--border);
+  border-left: 3px solid transparent;
+  padding-left: 0.8rem;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.ledger-row:hover { border-left-color: var(--accent); background: var(--bg-info); }
+.ledger-row.is-unlocked { border-left-color: var(--text-success); }
+.ledger-row-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.8rem; flex-wrap: wrap; }
+.ledger-row-title { font-size: 1.05rem; font-weight: 600; }
+.ledger-row-meta { color: var(--text-secondary); font-size: 0.85rem; }
+
+/* --- Seal: trust-level / course-code marks — a mark of record, not a
+   decorative rounded pill. Sharp corners, quiet gold, no shadow. --- */
+.seal {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--bg-pill);
+  color: var(--accent-dark);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+/* --- Stamp: a status mark (unlocked, verifying, disputed) styled like
+   an ink stamp impression — a slight rotation and a double-ish border
+   is the one deliberately playful touch in this whole system, used
+   nowhere else. --- */
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+  padding: 0.15rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  transform: rotate(-1.5deg);
+  letter-spacing: 0.02em;
+}
+.stamp-success { color: var(--text-success); }
+.stamp-warning { color: var(--text-warning); }
+.stamp-danger { color: var(--text-danger); }
+
+.btn { background: var(--surface); color: var(--text-primary); border: 1px solid var(--border); padding: 0.4rem 1.1rem; border-radius: 3px; font-weight: 500; font-size: 0.8rem; cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 0.4rem; }
+.btn:hover { border-color: var(--accent); background: var(--stone-light); }
 .btn-primary { background: var(--ink); border: 1px solid var(--ink); color: white; }
-.btn-primary:hover { background: var(--ink-hover); border-color: var(--ink-hover); }
+.btn-primary:hover { background: var(--accent); border-color: var(--accent); }
 .btn-primary:disabled { opacity: 0.6; cursor: default; }
 .btn-block { width: 100%; justify-content: center; }
 
@@ -208,6 +283,11 @@ img, svg { max-width: 100%; }
   .block-card { padding: 1rem; }
   .block-card h3 { font-size: 1.05rem; }
 
+  .ledger-row { padding: 0.9rem 0.2rem 0.9rem 0.6rem; }
+  .ledger-row-title { font-size: 0.95rem; }
+  .ledger-row-head { flex-direction: column; align-items: flex-start; gap: 0.3rem; }
+  .stamp { transform: none; } /* the tilt is a nice detail at rest, but fussy on a small screen where it sits close to other text */
+
   .auth-page { padding: 1rem; }
   .auth-card { padding: 1.75rem 1.5rem; border-radius: 0.8rem; }
   .auth-card h1 { font-size: 1.6rem; }
@@ -225,8 +305,8 @@ img, svg { max-width: 100%; }
    ============================================================ */
 
 /* --- Motion primitives --- */
-.card-hover { transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
-.card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 24px -12px rgba(24,24,27,0.18); }
+.card-hover { transition: transform 0.18s ease, border-color 0.18s ease; }
+.card-hover:hover { transform: translateY(-2px); border-color: var(--accent); }
 
 .press-on-tap { transition: transform 0.1s ease; }
 .press-on-tap:active { transform: scale(0.97); }

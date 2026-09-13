@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac } from "crypto";
+import * as Sentry from "@sentry/nextjs";
 import { prisma } from "@/lib/prisma";
 import { generateReceiptImage } from "@/lib/receipt";
 import { sendEmail } from "@/lib/email";
@@ -27,6 +28,8 @@ export async function POST(req: NextRequest) {
     await handleChargeSuccess(event.data);
   } else if (event.event === "transfer.success" || event.event === "transfer.failed" || event.event === "transfer.reversed") {
     await handleTransferEvent(event.event, event.data);
+  } else if (event.event === "charge.dispute.create") {
+    await handleDisputeCreated(event.data);
   }
   // Any other event type — nothing we care about, just acknowledge it below.
 
@@ -67,6 +70,10 @@ async function handleChargeSuccess(data: any) {
   // unlike the browser-driven verify endpoint.
   if (!metadata?.blockId || !metadata?.noteId || !metadata?.userId) {
     console.error("Paystack webhook: charge.success missing expected metadata", reference);
+    Sentry.captureMessage("Paystack webhook: charge.success missing expected metadata", {
+      level: "error",
+      extra: { reference },
+    });
     return;
   }
 
@@ -86,6 +93,7 @@ async function handleChargeSuccess(data: any) {
     // moment earlier — not an error, just the other path getting there first.
     if (err?.code !== "P2002") {
       console.error("Paystack webhook: failed to create purchase", reference, err);
+      Sentry.captureException(err, { extra: { reference, context: "webhook-charge-success" } });
     }
   }
 }
@@ -128,6 +136,7 @@ async function handleTransferEvent(eventType: string, data: any) {
       });
     } catch (err) {
       console.error("Failed to send payout receipt email:", err);
+      Sentry.captureException(err, { extra: { payoutId: payout.id, context: "payout-receipt-email" } });
     }
   } else {
     await prisma.payout.update({
@@ -135,4 +144,100 @@ async function handleTransferEvent(eventType: string, data: any) {
       data: { status: "FAILED", failureReason: data?.failure_reason || eventType },
     });
   }
+}
+
+// A chargeback filed with the buyer's bank, entirely outside our own
+// admin-approved refund flow — the buyer never touched "Request refund" in
+// Veloce. We only find out about it here, and by the time we do, the
+// scribe's 30-minute hold may have already expired and the money may
+// already be withdrawn. We can't undo a withdrawal that's already
+// happened, but we CAN stop the bleeding immediately: revoke the buyer's
+// access and pull this purchase out of every earnings calculation right
+// now (reusing refundedAt does both, for free, via the exact same checks
+// the admin-refund flow already relies on), and alert every admin so a
+// human can decide whether to contest the dispute with Paystack.
+//
+// Deliberately does NOT grant a coupon — that's a goodwill gesture for a
+// refund Veloce chose to give, not for a chargeback that happened to us.
+//
+// NOTE ON PAYLOAD SHAPE: Paystack's exact dispute payload wasn't something
+// I could verify against live docs while building this — it's built
+// defensively (checks a couple of plausible reference locations) and logs
+// loudly if none match, rather than silently no-op'ing on a shape
+// mismatch. Test this against a real dispute in Paystack's dashboard
+// (Settings -> API Keys & Webhooks -> Test Webhook, or trigger one in test
+// mode) before relying on it, and adjust the reference lookup below if the
+// real payload differs.
+async function handleDisputeCreated(data: any) {
+  const reference: string | undefined = data?.transaction?.reference || data?.transaction_reference || data?.reference;
+
+  if (!reference) {
+    console.error("Paystack webhook: charge.dispute.create had no recognizable reference — payload:", JSON.stringify(data));
+    Sentry.captureMessage("Paystack dispute webhook: no recognizable reference in payload", {
+      level: "fatal", // this is the exact scenario that needs a human immediately — a chargeback that goes unhandled
+      extra: { payload: data },
+    });
+    return;
+  }
+
+  const purchase = await prisma.purchase.findUnique({
+    where: { paystackRef: reference },
+    include: {
+      buyer: true,
+      note: { include: { scribe: true } },
+      block: { select: { title: true } },
+    },
+  });
+
+  if (!purchase) {
+    console.error("Paystack webhook: dispute filed on a reference with no matching purchase:", reference);
+    Sentry.captureMessage("Paystack dispute webhook: reference matched no purchase", {
+      level: "fatal",
+      extra: { reference },
+    });
+    return;
+  }
+
+  if (purchase.disputedAt) return; // already handled — Paystack can resend events
+
+  const now = new Date();
+
+  await prisma.$transaction([
+    prisma.purchase.update({
+      where: { id: purchase.id },
+      data: { refundedAt: purchase.refundedAt ?? now, disputedAt: now },
+    }),
+    prisma.report.updateMany({
+      where: { purchaseId: purchase.id, type: "REFUND", status: "PENDING" },
+      data: { status: "ACTIONED", reviewedAt: now },
+    }),
+  ]);
+
+  const admins = await prisma.user.findMany({
+    where: { role: "ADMIN", universityId: purchase.buyer.universityId },
+    select: { id: true },
+  });
+
+  await prisma.adminMessage.createMany({
+    data: [
+      {
+        recipientId: purchase.buyerId,
+        senderId: null,
+        subject: `A dispute was filed on "${purchase.block.title}"`,
+        body: `Your bank filed a dispute on your purchase of "${purchase.block.title}", so access to it has been removed while this is investigated.`,
+      },
+      {
+        recipientId: purchase.note.scribeId,
+        senderId: null,
+        subject: `A sale of "${purchase.block.title}" is under dispute`,
+        body: `A buyer's bank has disputed their purchase of your version of "${purchase.block.title}". This sale has been pulled from your earnings while it's investigated — an admin is looking into it.`,
+      },
+      ...admins.map((a) => ({
+        recipientId: a.id,
+        senderId: null,
+        subject: `Chargeback filed — "${purchase.block.title}"`,
+        body: `A Paystack dispute (charge.dispute.create) came in for purchase ${purchase.id} (${reference}). Access has been auto-revoked and the sale pulled from earnings. Check the Paystack dashboard to contest or accept it.`,
+      })),
+    ],
+  });
 }

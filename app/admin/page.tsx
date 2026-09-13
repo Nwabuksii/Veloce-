@@ -4,28 +4,57 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
 import ProfileMenu from "@/app/components/ProfileMenu";
-import { SkeletonList } from "@/app/components/Skeleton";
 import Logo from "@/app/components/Logo";
-import { friendlyErrorMessage } from "@/lib/api-client";
 
-interface Application {
-  id: string;
-  reason: string;
-  status: string;
-  submittedAt: string;
-  user: { id: string; fullName: string; email: string; level?: string };
+interface HubLink {
+  icon: string;
+  label: string;
+  description: string;
+  href: string;
 }
 
-export default function AdminPage() {
+interface HubGroup {
+  title: string;
+  links: HubLink[];
+}
+
+const GROUPS: HubGroup[] = [
+  {
+    title: "Trust & moderation",
+    links: [
+      { icon: "fa-user-cog", label: "Scribe applications", description: "Approve or reject people applying to become scribes", href: "/admin/applications" },
+      { icon: "fa-undo", label: "Appeals", description: "Demoted scribes asking for reinstatement", href: "/admin/appeals" },
+      { icon: "fa-flag", label: "Moderation queue", description: "Newly uploaded notes awaiting review", href: "/admin/moderation" },
+      { icon: "fa-exclamation-triangle", label: "Reports", description: "Content reports and refund requests from students", href: "/admin/reports" },
+    ],
+  },
+  {
+    title: "Money",
+    links: [
+      { icon: "fa-money-bill-wave", label: "Payouts", description: "Scribe withdrawal requests awaiting approval", href: "/admin/payouts" },
+      { icon: "fa-chart-line", label: "Financial ledger", description: "Revenue, scribe pool, and coupon stats", href: "/admin/finance" },
+    ],
+  },
+  {
+    title: "People",
+    links: [
+      { icon: "fa-ban", label: "Manage users", description: "Ban or unban an account", href: "/admin/users" },
+      { icon: "fa-user-minus", label: "Manage scribes", description: "Demote a scribe back to student", href: "/admin/scribes" },
+      { icon: "fa-envelope-open-text", label: "Message a user", description: "Send someone a direct message", href: "/admin/messages" },
+    ],
+  },
+  {
+    title: "Feedback",
+    links: [{ icon: "fa-comment-dots", label: "Feedback inbox", description: "What people are saying about the site", href: "/admin/feedback" }],
+  },
+];
+
+export default function AdminHubPage() {
   const router = useRouter();
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [actionMessage, setActionMessage] = useState("");
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const user = getStoredUser();
-
     if (!user) {
       router.push("/login");
       return;
@@ -34,38 +63,10 @@ export default function AdminPage() {
       router.push("/dashboard");
       return;
     }
-
-    loadApplications();
+    setReady(true);
   }, [router]);
 
-  async function loadApplications() {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/admin/scribe-applications");
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load applications");
-      setApplications(data.applications);
-    } catch (err) {
-      setError(friendlyErrorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleDecision(id: string, decision: "approve" | "reject") {
-    setActionMessage("");
-
-    try {
-      const res = await fetch(`/api/admin/scribe-applications/${id}/${decision}`, { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || `Could not ${decision}`);
-
-      setActionMessage(`Application ${decision}d.`);
-      setApplications((prev) => prev.filter((a) => a.id !== id));
-    } catch (err) {
-      setActionMessage(friendlyErrorMessage(err));
-    }
-  }
+  if (!ready) return null;
 
   return (
     <div className="page-wrap">
@@ -77,83 +78,35 @@ export default function AdminPage() {
               <h1>
                 Veloce <span className="accent">.</span>
               </h1>
-              <div className="logo-sub">Admin control hub</div>
+              <div className="logo-sub">Admin</div>
             </div>
           </div>
-          <div style={{ display: "flex", gap: "0.6rem" }}>
-            <button className="btn" onClick={() => router.push("/admin/appeals")}>
-              <i className="fas fa-undo"></i> Appeals
-            </button>
-            <button className="btn" onClick={() => router.push("/admin/reports")}>
-              <i className="fas fa-exclamation-triangle"></i> Reports
-            </button>
-            <button className="btn" onClick={() => router.push("/admin/payouts")}>
-              <i className="fas fa-money-bill-wave"></i> Payouts
-            </button>
-            <button className="btn" onClick={() => router.push("/admin/users")}>
-              <i className="fas fa-ban"></i> Users
-            </button>
-            <ProfileMenu />
-          </div>
+          <ProfileMenu />
         </div>
 
-        <div style={{ marginTop: "1.5rem" }}>
-          <h2>
-            <i className="fas fa-user-cog" style={{ color: "var(--text-info)" }}></i> Scribe application review queue
-          </h2>
-
-          {loading && <SkeletonList rows={3} />}
-          {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}
-          {actionMessage && <p style={{ marginTop: "1rem", color: "var(--text-success)" }}>{actionMessage}</p>}
-          {!loading && !error && applications.length === 0 && (
-            <p style={{ marginTop: "1rem", color: "var(--text-secondary)" }}>No pending applications right now.</p>
-          )}
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem", marginTop: "1rem" }}>
-            {applications.map((app) => (
-              <div
-                key={app.id}
-                style={{
-                  background: "var(--surface)",
-                  border: "1px solid var(--border-blue)",
-                  borderRadius: "1rem",
-                  padding: "1rem",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  flexWrap: "wrap",
-                  gap: "0.6rem",
-                }}
-              >
-                <div style={{ flex: "1 1 260px" }}>
-                  <strong>{app.user.fullName}</strong>
-                  <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-                    {app.user.email}
-                    {app.user.level ? ` · ${app.user.level}` : ""}
-                  </div>
-                  <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "0.5rem", whiteSpace: "pre-wrap" }}>
-                    &ldquo;{app.reason}&rdquo;
-                  </p>
-                </div>
-                <div style={{ display: "flex", gap: "0.6rem" }}>
+        <div style={{ marginTop: "1.5rem", display: "flex", flexDirection: "column", gap: "1.8rem" }}>
+          {GROUPS.map((group) => (
+            <div key={group.title}>
+              <h2 style={{ fontSize: "1rem", color: "var(--text-secondary)", marginBottom: "0.4rem" }}>{group.title}</h2>
+              <div className="ledger-list">
+                {group.links.map((link) => (
                   <button
-                    className="btn"
-                    style={{ background: "var(--text-success)", borderColor: "var(--text-success)", color: "white" }}
-                    onClick={() => handleDecision(app.id, "approve")}
+                    key={link.href}
+                    className="ledger-row press-on-tap"
+                    style={{ width: "100%", background: "none", cursor: "pointer", textAlign: "left" }}
+                    onClick={() => router.push(link.href)}
                   >
-                    <i className="fas fa-check"></i> Approve
+                    <div className="ledger-row-head">
+                      <span className="ledger-row-title">
+                        <i className={`fas ${link.icon}`} style={{ color: "var(--accent)", width: "1.2rem" }}></i> {link.label}
+                      </span>
+                    </div>
+                    <div className="ledger-row-meta">{link.description}</div>
                   </button>
-                  <button
-                    className="btn"
-                    style={{ background: "var(--text-danger)", borderColor: "var(--text-danger)", color: "white" }}
-                    onClick={() => handleDecision(app.id, "reject")}
-                  >
-                    <i className="fas fa-times"></i> Reject
-                  </button>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

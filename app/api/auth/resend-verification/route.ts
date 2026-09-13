@@ -3,6 +3,7 @@ import { z } from "zod";
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
+import { checkRateLimit, ipKeyFrom } from "@/lib/rate-limit";
 
 const RESEND_COOLDOWN_MS = 60 * 1000; // 60 seconds
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
@@ -12,6 +13,11 @@ const resendSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const allowed = await checkRateLimit(ipKeyFrom(req, "resend-verification"), 8, 60 * 60 * 1000);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many requests from this network. Try again later." }, { status: 429 });
+  }
+
   const parsed = resendSchema.safeParse(await req.json());
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });

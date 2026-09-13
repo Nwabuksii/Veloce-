@@ -3,6 +3,7 @@ import { z } from "zod";
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
+import { checkRateLimit, ipKeyFrom } from "@/lib/rate-limit";
 
 const RESEND_COOLDOWN_MS = 60 * 1000;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour — shorter than email verification's 24h, since a live reset link is a more sensitive thing to leave valid for long
@@ -12,6 +13,14 @@ const forgotSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  // The per-email cooldown below stops spamming one inbox; this stops
+  // someone cycling through many different emails to spam a lot of
+  // different inboxes from the same place.
+  const allowed = await checkRateLimit(ipKeyFrom(req, "forgot-password"), 8, 60 * 60 * 1000);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many requests from this network. Try again later." }, { status: 429 });
+  }
+
   const parsed = forgotSchema.safeParse(await req.json());
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });

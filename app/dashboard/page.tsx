@@ -253,46 +253,19 @@ export default function DashboardPage() {
             </p>
           )}
 
-          <div className="card-grid">
+          <div className="ledger-list">
             {blocks.map((block) => (
               <div
                 key={block.id}
-                className={`block-card ${block.unlocked ? "unlocked" : "locked"}`}
+                className={`ledger-row press-on-tap ${block.unlocked ? "is-unlocked" : ""}`}
                 onClick={() => router.push(`/blocks/${block.id}`)}
                 style={{ cursor: "pointer" }}
               >
-                <div className="badge">{block.courseCode}</div>
-                <h3>{block.title}</h3>
-                <div className="meta">{block.courseName}</div>
-                {block.scribeName && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/scribe/${block.scribeId}`);
-                    }}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      padding: 0,
-                      cursor: "pointer",
-                      fontSize: "0.8rem",
-                      color: "var(--text-info)",
-                      marginTop: "-0.4rem",
-                      marginBottom: "0.6rem",
-                      display: "block",
-                    }}
-                  >
-                    by {block.scribeName}
-                  </button>
-                )}
-                {block.topics.length > 0 && (
-                  <ul style={{ fontSize: "0.8rem", color: "var(--text-secondary)", margin: "0.4rem 0 0.8rem", paddingLeft: "1.1rem" }}>
-                    {block.topics.map((t, i) => (
-                      <li key={i}>{t}</li>
-                    ))}
-                  </ul>
-                )}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div className="ledger-row-head">
+                  <span className="ledger-row-title">
+                    <span className="seal mono" style={{ marginRight: "0.6rem" }}>{block.courseCode}</span>
+                    {block.title}
+                  </span>
                   {!block.unlocked && couponBalance != null && couponBalance > 0 ? (
                     <span className="price-tag" style={{ color: "var(--text-pro)", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
                       <i className="fas fa-ticket"></i> Use coupon
@@ -308,29 +281,56 @@ export default function DashboardPage() {
                         </span>
                       </span>
                     ) : (
-                      <span>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
                         <span className="price-tag">₦{block.discountedPrice.toLocaleString()}</span>
-                        <span className="pill pill-info" style={{ marginLeft: "0.5rem" }}>Fixed price</span>
+                        <span className="seal">Fixed price</span>
                       </span>
                     )
                   ) : (
                     <span className="price-tag">₦{block.price.toLocaleString()}</span>
                   )}
+                </div>
+
+                <div className="ledger-row-meta">{block.courseName}</div>
+
+                {block.scribeName && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/scribe/${block.scribeId}`);
+                    }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      cursor: "pointer",
+                      fontSize: "0.8rem",
+                      color: "var(--text-info)",
+                      display: "block",
+                    }}
+                  >
+                    by {block.scribeName}
+                  </button>
+                )}
+
+                {block.topics.length > 0 && (
+                  <ul style={{ fontSize: "0.8rem", color: "var(--text-secondary)", margin: "0.3rem 0 0", paddingLeft: "1.1rem" }}>
+                    {block.topics.map((t, i) => (
+                      <li key={i}>{t}</li>
+                    ))}
+                  </ul>
+                )}
+
+                <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", marginTop: "0.3rem" }}>
                   {block.liveNoteCount > 1 ? (
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      {block.unlocked && (
-                        <span style={{ color: "var(--text-success)", fontSize: "0.75rem" }}>
-                          <i className="fas fa-check-circle"></i>
-                        </span>
-                      )}
+                      {block.unlocked && <span className="stamp stamp-success">Unlocked</span>}
                       <button className="btn btn-primary" onClick={(e) => { e.stopPropagation(); openVersionPicker(block); }}>
                         <i className="fas fa-layer-group"></i> {block.liveNoteCount} versions
                       </button>
                     </div>
                   ) : block.unlocked ? (
-                    <span style={{ color: "var(--text-success)", fontWeight: 500 }}>
-                      <i className="fas fa-check-circle"></i> unlocked
-                    </span>
+                    <span className="stamp stamp-success">Unlocked</span>
                   ) : (
                     <button className="btn btn-primary" onClick={(e) => { e.stopPropagation(); handleBuyClick(block); }}>
                       {couponBalance != null && couponBalance > 0 ? (
@@ -362,7 +362,7 @@ export default function DashboardPage() {
             <div
               style={{
                 background: "var(--surface)",
-                borderRadius: "16px",
+                borderRadius: "4px",
                 padding: "1.5rem",
                 width: "min(480px, 92vw)",
                 maxHeight: "80vh",
@@ -494,9 +494,10 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {pendingCouponBuy && (
+      {pendingCouponBuy && couponBalance != null && (
         <CouponConfirmDialog
           itemLabel={pendingCouponBuy.block.title}
+          couponBalance={couponBalance}
           confirming={couponConfirming}
           onConfirm={confirmCouponBuy}
           onCancel={() => setPendingCouponBuy(null)}

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyPassword, signToken, SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth";
 import { checkAndResolveBan } from "@/lib/ban";
 import { formatDateDDMMYYYY } from "@/lib/date-format";
+import { checkRateLimit, ipKeyFrom } from "@/lib/rate-limit";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -14,6 +15,15 @@ const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
 
 export async function POST(req: NextRequest) {
+  // Per-account lockout (below) stops one account being brute-forced, but
+  // doesn't stop someone trying many different emails from one place —
+  // this catches that. Generous limit since a whole campus can share one
+  // public IP behind NAT.
+  const allowed = await checkRateLimit(ipKeyFrom(req, "login"), 30, 15 * 60 * 1000);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many login attempts from this network. Try again shortly." }, { status: 429 });
+  }
+
   const body = await req.json();
   const parsed = loginSchema.safeParse(body);
 

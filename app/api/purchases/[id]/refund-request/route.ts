@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { REFUND_WINDOW_MINUTES } from "@/lib/pricing";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 interface RouteContext {
   params: { id: string };
@@ -13,6 +14,15 @@ const refundRequestSchema = z.object({
 });
 
 export const POST = requireRole<RouteContext>("STUDENT", async (req: NextRequest, user, ctx) => {
+  // The existing "one pending request per purchase" check below stops
+  // spamming the same purchase; this stops spamming the admin queue
+  // across many different purchases instead. 10/hour is generous — a
+  // genuine user rarely files more than one or two of these, ever.
+  const allowed = await checkRateLimit(`refund-request:${user.sub}`, 10, 60 * 60 * 1000);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many refund requests. Try again later." }, { status: 429 });
+  }
+
   const purchaseId = ctx.params.id;
 
   const purchase = await prisma.purchase.findUnique({

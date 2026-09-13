@@ -92,6 +92,12 @@ export default function SignupPage() {
 
                 {error && <div className="auth-error">{error}</div>}
 
+                <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                  By signing up, you agree to Veloce's{" "}
+                  <a href="/terms" target="_blank" rel="noopener noreferrer">Terms of Service</a> and{" "}
+                  <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.
+                </p>
+
                 <button className="btn btn-primary btn-block" type="submit" disabled={loading}>
                   {loading ? "Creating account..." : "Sign up"}
                 </button>

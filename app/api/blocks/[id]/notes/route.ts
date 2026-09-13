@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { computeTrustLevel } from "@/lib/trust-level";
+import { REQUEST_FULFILLED_PRICE } from "@/lib/pricing";
 
 interface RouteContext {
   params: { id: string };
@@ -50,11 +51,11 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
     }),
     prisma.purchase.findMany({
       where: { buyerId: user.sub, blockId, refundedAt: null },
-      select: { noteId: true },
+      select: { id: true, noteId: true, review: { select: { rating: true, comment: true } } },
     }),
   ]);
 
-  const ownedNoteIds = new Set(myPurchases.map((p) => p.noteId));
+  const purchaseByNoteId = new Map(myPurchases.map((p) => [p.noteId, p]));
 
   const salesCountByScribe = new Map<string, number>();
   for (const p of salesByScribe) {
@@ -82,6 +83,8 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
       hasRejectedNote: rejectedScribeIds.has(n.scribeId),
     });
 
+    const myPurchase = purchaseByNoteId.get(n.id);
+
     return {
       noteId: n.id,
       scribeId: n.scribeId,
@@ -91,7 +94,15 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
       noteAvgRating,
       noteRatingCount,
       uploadedAt: n.createdAt,
-      owned: ownedNoteIds.has(n.id),
+      owned: Boolean(myPurchase),
+      purchaseId: myPurchase?.id ?? null,
+      myReview: myPurchase?.review ? { rating: myPurchase.review.rating, comment: myPurchase.review.comment } : null,
+      // A note that fulfills a student request is always REQUEST_FULFILLED_PRICE,
+      // never the block's normal price — this must match exactly what
+      // app/api/payments/initialize/route.ts actually charges, or the page
+      // shows one number and collects another.
+      price: n.fulfillsRequestId ? REQUEST_FULFILLED_PRICE : block.price,
+      isRequestFulfillment: Boolean(n.fulfillsRequestId),
     };
   });
 

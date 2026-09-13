@@ -127,6 +127,11 @@ function LoginForm() {
           <p className="auth-switch">
             No account? <a href="/signup">Sign up</a> &middot; <a href="/forgot-password">Forgot password?</a>
           </p>
+          <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", textAlign: "center", marginTop: "0.5rem" }}>
+            <a href="/terms" target="_blank" rel="noopener noreferrer">Terms</a>
+            {" "}&middot;{" "}
+            <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy</a>
+          </p>
         </div>
       </div>
     </div>

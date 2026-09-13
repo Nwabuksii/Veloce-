@@ -50,6 +50,7 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
     amountPaid: p.amountPaid,
     discountApplied: p.discountApplied,
     refunded: Boolean(p.refundedAt),
+    disputed: Boolean(p.disputedAt),
     redeemedWithCoupon: p.redeemedWithCoupon,
     purchasedAt: p.purchasedAt,
   }));

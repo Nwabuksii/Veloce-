@@ -1,6 +1,19 @@
 import "./globals.css";
+import { Archivo, JetBrains_Mono } from "next/font/google";
 import ToastViewport from "./components/ToastViewport";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme";
+
+const archivo = Archivo({
+  subsets: ["latin"],
+  variable: "--font-archivo",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  display: "swap",
+});
 
 export const metadata = {
   title: "Veloce",
@@ -14,7 +27,7 @@ export const viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${archivo.variable} ${jetbrainsMono.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
         <link

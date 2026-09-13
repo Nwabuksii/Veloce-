@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import { sendEmail } from "@/lib/email";
 import { passwordSchema } from "@/lib/password-policy";
+import { checkRateLimit, ipKeyFrom } from "@/lib/rate-limit";
 
 const signupSchema = z.object({
   email: z.string().email(),
@@ -21,6 +22,11 @@ const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 // the account only becomes real once the verification link is clicked (see
 // /api/auth/verify-email). Login is blocked entirely until then.
 export async function POST(req: NextRequest) {
+  const allowed = await checkRateLimit(ipKeyFrom(req, "signup"), 8, 60 * 60 * 1000);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many signups from this network. Try again later." }, { status: 429 });
+  }
+
   const body = await req.json();
   const parsed = signupSchema.safeParse(body);
 

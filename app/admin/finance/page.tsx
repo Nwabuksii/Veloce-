@@ -19,6 +19,7 @@ interface Transaction {
   amountPaid: number;
   discountApplied: boolean;
   refunded: boolean;
+  disputed: boolean;
   redeemedWithCoupon: boolean;
   purchasedAt: string;
 }
@@ -182,7 +183,11 @@ export default function AdminFinancePage() {
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.7rem" }}>
                         {t.discountApplied && <span className="pill pill-info">Fixed request price</span>}
-                        {t.refunded ? (
+                        {t.disputed ? (
+                          <span className="pill" style={{ background: "var(--bg-danger)", color: "var(--text-danger)" }}>
+                            <i className="fas fa-triangle-exclamation"></i> Disputed
+                          </span>
+                        ) : t.refunded ? (
                           <span className="pill" style={{ background: "var(--bg-danger)", color: "var(--text-danger)" }}>Refunded</span>
                         ) : t.redeemedWithCoupon ? (
                           <span className="pill" style={{ background: "var(--bg-pro)", color: "var(--text-pro)" }}>
