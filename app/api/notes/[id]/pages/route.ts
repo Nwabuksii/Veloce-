@@ -28,9 +28,20 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
 
   let pageCount = note.pageCount;
   if (!pageCount) {
-    const buffer = await readNoteFile(note.fileUrl);
-    pageCount = await getPdfPageCount(buffer);
-    await prisma.note.update({ where: { id: note.id }, data: { pageCount } });
+    try {
+      const buffer = await readNoteFile(note.fileUrl);
+      pageCount = await getPdfPageCount(buffer);
+      await prisma.note.update({ where: { id: note.id }, data: { pageCount } });
+    } catch (err) {
+      // Upload now validates the PDF opens before it can ever go LIVE, but
+      // this still guards any note saved before that check existed —
+      // surface a clear, expected error instead of an unhandled crash.
+      console.error(`Failed to read/render note ${note.id} for page count:`, err);
+      return NextResponse.json(
+        { error: "This file couldn't be opened — it may not have uploaded correctly. Please contact the scribe or support." },
+        { status: 422 }
+      );
+    }
   }
 
   return NextResponse.json({ pageCount });

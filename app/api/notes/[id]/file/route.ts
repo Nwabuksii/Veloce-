@@ -35,7 +35,16 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     return NextResponse.json({ error: "You don't have access to this file" }, { status: 403 });
   }
 
-  const buffer = await readNoteFile(note.fileUrl);
+  let buffer: Buffer;
+  try {
+    buffer = await readNoteFile(note.fileUrl);
+  } catch (err) {
+    console.error(`Failed to read file for note ${note.id}:`, err);
+    return NextResponse.json(
+      { error: "This file couldn't be opened — it may not have uploaded correctly. Please contact the scribe or support." },
+      { status: 422 }
+    );
+  }
 
   return new NextResponse(new Uint8Array(buffer), {
     headers: {

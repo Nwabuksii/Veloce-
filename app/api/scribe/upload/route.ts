@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import * as Sentry from "@sentry/nextjs";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { saveNoteFile } from "@/lib/storage";
 import { runQualityGate } from "@/lib/quality-check";
+import { getPdfPageCount } from "@/lib/pdf-render";
 // @ts-expect-error — pdf-parse ships without its own type declarations
 import pdfParse from "pdf-parse";
 
@@ -39,8 +39,7 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
     }
 
     // If this block was created to fulfill a demand-feed request, tag the
-    // note with it so it always sells at the fixed request-fulfillment
-    // price (see lib/pricing.ts), for any buyer — not just those who voted.
+    // note with it so buyers who voted for it can get their discount.
     const fulfilledRequest = await prisma.blockRequest.findFirst({
       where: { blockId: block.id, status: "FULFILLED" },
     });
@@ -54,24 +53,13 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
       return NextResponse.json({ error: "This doesn't look like a real PDF file" }, { status: 400 });
     }
 
-    let parsed;
+    let parsed: { text?: string; numpages: number };
     try {
       parsed = await pdfParse(buffer);
-    } catch (parseErr) {
-      // The library's own error text ("Invalid PDF structure" etc.) means
-      // nothing to a student — it's genuinely a real, valid PDF that opens
-      // fine in a normal viewer, just structured in a way this specific
-      // text-extraction library can't read. Re-saving through a different
-      // tool (print-to-PDF, or re-export from Word/Docs) normalizes the
-      // structure and almost always fixes it — that's the actionable fix,
-      // so that's what the person sees, not the library internals.
-      console.error("Scribe upload: PDF parsing failed", parseErr);
-      Sentry.captureException(parseErr, { extra: { context: "scribe-upload-pdf-parse", userId: user.sub } });
+    } catch (err) {
+      console.error("pdf-parse failed on upload:", err);
       return NextResponse.json(
-        {
-          error:
-            "We couldn't read this PDF's content. It may still open fine in a normal PDF viewer, but this file's internal structure isn't one we can extract text from. Try re-saving it — e.g. open it and use \"Print → Save as PDF\", or re-export it from Word/Google Docs — then upload that version.",
-        },
+        { error: "This PDF looks corrupted or didn't fully upload. Please try uploading it again." },
         { status: 400 }
       );
     }
@@ -80,6 +68,27 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
     if (parsed.numpages > MAX_PDF_PAGES) {
       return NextResponse.json(
         { error: `PDF has too many pages (${parsed.numpages}) — max ${MAX_PDF_PAGES}. Split it into smaller blocks.` },
+        { status: 400 }
+      );
+    }
+
+    // pdf-parse is a lenient reader — it can happily return text for a file
+    // that's truncated or otherwise malformed and never notice. The actual
+    // reading experience renders pages with pdfjs-dist instead (see
+    // lib/pdf-render.ts), which is stricter and throws on exactly the kind
+    // of broken/incomplete PDF pdf-parse let through above. Without this
+    // check, that mismatch was the whole bug: a half-uploaded PDF could
+    // sail past pdf-parse, get saved, and go LIVE — only to 500 the moment
+    // a buyer actually tried to open it. Running the real renderer's own
+    // "can I even open this" check here, before anything is saved or goes
+    // live, catches it up front instead.
+    let pageCount: number;
+    try {
+      pageCount = await getPdfPageCount(buffer);
+    } catch (err) {
+      console.error("PDF failed render validation on upload:", err);
+      return NextResponse.json(
+        { error: "This PDF looks corrupted or didn't fully upload. Please try uploading it again." },
         { status: 400 }
       );
     }
@@ -112,6 +121,7 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
         scribeId: user.sub,
         fileUrl: storedFilename,
         extractedText,
+        pageCount,
         similarityScore: result.maxSimilarity,
         qualityScore: result.qualityScore,
         flaggedForReview: result.flagged,
@@ -128,7 +138,6 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
     });
   } catch (err) {
     console.error("Scribe upload failed:", err);
-    Sentry.captureException(err, { extra: { context: "scribe-upload-general", userId: user.sub } });
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: `Upload failed: ${message}` }, { status: 500 });
   }

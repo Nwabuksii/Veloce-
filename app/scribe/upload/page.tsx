@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, FormEvent, Suspense } from "react";
+import { useEffect, useState, FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
 import Logo from "@/app/components/Logo";
 import { friendlyErrorMessage } from "@/lib/api-client";
+import { toast } from "@/lib/toast";
 
 interface CourseOption {
   id: string;
@@ -30,7 +31,12 @@ const inputStyle: React.CSSProperties = {
   border: "1px solid var(--border-blue)",
 };
 
-function ScribeUploadForm() {
+// This page reads ?requestId=/?courseId= to support the "Fulfill this"
+// one-click flow from the discovery feed — needs dynamic rendering so
+// a production build doesn't try to statically prerender it.
+export const dynamic = "force-dynamic";
+
+export default function ScribeUploadPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -242,12 +248,17 @@ function ScribeUploadForm() {
 
       if (!res.ok) {
         setStatus(data.error || "Upload failed");
+        setLoading(false);
         return;
       }
-      setStatus(data.message);
+
+      // Redirect straight back to the workspace on success so the scribe
+      // can't hit Upload again on the same file/block — leaving them on
+      // this page invited exactly that (accidental duplicate uploads).
+      toast.success(data.message || "Uploaded!");
+      router.push("/scribe/workspace");
     } catch {
       setStatus("Something went wrong uploading. Try again.");
-    } finally {
       setLoading(false);
     }
   }
@@ -381,7 +392,7 @@ function ScribeUploadForm() {
 
                 {openRequests.length > 0 && (
                   <label style={{ fontSize: "0.85rem", fontWeight: 500 }}>
-                    Fulfill an open request? (optional — this note sells at a fixed ₦900, ₦600 of which is yours)
+                    Fulfill an open request? (optional — buyers who asked for it get a discount)
                     <select
                       value={fulfillsRequestId}
                       onChange={(e) => setFulfillsRequestId(e.target.value)}
@@ -458,13 +469,5 @@ function ScribeUploadForm() {
         )}
       </div>
     </div>
-  );
-}
-
-export default function ScribeUploadPage() {
-  return (
-    <Suspense fallback={<div className="page-wrap"><div className="app-container">Loading...</div></div>}>
-      <ScribeUploadForm />
-    </Suspense>
   );
 }

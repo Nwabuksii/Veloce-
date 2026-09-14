@@ -48,30 +48,41 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
 
   let baseImageBuffer: Buffer;
 
-  if (pageImage) {
-    baseImageBuffer = await readNoteFile(pageImage.imageUrl); // generic fetch-by-url despite the name
-  } else {
-    const pdfBuffer = await readNoteFile(note.fileUrl);
+  try {
+    if (pageImage) {
+      baseImageBuffer = await readNoteFile(pageImage.imageUrl); // generic fetch-by-url despite the name
+    } else {
+      const pdfBuffer = await readNoteFile(note.fileUrl);
 
-    if (!note.pageCount) {
-      const pageCount = await getPdfPageCount(pdfBuffer);
-      await prisma.note.update({ where: { id: note.id }, data: { pageCount } });
+      if (!note.pageCount) {
+        const pageCount = await getPdfPageCount(pdfBuffer);
+        await prisma.note.update({ where: { id: note.id }, data: { pageCount } });
+      }
+
+      baseImageBuffer = await renderPdfPageToImage(pdfBuffer, pageNum);
+      const imageUrl = await saveNotePageImage(note.id, pageNum, baseImageBuffer);
+
+      // Someone else may have rendered + cached this exact page in the tiny
+      // window since our findUnique above — @@unique([noteId, pageNum]) means
+      // the loser here just quietly keeps using its own freshly-rendered
+      // buffer instead of erroring, since the pixels are identical either way.
+      try {
+        pageImage = await prisma.notePageImage.create({
+          data: { noteId: note.id, pageNum, imageUrl },
+        });
+      } catch (err: any) {
+        if (err?.code !== "P2002") throw err;
+      }
     }
-
-    baseImageBuffer = await renderPdfPageToImage(pdfBuffer, pageNum);
-    const imageUrl = await saveNotePageImage(note.id, pageNum, baseImageBuffer);
-
-    // Someone else may have rendered + cached this exact page in the tiny
-    // window since our findUnique above — @@unique([noteId, pageNum]) means
-    // the loser here just quietly keeps using its own freshly-rendered
-    // buffer instead of erroring, since the pixels are identical either way.
-    try {
-      pageImage = await prisma.notePageImage.create({
-        data: { noteId: note.id, pageNum, imageUrl },
-      });
-    } catch (err: any) {
-      if (err?.code !== "P2002") throw err;
-    }
+  } catch (err) {
+    // Upload now validates the PDF opens before it can ever go LIVE, but
+    // this still guards any note saved before that check existed —
+    // surface a clear, expected error instead of an unhandled crash.
+    console.error(`Failed to read/render page ${pageNum} for note ${note.id}:`, err);
+    return NextResponse.json(
+      { error: "This file couldn't be opened — it may not have uploaded correctly. Please contact the scribe or support." },
+      { status: 422 }
+    );
   }
 
   const watermarked = await stampWatermark(baseImageBuffer, [viewer.email, viewer.fullName]);
