@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { saveNoteFile } from "@/lib/storage";
@@ -87,6 +88,7 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
       pageCount = await getPdfPageCount(buffer);
     } catch (err) {
       console.error("PDF failed render validation on upload:", err);
+      Sentry.captureException(err, { extra: { context: "scribe-upload-render-validation", userId: user.sub } });
       return NextResponse.json(
         { error: "This PDF looks corrupted or didn't fully upload. Please try uploading it again." },
         { status: 400 }
