@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { saveNoteFile } from "@/lib/storage";
@@ -53,7 +54,27 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
       return NextResponse.json({ error: "This doesn't look like a real PDF file" }, { status: 400 });
     }
 
-    const parsed = await pdfParse(buffer);
+    let parsed;
+    try {
+      parsed = await pdfParse(buffer);
+    } catch (parseErr) {
+      // The library's own error text ("Invalid PDF structure" etc.) means
+      // nothing to a student — it's genuinely a real, valid PDF that opens
+      // fine in a normal viewer, just structured in a way this specific
+      // text-extraction library can't read. Re-saving through a different
+      // tool (print-to-PDF, or re-export from Word/Docs) normalizes the
+      // structure and almost always fixes it — that's the actionable fix,
+      // so that's what the person sees, not the library internals.
+      console.error("Scribe upload: PDF parsing failed", parseErr);
+      Sentry.captureException(parseErr, { extra: { context: "scribe-upload-pdf-parse", userId: user.sub } });
+      return NextResponse.json(
+        {
+          error:
+            "We couldn't read this PDF's content. It may still open fine in a normal PDF viewer, but this file's internal structure isn't one we can extract text from. Try re-saving it — e.g. open it and use \"Print → Save as PDF\", or re-export it from Word/Google Docs — then upload that version.",
+        },
+        { status: 400 }
+      );
+    }
     const extractedText: string = parsed.text || "";
 
     if (parsed.numpages > MAX_PDF_PAGES) {
@@ -107,6 +128,7 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
     });
   } catch (err) {
     console.error("Scribe upload failed:", err);
+    Sentry.captureException(err, { extra: { context: "scribe-upload-general", userId: user.sub } });
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: `Upload failed: ${message}` }, { status: 500 });
   }

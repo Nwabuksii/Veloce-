@@ -110,10 +110,7 @@ export default function ProfileMenu() {
           {(user.role === "SCRIBE" || user.role === "ADMIN") && (
             <>
               <Divider />
-              <MenuItem icon="fa-store" label="Scribe workspace" onClick={() => go("/scribe/workspace")} />
-              <MenuItem icon="fa-wallet" label="Earnings" onClick={() => go("/scribe/earnings")} />
-              <MenuItem icon="fa-cloud-upload-alt" label="Upload notes" onClick={() => go("/scribe/upload")} />
-              <MenuItem icon="fa-fire" label="Discovery feed" onClick={() => go("/scribe/requests")} />
+              <MenuItem icon="fa-store" label="Scribe hub" onClick={() => go("/scribe")} />
             </>
           )}
 
