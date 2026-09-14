@@ -23,6 +23,16 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
           ...(courseId ? { id: courseId } : {}),
           ...(departmentId ? { departmentId } : {}),
         },
+        // A block exists as soon as a scribe names it (step 2 of the upload
+        // wizard) — the actual file only lands in step 3. If a scribe
+        // abandons the flow after step 2 (closes the tab, loses
+        // connection, gets flagged/rejected by the quality gate), the
+        // block would otherwise sit here with nothing purchasable behind
+        // it: a student clicks in, sees "No live notes for this topic
+        // yet," and can't buy. Requiring at least one LIVE note keeps
+        // those out of browse/search entirely until there's really
+        // something to sell.
+        notes: { some: { status: "LIVE" } },
         ...(q
           ? {
               OR: [
