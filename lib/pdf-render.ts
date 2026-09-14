@@ -13,28 +13,22 @@
 // run `npm install`, the fix is almost always a small signature tweak
 // here, not a change to the overall architecture.
 
-// pdfjs-dist v4 calls Promise.withResolvers() internally, which only
-// exists natively in Node 22+. On an older Node runtime (18.x, most
-// 20.x builds — common on serverless hosts that haven't been bumped
-// yet), every single getDocument() call throws immediately with
-// "Promise.withResolvers is not a function" — regardless of whether
-// the PDF itself is fine. This polyfills it if it's missing, so PDF
-// parsing doesn't depend on the exact Node version deployed.
-if (typeof (Promise as any).withResolvers !== "function") {
-  (Promise as any).withResolvers = function withResolvers<T>() {
-    let resolve!: (value: T | PromiseLike<T>) => void;
-    let reject!: (reason?: unknown) => void;
-    const promise = new Promise<T>((res, rej) => {
-      resolve = res;
-      reject = rej;
-    });
-    return { promise, resolve, reject };
-  };
-}
-
 import { createCanvas, loadImage, type SKRSContext2D } from "@napi-rs/canvas";
 // @ts-ignore — pdfjs-dist's legacy Node build has no first-party types for this exact entry point
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
+import path from "path";
+
+// pdfjs-dist ships its own standard-font glyph data inside the package
+// itself, but never finds it automatically in Node — getDocument() needs
+// to be told exactly where. Without this, parsing throws on almost any
+// real-world PDF (even a perfectly valid one), not just corrupted ones,
+// because nearly every PDF references a standard font (Helvetica, Times,
+// etc.) even when it also embeds custom ones. This was the actual bug
+// behind "every single upload fails, not just broken ones."
+const STANDARD_FONT_DATA_URL = path.join(
+  path.dirname(require.resolve("pdfjs-dist/package.json")),
+  "standard_fonts/"
+);
 
 // pdf.js needs something that can hand it fresh canvases for internal
 // operations (transparency groups, soft masks) beyond the one canvas we
@@ -64,7 +58,10 @@ const RENDER_SCALE = 1.4;
 const JPEG_QUALITY = 80; // 0-100
 
 export async function getPdfPageCount(pdfBuffer: Buffer): Promise<number> {
-  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(pdfBuffer) }).promise;
+  const doc = await pdfjsLib.getDocument({
+    data: new Uint8Array(pdfBuffer),
+    standardFontDataUrl: STANDARD_FONT_DATA_URL,
+  }).promise;
   const count = doc.numPages;
   await doc.destroy();
   return count;
@@ -84,6 +81,7 @@ export async function renderPdfPageToImage(pdfBuffer: Buffer, pageNum: number): 
   const doc = await pdfjsLib.getDocument({
     data: new Uint8Array(pdfBuffer),
     canvasFactory,
+    standardFontDataUrl: STANDARD_FONT_DATA_URL,
   } as any).promise;
 
   try {
