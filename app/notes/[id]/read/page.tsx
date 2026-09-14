@@ -111,21 +111,76 @@ export default function NoteReaderPage() {
                 />
               )}
             </div>
-
-            {pageCount && (
-              <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                <button className="btn" onClick={() => goTo(currentPage - 1)} disabled={currentPage <= 1}>
-                  <i className="fas fa-chevron-left"></i> Prev
-                </button>
-                <span style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-                  Page {currentPage} of {pageCount}
-                </span>
-                <button className="btn" onClick={() => goTo(currentPage + 1)} disabled={currentPage >= pageCount}>
-                  Next <i className="fas fa-chevron-right"></i>
-                </button>
-              </div>
-            )}
           </div>
+        )}
+
+        {/* Fixed to the viewport (not the scrolling page) so these stay put
+            and reachable no matter how far down the document you've scrolled. */}
+        {!error && pageCount && (
+          <>
+            <button
+              className="btn"
+              onClick={() => goTo(currentPage - 1)}
+              disabled={currentPage <= 1}
+              aria-label="Previous page"
+              style={{
+                position: "fixed",
+                left: "0.75rem",
+                top: "50%",
+                transform: "translateY(-50%)",
+                zIndex: 40,
+                width: "2.75rem",
+                height: "2.75rem",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 0,
+              }}
+            >
+              <i className="fas fa-chevron-left"></i>
+            </button>
+            <button
+              className="btn"
+              onClick={() => goTo(currentPage + 1)}
+              disabled={currentPage >= pageCount}
+              aria-label="Next page"
+              style={{
+                position: "fixed",
+                right: "0.75rem",
+                top: "50%",
+                transform: "translateY(-50%)",
+                zIndex: 40,
+                width: "2.75rem",
+                height: "2.75rem",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 0,
+              }}
+            >
+              <i className="fas fa-chevron-right"></i>
+            </button>
+            <div
+              style={{
+                position: "fixed",
+                bottom: "0.9rem",
+                left: "50%",
+                transform: "translateX(-50%)",
+                zIndex: 40,
+                background: "var(--surface)",
+                border: "1px solid var(--border-blue)",
+                borderRadius: "999px",
+                padding: "0.35rem 1rem",
+                fontSize: "0.85rem",
+                color: "var(--text-secondary)",
+                boxShadow: "0 6px 16px -8px rgba(24,24,27,0.25)",
+              }}
+            >
+              Page {currentPage} of {pageCount}
+            </div>
+          </>
         )}
       </div>
     </div>
