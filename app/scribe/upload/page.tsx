@@ -1,6 +1,6 @@
 "use client";
-export const dynamic = "force-dynamic";
-import { useEffect, useState, FormEvent } from "react";
+
+import { useEffect, useState, FormEvent, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
 import Logo from "@/app/components/Logo";
@@ -30,12 +30,7 @@ const inputStyle: React.CSSProperties = {
   border: "1px solid var(--border-blue)",
 };
 
-// This page reads ?requestId=/?courseId= to support the "Fulfill this"
-// one-click flow from the discovery feed — needs dynamic rendering so
-// a production build doesn't try to statically prerender it.
-export const dynamic = "force-dynamic";
-
-export default function ScribeUploadPage() {
+function ScribeUploadForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -463,5 +458,13 @@ export default function ScribeUploadPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ScribeUploadPage() {
+  return (
+    <Suspense fallback={<div className="page-wrap"><div className="app-container">Loading...</div></div>}>
+      <ScribeUploadForm />
+    </Suspense>
   );
 }
