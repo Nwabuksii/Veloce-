@@ -1,7 +1,7 @@
 // Server-side PDF -> watermarked image pipeline.
 //
 // IMPORTANT CAVEAT: this file was written without the ability to actually
-// run `npm install` or execute it against a real PDF in this environment —
+// run `npm install` or execute it against a real PDF in this environment â€”
 // there's no network access here to pull pdfjs-dist / @napi-rs/canvas and
 // no way to test the render output. The overall approach (pdfjs-dist +
 // a Node canvas implementation, rendering to a canvas context) is the
@@ -14,21 +14,27 @@
 // here, not a change to the overall architecture.
 
 import { createCanvas, loadImage, type SKRSContext2D } from "@napi-rs/canvas";
-// @ts-ignore — pdfjs-dist's legacy Node build has no first-party types for this exact entry point
+// @ts-ignore â€” pdfjs-dist's legacy Node build has no first-party types for this exact entry point
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import path from "path";
 
 // pdfjs-dist ships its own standard-font glyph data inside the package
-// itself, but never finds it automatically in Node — getDocument() needs
+// itself, but never finds it automatically in Node â€” getDocument() needs
 // to be told exactly where. Without this, parsing throws on almost any
 // real-world PDF (even a perfectly valid one), not just corrupted ones,
 // because nearly every PDF references a standard font (Helvetica, Times,
-// etc.) even when it also embeds custom ones. This was the actual bug
-// behind "every single upload fails, not just broken ones."
-const STANDARD_FONT_DATA_URL = path.join(
-  path.dirname(require.resolve("pdfjs-dist/package.json")),
-  "standard_fonts/"
-);
+// etc.) even when it also embeds custom ones.
+//
+// Deliberately NOT using require.resolve() to find this path â€” Next.js
+// bundles this file through webpack, which intercepts require.resolve()
+// calls and replaces them with its own internal numeric module ID instead
+// of a real filesystem path. That's exactly what broke the production
+// build ("path argument must be of type string, received type number").
+// process.cwd() is a plain runtime call webpack has no reason to rewrite,
+// and pdfjs-dist/@napi-rs/canvas are already excluded from bundling via
+// serverComponentsExternalPackages in next.config.js, so their real
+// node_modules folder is guaranteed to exist on disk at runtime.
+const STANDARD_FONT_DATA_URL = path.join(process.cwd(), "node_modules/pdfjs-dist/standard_fonts/");
 
 // pdf.js needs something that can hand it fresh canvases for internal
 // operations (transparency groups, soft masks) beyond the one canvas we
@@ -51,7 +57,7 @@ class NodeCanvasFactory {
   }
 }
 
-// Readable-on-screen resolution rather than print quality — keeps cached
+// Readable-on-screen resolution rather than print quality â€” keeps cached
 // base images (and the bandwidth to serve them) small. ~1.4x a standard
 // PDF page's default scale renders comfortably sharp on a phone screen.
 const RENDER_SCALE = 1.4;
@@ -69,14 +75,14 @@ export async function getPdfPageCount(pdfBuffer: Buffer): Promise<number> {
 
 /**
  * Renders one page of a PDF to a plain JPEG image (no watermark). This is
- * the expensive step — callers should cache the result (see
+ * the expensive step â€” callers should cache the result (see
  * NotePageImage in the schema) rather than calling this more than once
  * per page per note.
  */
 export async function renderPdfPageToImage(pdfBuffer: Buffer, pageNum: number): Promise<Buffer> {
   const canvasFactory = new NodeCanvasFactory();
   // `canvasFactory` is a real, supported option at runtime in pdfjs-dist's
-  // Node build, but its bundled TypeScript types don't declare it — hence
+  // Node build, but its bundled TypeScript types don't declare it â€” hence
   // the cast rather than a change in behavior.
   const doc = await pdfjsLib.getDocument({
     data: new Uint8Array(pdfBuffer),
@@ -102,7 +108,7 @@ export async function renderPdfPageToImage(pdfBuffer: Buffer, pageNum: number): 
 /**
  * Stamps a moderate, tiled, diagonal watermark (a handful of repeats, not
  * a dense fill) over an already-rendered page image. Cheap relative to
- * the PDF render itself, so this runs fresh on every view — the result
+ * the PDF render itself, so this runs fresh on every view â€” the result
  * must never be cached, since it's personalized to whoever's looking.
  */
 export async function stampWatermark(baseImageBuffer: Buffer, lines: string[]): Promise<Buffer> {
@@ -112,7 +118,7 @@ export async function stampWatermark(baseImageBuffer: Buffer, lines: string[]): 
 
   ctx.drawImage(img as any, 0, 0, img.width, img.height);
 
-  const text = lines.join("  ·  ");
+  const text = lines.join("  Â·  ");
 
   ctx.save();
   ctx.font = `${Math.max(14, Math.round(img.width / 42))}px sans-serif`;
@@ -120,7 +126,7 @@ export async function stampWatermark(baseImageBuffer: Buffer, lines: string[]): 
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  // A handful of repeats across the page, not a dense grid — spacing
+  // A handful of repeats across the page, not a dense grid â€” spacing
   // scales with page size so it looks consistent across different PDFs.
   const stepX = img.width / 2.2;
   const stepY = img.height / 3.2;
