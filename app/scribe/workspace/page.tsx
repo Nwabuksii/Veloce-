@@ -116,11 +116,11 @@ export default function ScribeWorkspacePage() {
           </p>
         )}
 
-        <div className="card-grid">
+        <div className="ledger-list">
           {notes.map((n) => {
             const style = STATUS_STYLES[n.status] || STATUS_STYLES.PENDING_REVIEW;
             return (
-              <div key={n.id} className="block-card">
+              <div key={n.id} className="ledger-row">
                 <div className="badge">{n.courseCode}</div>
                 <h3>{n.blockTitle}</h3>
                 <div className="meta">{n.courseName}</div>
@@ -130,7 +130,7 @@ export default function ScribeWorkspacePage() {
                     background: style.bg,
                     color: style.color,
                     padding: "0.2rem 0.8rem",
-                    borderRadius: "30px",
+                    borderRadius: "3px",
                     fontSize: "0.75rem",
                     fontWeight: 600,
                   }}

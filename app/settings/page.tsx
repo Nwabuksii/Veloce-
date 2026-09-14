@@ -163,7 +163,7 @@ export default function SettingsPage() {
 
         <div style={{ marginTop: "1.5rem" }}>
           {tab === "about" && (
-            <div style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "1rem", padding: "1.2rem", lineHeight: 1.7, color: "var(--text-secondary)" }}>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "4px", padding: "1.2rem", lineHeight: 1.7, color: "var(--text-secondary)" }}>
               <h2 style={{ marginBottom: "0.6rem" }}>About Veloce</h2>
               <p>
                 Veloce is a marketplace where students turn the notes they've already taken into something other
@@ -185,7 +185,7 @@ export default function SettingsPage() {
               {FAQ_ITEMS.map((item, i) => (
                 <details
                   key={i}
-                  style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "0.8rem", padding: "0.9rem 1rem" }}
+                  style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "3px", padding: "0.9rem 1rem" }}
                 >
                   <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--text-primary)" }}>{item.q}</summary>
                   <p style={{ marginTop: "0.6rem", color: "var(--text-secondary)", fontSize: "0.9rem", lineHeight: 1.6 }}>{item.a}</p>
@@ -195,7 +195,7 @@ export default function SettingsPage() {
           )}
 
           {tab === "contact" && (
-            <div style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "1rem", padding: "1.2rem" }}>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "4px", padding: "1.2rem" }}>
               <h2 style={{ marginBottom: "0.6rem" }}>Contact your admin</h2>
               {contactLoading && <div style={{ marginTop: "1rem" }}><SkeletonCard height="4.5rem" /></div>}
               {!contactLoading && adminEmail && (
@@ -217,7 +217,7 @@ export default function SettingsPage() {
           )}
 
           {tab === "account" && (
-            <div style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "1rem", padding: "1.2rem" }}>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "4px", padding: "1.2rem" }}>
               <h2 style={{ marginBottom: "0.3rem" }}>Account</h2>
               <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "1rem" }}>
                 Change your email or password. Your name can't be changed here.
@@ -230,7 +230,7 @@ export default function SettingsPage() {
                     type="email"
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
-                    style={{ padding: "0.6rem", borderRadius: "0.6rem", border: "1px solid var(--border-blue)" }}
+                    style={{ padding: "0.6rem", borderRadius: "3px", border: "1px solid var(--border-blue)" }}
                   />
                 </label>
 
@@ -241,7 +241,7 @@ export default function SettingsPage() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="At least 8 characters"
-                    style={{ padding: "0.6rem", borderRadius: "0.6rem", border: "1px solid var(--border-blue)" }}
+                    style={{ padding: "0.6rem", borderRadius: "3px", border: "1px solid var(--border-blue)" }}
                   />
                 </label>
 
@@ -251,7 +251,7 @@ export default function SettingsPage() {
                     type="password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    style={{ padding: "0.6rem", borderRadius: "0.6rem", border: "1px solid var(--border-blue)" }}
+                    style={{ padding: "0.6rem", borderRadius: "3px", border: "1px solid var(--border-blue)" }}
                   />
                 </label>
 
@@ -268,7 +268,7 @@ export default function SettingsPage() {
             </div>
           )}
           {tab === "display" && (
-            <div style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "1rem", padding: "1.2rem" }}>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "4px", padding: "1.2rem" }}>
               <h2 style={{ marginBottom: "0.3rem" }}>Display</h2>
               <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "1rem" }}>
                 Choose how Veloce looks on this device.

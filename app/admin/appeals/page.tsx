@@ -112,7 +112,7 @@ export default function AdminAppealsPage() {
                 style={{
                   background: "var(--surface)",
                   border: "1px solid var(--border-blue)",
-                  borderRadius: "1rem",
+                  borderRadius: "4px",
                   padding: "1rem",
                   display: "flex",
                   justifyContent: "space-between",

@@ -131,7 +131,7 @@ export default function AdminUsersPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by name or email..."
-          style={{ width: "100%", maxWidth: 420, padding: "0.7rem", borderRadius: "0.7rem", border: "1px solid var(--border-blue)", marginTop: "1rem" }}
+          style={{ width: "100%", maxWidth: 420, padding: "0.7rem", borderRadius: "3px", border: "1px solid var(--border-blue)", marginTop: "1rem" }}
         />
         {searching && <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: "0.5rem" }}>Searching...</p>}
         {actionMessage && <p style={{ color: "var(--text-success)", marginTop: "0.6rem" }}>{actionMessage}</p>}
@@ -145,7 +145,7 @@ export default function AdminUsersPage() {
                 style={{
                   background: "var(--surface)",
                   border: isBanned ? "2px solid var(--text-danger)" : "1px solid var(--border-blue)",
-                  borderRadius: "1rem",
+                  borderRadius: "4px",
                   padding: "1rem",
                 }}
               >
@@ -180,7 +180,7 @@ export default function AdminUsersPage() {
                       onChange={(e) => setBanReason(e.target.value)}
                       rows={2}
                       placeholder="Reason (optional) — included in their email"
-                      style={{ padding: "0.5rem", borderRadius: "0.6rem", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem" }}
+                      style={{ padding: "0.5rem", borderRadius: "3px", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem" }}
                     />
                     <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
                       Duration in days (leave blank for indefinite / until further notice)
@@ -191,7 +191,7 @@ export default function AdminUsersPage() {
                       value={banDurationDays}
                       onChange={(e) => setBanDurationDays(e.target.value)}
                       placeholder="e.g. 90"
-                      style={{ padding: "0.5rem", borderRadius: "0.6rem", border: "1px solid var(--border-blue)", fontSize: "0.85rem" }}
+                      style={{ padding: "0.5rem", borderRadius: "3px", border: "1px solid var(--border-blue)", fontSize: "0.85rem" }}
                     />
                     <div style={{ display: "flex", gap: "0.6rem" }}>
                       <button

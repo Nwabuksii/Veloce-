@@ -74,7 +74,7 @@ export default function NoteReaderPage() {
                 width: "100%",
                 background: "var(--surface)",
                 border: "1px solid var(--border-blue)",
-                borderRadius: "1rem",
+                borderRadius: "4px",
                 padding: "0.6rem",
                 minHeight: 300,
                 display: "flex",

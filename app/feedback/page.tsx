@@ -72,7 +72,7 @@ export default function FeedbackPage() {
                 marginTop: "1.2rem",
                 background: "var(--surface)",
                 border: "1px solid var(--border-blue)",
-                borderRadius: "0.9rem",
+                borderRadius: "4px",
                 padding: "1.2rem",
               }}
             >
@@ -93,7 +93,7 @@ export default function FeedbackPage() {
                 style={{
                   width: "100%",
                   padding: "0.7rem",
-                  borderRadius: "0.7rem",
+                  borderRadius: "3px",
                   border: "1px solid var(--border-blue)",
                   fontFamily: "inherit",
                   fontSize: "0.9rem",

@@ -32,7 +32,7 @@ function TrustBadge({ level, label }: { level: string; label: string }) {
         background: style.bg,
         color: style.color,
         padding: "0.15rem 0.7rem",
-        borderRadius: "30px",
+        borderRadius: "3px",
         fontSize: "0.75rem",
         fontWeight: 600,
       }}
@@ -131,7 +131,7 @@ export default function FollowingPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by name..."
-          style={{ width: "100%", padding: "0.7rem", borderRadius: "0.7rem", border: "1px solid var(--border-blue)", marginTop: "0.6rem" }}
+          style={{ width: "100%", padding: "0.7rem", borderRadius: "3px", border: "1px solid var(--border-blue)", marginTop: "0.6rem" }}
         />
 
         {searching && <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: "0.5rem" }}>Searching...</p>}
@@ -144,7 +144,7 @@ export default function FollowingPage() {
                 style={{
                   background: "var(--surface)",
                   border: "1px solid var(--border-blue)",
-                  borderRadius: "0.9rem",
+                  borderRadius: "4px",
                   padding: "0.8rem 1rem",
                   display: "flex",
                   justifyContent: "space-between",
@@ -195,7 +195,7 @@ export default function FollowingPage() {
               style={{
                 background: "var(--surface)",
                 border: "1px solid var(--border-blue)",
-                borderRadius: "0.9rem",
+                borderRadius: "4px",
                 padding: "0.8rem 1rem",
                 display: "flex",
                 justifyContent: "space-between",

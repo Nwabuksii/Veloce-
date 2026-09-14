@@ -147,7 +147,7 @@ export default function ScribeProfilePage() {
                     background: TRUST_STYLES[profile.trustLevel].bg,
                     color: TRUST_STYLES[profile.trustLevel].color,
                     padding: "0.25rem 0.9rem",
-                    borderRadius: "30px",
+                    borderRadius: "3px",
                     fontSize: "0.8rem",
                     fontWeight: 600,
                   }}
@@ -163,7 +163,7 @@ export default function ScribeProfilePage() {
                       background: "var(--bg-danger)",
                       color: "var(--text-danger)",
                       padding: "0.25rem 0.9rem",
-                      borderRadius: "30px",
+                      borderRadius: "3px",
                       fontSize: "0.8rem",
                       fontWeight: 600,
                     }}
@@ -191,7 +191,7 @@ export default function ScribeProfilePage() {
             </div>
 
             {reporting && (
-              <div style={{ marginTop: "1rem", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "1rem", padding: "1rem", display: "flex", flexDirection: "column", gap: "0.7rem" }}>
+              <div style={{ marginTop: "1rem", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "4px", padding: "1rem", display: "flex", flexDirection: "column", gap: "0.7rem" }}>
                 <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
                   Why are you reporting {profile.fullName}? (harassment, scam, fake notes, etc.)
                 </label>
@@ -200,7 +200,7 @@ export default function ScribeProfilePage() {
                   onChange={(e) => setReportReason(e.target.value)}
                   rows={3}
                   placeholder="Describe what happened..."
-                  style={{ padding: "0.6rem", borderRadius: "0.6rem", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem" }}
+                  style={{ padding: "0.6rem", borderRadius: "3px", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem" }}
                 />
                 <div style={{ display: "flex", gap: "0.6rem" }}>
                   <button className="btn btn-primary" onClick={submitReport} disabled={reportSubmitting}>
@@ -238,9 +238,9 @@ export default function ScribeProfilePage() {
               <p style={{ color: "var(--text-secondary)", marginTop: "0.6rem" }}>No live notes yet.</p>
             )}
 
-            <div className="card-grid" style={{ marginTop: "0.8rem" }}>
+            <div className="ledger-list" style={{ marginTop: "0.8rem" }}>
               {profile.blocks.map((b) => (
-                <div key={b.noteId} className="block-card" onClick={() => router.push(`/blocks/${b.blockId}`)} style={{ cursor: "pointer" }}>
+                <div key={b.noteId} className="ledger-row" onClick={() => router.push(`/blocks/${b.blockId}`)} style={{ cursor: "pointer" }}>
                   <div className="badge">{b.courseCode}</div>
                   <h3>{b.blockTitle}</h3>
                   <div className="meta">{b.courseName}</div>

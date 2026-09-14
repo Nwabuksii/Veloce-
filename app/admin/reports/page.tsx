@@ -158,7 +158,7 @@ export default function AdminReportsPage() {
                 style={{
                   background: "var(--surface)",
                   border: "1px solid var(--border-blue)",
-                  borderRadius: "1rem",
+                  borderRadius: "4px",
                   padding: "1rem",
                   display: "flex",
                   justifyContent: "space-between",
@@ -173,7 +173,7 @@ export default function AdminReportsPage() {
                       background: r.type === "BLOCK" ? "var(--bg-info)" : "var(--bg-danger)",
                       color: r.type === "BLOCK" ? "var(--text-info)" : "var(--text-danger)",
                       padding: "0.15rem 0.7rem",
-                      borderRadius: "30px",
+                      borderRadius: "3px",
                       fontSize: "0.75rem",
                       fontWeight: 600,
                     }}
@@ -293,7 +293,7 @@ export default function AdminReportsPage() {
                       placeholder="e.g. Contains pages from a different course entirely..."
                       style={{
                         padding: "0.5rem",
-                        borderRadius: "0.6rem",
+                        borderRadius: "3px",
                         border: "1px solid var(--border-blue)",
                         fontFamily: "inherit",
                         fontSize: "0.85rem",

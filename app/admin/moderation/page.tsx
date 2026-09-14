@@ -98,7 +98,7 @@ export default function ModerationPage() {
 
           <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem", marginTop: "1rem" }}>
             {notes.map((n) => (
-              <div key={n.id} style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "1rem", padding: "1rem" }}>
+              <div key={n.id} style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "4px", padding: "1rem" }}>
                 <strong>
                   {n.block.course.code} — {n.block.title}
                 </strong>

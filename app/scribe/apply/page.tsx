@@ -122,7 +122,7 @@ export default function ScribeApplyPage() {
                 background: STATUS_STYLES[application.status].bg,
                 color: STATUS_STYLES[application.status].color,
                 padding: "0.4rem 1rem",
-                borderRadius: "30px",
+                borderRadius: "3px",
                 fontSize: "0.85rem",
                 fontWeight: 600,
               }}
@@ -131,7 +131,7 @@ export default function ScribeApplyPage() {
               {STATUS_STYLES[application.status].label}
             </span>
 
-            <div style={{ marginTop: "1.2rem", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "1rem", padding: "1.2rem" }}>
+            <div style={{ marginTop: "1.2rem", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "4px", padding: "1.2rem" }}>
               <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "0.4rem" }}>Your reason for applying:</div>
               <p style={{ fontSize: "0.9rem", color: "var(--text-primary)", whiteSpace: "pre-wrap" }}>&ldquo;{application.reason}&rdquo;</p>
               <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "1rem" }}>
@@ -177,7 +177,7 @@ export default function ScribeApplyPage() {
                 placeholder="e.g. I've taken detailed notes for COS 201 all semester and want to share them, plus help other students who are struggling with..."
                 style={{
                   padding: "0.7rem",
-                  borderRadius: "0.7rem",
+                  borderRadius: "3px",
                   border: "1px solid var(--border-blue)",
                   fontFamily: "inherit",
                   fontSize: "0.9rem",

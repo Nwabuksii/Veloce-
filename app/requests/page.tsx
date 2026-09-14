@@ -27,7 +27,7 @@ const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "0.6rem",
   marginTop: "0.4rem",
-  borderRadius: "0.7rem",
+  borderRadius: "3px",
   border: "1px solid var(--border-blue)",
 };
 
@@ -235,7 +235,7 @@ export default function RequestsPage() {
                 style={{
                   background: "var(--surface)",
                   border: "1px solid var(--border-blue)",
-                  borderRadius: "1rem",
+                  borderRadius: "4px",
                   padding: "0.9rem 1.1rem",
                   display: "flex",
                   justifyContent: "space-between",

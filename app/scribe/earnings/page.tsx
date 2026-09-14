@@ -259,7 +259,7 @@ export default function ScribeEarningsPage() {
                   marginTop: "0.8rem",
                   background: "var(--bg-warning)",
                   border: "1px solid var(--text-warning)",
-                  borderRadius: "0.9rem",
+                  borderRadius: "4px",
                   padding: "1rem",
                   display: "flex",
                   justifyContent: "space-between",
@@ -287,7 +287,7 @@ export default function ScribeEarningsPage() {
             </h3>
 
             {!editingAccount && hasAccount && (
-              <div style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "0.9rem", padding: "1rem", marginTop: "0.6rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "4px", padding: "1rem", marginTop: "0.6rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <div style={{ fontWeight: 600 }}>{account?.accountName}</div>
                   <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
@@ -301,11 +301,11 @@ export default function ScribeEarningsPage() {
             )}
 
             {editingAccount && (
-              <form onSubmit={handleSaveAccount} style={{ marginTop: "0.6rem", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "0.9rem", padding: "1rem", display: "flex", flexDirection: "column", gap: "0.7rem" }}>
+              <form onSubmit={handleSaveAccount} style={{ marginTop: "0.6rem", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "4px", padding: "1rem", display: "flex", flexDirection: "column", gap: "0.7rem" }}>
                 <select
                   value={bankCode}
                   onChange={(e) => setBankCode(e.target.value)}
-                  style={{ padding: "0.6rem", borderRadius: "0.6rem", border: "1px solid var(--border-blue)" }}
+                  style={{ padding: "0.6rem", borderRadius: "3px", border: "1px solid var(--border-blue)" }}
                 >
                   <option value="">Select your bank</option>
                   {banks.map((b) => (
@@ -321,7 +321,7 @@ export default function ScribeEarningsPage() {
                   placeholder="10-digit account number"
                   value={accountNumber}
                   onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ""))}
-                  style={{ padding: "0.6rem", borderRadius: "0.6rem", border: "1px solid var(--border-blue)" }}
+                  style={{ padding: "0.6rem", borderRadius: "3px", border: "1px solid var(--border-blue)" }}
                 />
                 {accountError && <p style={{ color: "var(--text-danger)", fontSize: "0.85rem" }}>{accountError}</p>}
                 <div style={{ display: "flex", gap: "0.6rem" }}>
@@ -359,7 +359,7 @@ export default function ScribeEarningsPage() {
                   placeholder={`Up to ₦${balance.toLocaleString()}`}
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
-                  style={{ flex: 1, padding: "0.6rem", borderRadius: "0.6rem", border: "1px solid var(--border-blue)" }}
+                  style={{ flex: 1, padding: "0.6rem", borderRadius: "3px", border: "1px solid var(--border-blue)" }}
                 />
                 <button className="btn btn-primary" type="submit" disabled={withdrawSubmitting}>
                   {withdrawSubmitting ? "Requesting..." : "Withdraw"}
@@ -371,7 +371,7 @@ export default function ScribeEarningsPage() {
             {payouts.length > 0 && (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.8rem" }}>
                 {payouts.map((p) => (
-                  <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.85rem", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "0.7rem", padding: "0.6rem 0.8rem" }}>
+                  <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.85rem", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "3px", padding: "0.6rem 0.8rem" }}>
                     <span>
                       ₦{p.amount.toLocaleString()} · {new Date(p.requestedAt).toLocaleDateString()}
                     </span>
@@ -380,7 +380,7 @@ export default function ScribeEarningsPage() {
                         background: STATUS_STYLES[p.status].bg,
                         color: STATUS_STYLES[p.status].color,
                         padding: "0.15rem 0.6rem",
-                        borderRadius: "30px",
+                        borderRadius: "3px",
                         fontWeight: 600,
                         fontSize: "0.75rem",
                       }}
@@ -408,7 +408,7 @@ export default function ScribeEarningsPage() {
                   style={{
                     background: "var(--surface)",
                     border: "1px solid var(--border-blue)",
-                    borderRadius: "0.9rem",
+                    borderRadius: "4px",
                     padding: "0.9rem 1rem",
                     display: "flex",
                     justifyContent: "space-between",

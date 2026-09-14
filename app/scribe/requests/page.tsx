@@ -84,7 +84,7 @@ export default function ScribeRequestsFeedPage() {
               style={{
                 background: "var(--surface)",
                 border: "1px solid var(--border-blue)",
-                borderRadius: "1rem",
+                borderRadius: "4px",
                 padding: "0.9rem 1.1rem",
                 display: "flex",
                 justifyContent: "space-between",

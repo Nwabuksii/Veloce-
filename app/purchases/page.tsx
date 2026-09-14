@@ -153,7 +153,7 @@ export default function PurchasesPage() {
           {purchases.map((p) => {
             const draft = drafts[p.purchaseId] || { rating: 0, comment: "" };
             return (
-              <div key={p.purchaseId} className="block-card" style={{ maxWidth: 480 }}>
+              <div key={p.purchaseId} className="ledger-row" style={{ maxWidth: 480 }}>
                 <div className="badge">{p.courseCode}</div>
                 <h3>{p.blockTitle}</h3>
                 <div className="meta">
@@ -168,7 +168,7 @@ export default function PurchasesPage() {
 
                 {p.refunded ? (
                   <div
-                    style={{ marginTop: "0.6rem", padding: "0.5rem 0.8rem", borderRadius: "0.6rem", background: "var(--bg-danger)", color: "var(--text-danger)", fontSize: "0.85rem", width: "fit-content" }}
+                    style={{ marginTop: "0.6rem", padding: "0.5rem 0.8rem", borderRadius: "3px", background: "var(--bg-danger)", color: "var(--text-danger)", fontSize: "0.85rem", width: "fit-content" }}
                   >
                     <i className="fas fa-ban"></i> Refunded — access removed
                   </div>
@@ -225,7 +225,7 @@ export default function PurchasesPage() {
                       style={{
                         width: "100%",
                         padding: "0.5rem",
-                        borderRadius: "0.6rem",
+                        borderRadius: "3px",
                         border: "1px solid var(--border-blue)",
                         fontFamily: "inherit",
                       }}
@@ -266,7 +266,7 @@ export default function PurchasesPage() {
                             onChange={(e) => setRefundReason(e.target.value)}
                             rows={2}
                             placeholder="Explain what went wrong..."
-                            style={{ padding: "0.5rem", borderRadius: "0.6rem", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem", background: "var(--surface)", color: "var(--text-primary)" }}
+                            style={{ padding: "0.5rem", borderRadius: "3px", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem", background: "var(--surface)", color: "var(--text-primary)" }}
                           />
                           <div style={{ display: "flex", gap: "0.6rem" }}>
                             <button
