@@ -71,12 +71,12 @@ export default function NoteReaderPage() {
           <div style={{ marginTop: "1.2rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}>
             <div
               style={{
+                width: "100%",
                 background: "var(--surface)",
                 border: "1px solid var(--border-blue)",
                 borderRadius: "0.5rem",
                 padding: "0.25rem",
                 minHeight: 300,
-                maxHeight: "78vh",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -99,14 +99,8 @@ export default function NoteReaderPage() {
                   onContextMenu={(e) => e.preventDefault()}
                   draggable={false}
                   style={{
-                    width: "auto",
+                    width: "100%",
                     height: "auto",
-                    maxWidth: "100%",
-                    // Fit to the visible height instead of stretching to full
-                    // container width — a full-width portrait page on a wide
-                    // screen was rendering much taller than the viewport,
-                    // forcing a lot of scrolling to see one page.
-                    maxHeight: "78vh",
                     display: "block",
                     borderRadius: "0.3rem",
                     userSelect: "none",
