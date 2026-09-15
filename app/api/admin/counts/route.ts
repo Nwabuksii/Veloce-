@@ -4,8 +4,27 @@ import { requireRole } from "@/lib/session";
 
 // Admin-only: pending-action counts per section, scoped to the admin's
 // own university — same scoping rule as every other /api/admin/* route.
+//
+// Two kinds of counts:
+//   Type A (action sections): raw pending counts. Stay until resolved.
+//     reports, applications, appeals, moderation, payouts, demotedScribes
+//   Type B (view-only sections): unseen-since-last-visit counts. Clear
+//     when the admin opens the page. Currently: feedback, disputes (ledger).
 export const GET = requireRole("ADMIN", async (req: NextRequest, user) => {
   const universityId = user.universityId;
+
+  // Look up the admin's last-seen timestamps for view-only sections.
+  const views = await prisma.adminSectionView.findMany({
+    where: { adminId: user.id, section: { in: ["feedback", "ledger"] } },
+  });
+  const lastSeen: Record<string, Date | null> = {
+    feedback: null,
+    ledger: null,
+  };
+  for (const v of views) lastSeen[v.section] = v.lastSeenAt;
+
+  const feedbackSince = lastSeen.feedback ?? new Date(0);
+  const ledgerSince = lastSeen.ledger ?? new Date(0);
 
   const [
     applications,
@@ -17,6 +36,7 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, user) => {
     demotedScribes,
     feedback,
   ] = await Promise.all([
+    // ── Type A: action sections (pending until resolved) ──
     prisma.scribeApplication.count({
       where: {
         type: "APPLICATION",
@@ -49,13 +69,6 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, user) => {
         scribe: { universityId },
       },
     }),
-    prisma.purchase.count({
-      where: {
-        disputedAt: { not: null },
-        refundedAt: null,
-        buyer: { universityId },
-      },
-    }),
     prisma.user.count({
       where: {
         role: "SCRIBE",
@@ -63,19 +76,33 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, user) => {
         universityId,
       },
     }),
+
+    // ── Type B: view-only sections (clear on visit) ──
+    prisma.purchase.count({
+      where: {
+        disputedAt: { not: null },
+        refundedAt: null,
+        buyer: { universityId },
+        disputedAt: { gt: ledgerSince },
+      },
+    }),
     prisma.feedback.count({
-      where: { user: { universityId } },
+      where: {
+        user: { universityId },
+        createdAt: { gt: feedbackSince },
+      },
     }),
   ]);
 
+  // Total badge shown on the ProfileMenu button = every section's count.
   const total =
     applications +
     appeals +
     moderation +
     reports +
     payouts +
-    disputes +
     demotedScribes +
+    disputes +
     feedback;
 
   return NextResponse.json({
