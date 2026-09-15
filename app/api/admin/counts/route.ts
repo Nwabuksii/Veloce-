@@ -80,10 +80,9 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, user) => {
     // ── Type B: view-only sections (clear on visit) ──
     prisma.purchase.count({
       where: {
-        disputedAt: { not: null },
         refundedAt: null,
         buyer: { universityId },
-        disputedAt: { gt: ledgerSince },
+        disputedAt: { not: null, gt: ledgerSince },
       },
     }),
     prisma.feedback.count({
