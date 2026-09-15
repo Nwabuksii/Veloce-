@@ -478,3 +478,16 @@ model RateLimitHit {
   count       Int      @default(1)
   windowStart DateTime @default(now())
 }
+// Tracks when each admin last opened a "view-only" admin section whose
+// badge should clear on visit (feedback, financial ledger). Action
+// sections (reports, applications, etc.) don't use this — their badges
+// are pure pending counts and stay until the item is resolved.
+model AdminSectionView {
+  id         String   @id @default(uuid())
+  adminId    String
+  admin      User     @relation("AdminSectionViews", fields: [adminId], references: [id], onDelete: Cascade)
+  section    String   // "feedback" | "ledger"
+  lastSeenAt DateTime @default(now())
+
+  @@unique([adminId, section])
+}
