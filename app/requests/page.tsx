@@ -6,7 +6,8 @@ import { getStoredUser } from "@/lib/client-session";
 import Logo from "@/app/components/Logo";
 import ProfileMenu from "@/app/components/ProfileMenu";
 import { SkeletonList } from "@/app/components/Skeleton";
-import { friendlyErrorMessage } from "@/lib/api-client";
+import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
+import { toast } from "@/lib/toast";
 
 interface CourseOption {
   id: string;
@@ -44,6 +45,7 @@ export default function RequestsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [requests, setRequests] = useState<RequestView[]>([]);
   const [loadingFeed, setLoadingFeed] = useState(true);
+  const [toggling, setToggling] = useState<string | null>(null);
 
   useEffect(() => {
     const user = getStoredUser();
@@ -70,6 +72,38 @@ export default function RequestsPage() {
       setRequests(data.requests || []);
     } finally {
       setLoadingFeed(false);
+    }
+  }
+
+  async function handleToggleVote(requestId: string, currentlyRequested: boolean) {
+    setToggling(requestId);
+    // Optimistic update — flip it immediately, same as the Follow button.
+    setRequests((prev) =>
+      prev.map((r) =>
+        r.id === requestId
+          ? { ...r, requestedByMe: !currentlyRequested, voteCount: r.voteCount + (currentlyRequested ? -1 : 1) }
+          : r
+      )
+    );
+    try {
+      const data = await apiFetch<{ requestedByMe: boolean; voteCount: number }>(`/api/requests/${requestId}/vote`, {
+        method: "POST",
+      });
+      setRequests((prev) =>
+        prev.map((r) => (r.id === requestId ? { ...r, requestedByMe: data.requestedByMe, voteCount: data.voteCount } : r))
+      );
+    } catch (err) {
+      // Roll back on failure.
+      setRequests((prev) =>
+        prev.map((r) =>
+          r.id === requestId
+            ? { ...r, requestedByMe: currentlyRequested, voteCount: r.voteCount + (currentlyRequested ? 1 : -1) }
+            : r
+        )
+      );
+      toast.error(friendlyErrorMessage(err));
+    } finally {
+      setToggling(null);
     }
   }
 
@@ -237,10 +271,15 @@ export default function RequestsPage() {
                   <div className="ledger-row-meta">{r.courseName}</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <span className="pill pill-info">
+                  <button
+                    className="pill pill-info"
+                    style={{ border: "none", cursor: "pointer" }}
+                    onClick={() => handleToggleVote(r.id, r.requestedByMe)}
+                    disabled={toggling === r.id}
+                  >
                     <i className="fas fa-thumbs-up" style={{ marginRight: "0.35rem" }}></i>
                     {r.voteCount} want this
-                  </span>
+                  </button>
                   {r.requestedByMe && <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginTop: "0.35rem" }}>You requested this</div>}
                 </div>
               </div>
