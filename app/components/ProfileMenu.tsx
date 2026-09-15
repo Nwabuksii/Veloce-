@@ -59,6 +59,8 @@ export default function ProfileMenu() {
       >
         <i className="fas fa-user-graduate"></i> {user.fullName} · {user.role}
         <i className="fas fa-chevron-down" style={{ fontSize: "0.65rem", marginLeft: "0.2rem" }}></i>
+
+        {/* Messages badge — top-right corner (unchanged) */}
         {unreadCount > 0 && (
           <span
             style={{
@@ -78,6 +80,29 @@ export default function ProfileMenu() {
             }}
           >
             {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        )}
+
+        {/* Admin badge — top-left corner, so it doesn't collide with messages */}
+        {user.role === "ADMIN" && adminTotal > 0 && (
+          <span
+            style={{
+              position: "absolute",
+              top: -4,
+              left: -4,
+              background: "var(--text-danger)",
+              color: "white",
+              borderRadius: "50%",
+              width: 18,
+              height: 18,
+              fontSize: "0.65rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 700,
+            }}
+          >
+            {adminTotal > 9 ? "9+" : adminTotal}
           </span>
         )}
       </button>
@@ -123,12 +148,7 @@ export default function ProfileMenu() {
           {user.role === "ADMIN" && (
             <>
               <Divider />
-              <MenuItem
-                icon="fa-user-cog"
-                label="Admin panel"
-                badge={adminTotal}
-                onClick={() => go("/admin")}
-              />
+              <MenuItem icon="fa-user-cog" label="Admin panel" onClick={() => go("/admin")} />
             </>
           )}
 
@@ -146,13 +166,11 @@ function MenuItem({
   label,
   onClick,
   danger,
-  badge,
 }: {
   icon: string;
   label: string;
   onClick: () => void;
   danger?: boolean;
-  badge?: number;
 }) {
   return (
     <button
@@ -173,29 +191,10 @@ function MenuItem({
       }}
     >
       <i className={`fas ${icon}`} style={{ width: "16px" }}></i> {label}
-      {badge !== undefined && badge > 0 && (
-        <span
-          style={{
-            marginLeft: "auto",
-            background: "var(--text-danger)",
-            color: "white",
-            borderRadius: "50%",
-            width: 18,
-            height: 18,
-            fontSize: "0.65rem",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontWeight: 700,
-          }}
-        >
-          {badge > 9 ? "9+" : badge}
-        </span>
-      )}
     </button>
   );
 }
 
 function Divider() {
   return <div style={{ height: "1px", background: "var(--bg-info)", margin: "0.4rem 0" }} />;
-}
+        }
