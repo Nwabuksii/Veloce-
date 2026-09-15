@@ -3,12 +3,14 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser, clearSession, StoredUser } from "@/lib/client-session";
+import { fetchAdminCounts } from "@/lib/admin-counts";
 
 export default function ProfileMenu() {
   const router = useRouter();
   const [user, setUser] = useState<StoredUser | null>(null);
   const [open, setOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [adminTotal, setAdminTotal] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -19,6 +21,10 @@ export default function ProfileMenu() {
         .then((res) => res.json())
         .then((data) => setUnreadCount(data.count || 0))
         .catch(() => {});
+
+      if (u.role === "ADMIN") {
+        fetchAdminCounts().then((c) => setAdminTotal(c.total));
+      }
     }
   }, []);
 
@@ -117,7 +123,12 @@ export default function ProfileMenu() {
           {user.role === "ADMIN" && (
             <>
               <Divider />
-              <MenuItem icon="fa-user-cog" label="Admin panel" onClick={() => go("/admin")} />
+              <MenuItem
+                icon="fa-user-cog"
+                label="Admin panel"
+                badge={adminTotal}
+                onClick={() => go("/admin")}
+              />
             </>
           )}
 
@@ -135,11 +146,13 @@ function MenuItem({
   label,
   onClick,
   danger,
+  badge,
 }: {
   icon: string;
   label: string;
   onClick: () => void;
   danger?: boolean;
+  badge?: number;
 }) {
   return (
     <button
@@ -160,6 +173,25 @@ function MenuItem({
       }}
     >
       <i className={`fas ${icon}`} style={{ width: "16px" }}></i> {label}
+      {badge !== undefined && badge > 0 && (
+        <span
+          style={{
+            marginLeft: "auto",
+            background: "var(--text-danger)",
+            color: "white",
+            borderRadius: "50%",
+            width: 18,
+            height: 18,
+            fontSize: "0.65rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: 700,
+          }}
+        >
+          {badge > 9 ? "9+" : badge}
+        </span>
+      )}
     </button>
   );
 }
