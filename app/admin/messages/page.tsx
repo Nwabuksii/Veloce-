@@ -35,7 +35,7 @@ const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "0.6rem",
   marginTop: "0.4rem",
-  borderRadius: "3px",
+  borderRadius: "10px",
   border: "1px solid var(--border-blue)",
 };
 
@@ -217,7 +217,7 @@ export default function AdminMessagesPage() {
                           right: 0,
                           background: "var(--surface)",
                           border: "1px solid var(--border-blue)",
-                          borderRadius: "3px",
+                          borderRadius: "10px",
                           marginTop: "0.3rem",
                           zIndex: 10,
                           boxShadow: "0 8px 20px -8px rgba(0,20,40,0.18)",
@@ -253,7 +253,7 @@ export default function AdminMessagesPage() {
                   <div
                     style={{
                       background: "var(--bg-info)",
-                      borderRadius: "3px",
+                      borderRadius: "10px",
                       padding: "0.7rem 1rem",
                       display: "flex",
                       justifyContent: "space-between",
@@ -277,7 +277,7 @@ export default function AdminMessagesPage() {
                 style={{
                   background: "var(--surface)",
                   border: "1px solid var(--border-blue)",
-                  borderRadius: "3px",
+                  borderRadius: "10px",
                   padding: "0.8rem 1rem",
                   display: "flex",
                   flexDirection: "column",
@@ -334,7 +334,7 @@ export default function AdminMessagesPage() {
           {sentMessages.map((m, i) => (
             <div
               key={`${m.subject}-${m.createdAt}-${i}`}
-              style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "4px", padding: "0.8rem 1rem" }}
+              style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "0.8rem 1rem" }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
                 <strong style={{ fontSize: "0.9rem" }}>{m.subject}</strong>

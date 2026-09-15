@@ -77,7 +77,7 @@ export default function AdminFeedbackPage() {
                   style={{
                     background: "var(--surface)",
                     border: "1px solid var(--border-blue)",
-                    borderRadius: "4px",
+                    borderRadius: "12px",
                     padding: "1rem",
                   }}
                 >

@@ -130,7 +130,7 @@ export default function ScribeWorkspacePage() {
                     background: style.bg,
                     color: style.color,
                     padding: "0.2rem 0.8rem",
-                    borderRadius: "3px",
+                    borderRadius: "10px",
                     fontSize: "0.75rem",
                     fontWeight: 600,
                   }}

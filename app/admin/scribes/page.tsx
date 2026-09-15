@@ -136,7 +136,7 @@ export default function ManageScribesPage() {
               style={{
                 background: "var(--surface)",
                 border: "1px solid var(--border-blue)",
-                borderRadius: "4px",
+                borderRadius: "12px",
                 padding: "1rem",
                 display: "flex",
                 justifyContent: "space-between",
@@ -164,7 +164,7 @@ export default function ManageScribesPage() {
                     onChange={(e) => setDemoteReason(e.target.value)}
                     rows={2}
                     placeholder="Reason (optional) — shared with the scribe"
-                    style={{ padding: "0.5rem", borderRadius: "3px", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem" }}
+                    style={{ padding: "0.5rem", borderRadius: "10px", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem" }}
                   />
                   <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
                     <span style={{ fontSize: "0.85rem", color: "var(--text-danger)" }}>Demote for real?</span>

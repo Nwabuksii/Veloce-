@@ -27,7 +27,7 @@ const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "0.6rem",
   marginTop: "0.4rem",
-  borderRadius: "3px",
+  borderRadius: "10px",
   border: "1px solid var(--border-blue)",
 };
 
@@ -228,29 +228,20 @@ export default function RequestsPage() {
           </h2>
           {loadingFeed && <SkeletonList rows={3} />}
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.7rem", marginTop: "0.8rem" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.9rem", marginTop: "0.8rem" }}>
             {requests.map((r) => (
-              <div
-                key={r.id}
-                style={{
-                  background: "var(--surface)",
-                  border: "1px solid var(--border-blue)",
-                  borderRadius: "4px",
-                  padding: "0.9rem 1.1rem",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
+              <div key={r.id} className="ledger-row" style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
                 <div>
-                  <strong>{r.requestedTitle}</strong>
-                  <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                    {r.courseCode} — {r.courseName}
-                  </div>
+                  <span className="seal mono" style={{ marginBottom: "0.4rem", display: "inline-block" }}>{r.courseCode}</span>
+                  <div className="ledger-row-title">{r.requestedTitle}</div>
+                  <div className="ledger-row-meta">{r.courseName}</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div style={{ fontWeight: 600, color: "var(--text-info)" }}>{r.voteCount} want this</div>
-                  {r.requestedByMe && <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>You requested this</div>}
+                  <span className="pill pill-info">
+                    <i className="fas fa-thumbs-up" style={{ marginRight: "0.35rem" }}></i>
+                    {r.voteCount} want this
+                  </span>
+                  {r.requestedByMe && <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginTop: "0.35rem" }}>You requested this</div>}
                 </div>
               </div>
             ))}

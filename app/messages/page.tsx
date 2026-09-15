@@ -84,7 +84,7 @@ export default function MessagesPage() {
               style={{
                 background: "var(--surface)",
                 border: m.readAt ? "1px solid var(--border-blue)" : "1px solid var(--text-info)",
-                borderRadius: "4px",
+                borderRadius: "12px",
                 padding: "1rem 1.2rem",
                 cursor: "pointer",
               }}

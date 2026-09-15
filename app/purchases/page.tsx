@@ -168,7 +168,7 @@ export default function PurchasesPage() {
 
                 {p.refunded ? (
                   <div
-                    style={{ marginTop: "0.6rem", padding: "0.5rem 0.8rem", borderRadius: "3px", background: "var(--bg-danger)", color: "var(--text-danger)", fontSize: "0.85rem", width: "fit-content" }}
+                    style={{ marginTop: "0.6rem", padding: "0.5rem 0.8rem", borderRadius: "10px", background: "var(--bg-danger)", color: "var(--text-danger)", fontSize: "0.85rem", width: "fit-content" }}
                   >
                     <i className="fas fa-ban"></i> Refunded — access removed
                   </div>
@@ -225,7 +225,7 @@ export default function PurchasesPage() {
                       style={{
                         width: "100%",
                         padding: "0.5rem",
-                        borderRadius: "3px",
+                        borderRadius: "10px",
                         border: "1px solid var(--border-blue)",
                         fontFamily: "inherit",
                       }}
@@ -266,7 +266,7 @@ export default function PurchasesPage() {
                             onChange={(e) => setRefundReason(e.target.value)}
                             rows={2}
                             placeholder="Explain what went wrong..."
-                            style={{ padding: "0.5rem", borderRadius: "3px", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem", background: "var(--surface)", color: "var(--text-primary)" }}
+                            style={{ padding: "0.5rem", borderRadius: "10px", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem", background: "var(--surface)", color: "var(--text-primary)" }}
                           />
                           <div style={{ display: "flex", gap: "0.6rem" }}>
                             <button

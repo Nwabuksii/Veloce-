@@ -5,6 +5,7 @@ import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
 import Logo from "@/app/components/Logo";
 import ProfileMenu from "@/app/components/ProfileMenu";
+import Avatar from "@/app/components/Avatar";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
@@ -224,10 +225,22 @@ function BlockDetailInner() {
 
         {!loading && !error && (
           <div style={{ marginTop: "1.5rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.8rem" }}>
+            <div
+              style={{
+                background: "var(--ink)",
+                color: "white",
+                borderRadius: "14px",
+                padding: "1.5rem 1.7rem",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                flexWrap: "wrap",
+                gap: "0.8rem",
+              }}
+            >
               <div>
                 <h2 style={{ fontSize: "1.4rem" }}>{blockTitle}</h2>
-                <span className="price-tag" style={{ marginTop: "0.4rem", display: "inline-block" }}>
+                <span className="price-tag mono" style={{ marginTop: "0.4rem", display: "inline-block", color: "white" }}>
                   {notes.length > 0 && new Set(notes.map((n) => n.price)).size > 1
                     ? `From ₦${Math.min(...notes.map((n) => n.price)).toLocaleString()}`
                     : `₦${(notes[0]?.price ?? price).toLocaleString()}`}
@@ -286,12 +299,14 @@ function BlockDetailInner() {
                     className="ledger-row"
                     style={
                       n.noteId === highlightNoteId
-                        ? { background: "var(--bg-info)", borderLeftColor: "var(--text-info)" }
+                        ? { background: "var(--bg-info)", borderColor: "var(--text-info)" }
                         : undefined
                     }
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.6rem" }}>
-                    <div>
+                    <div style={{ display: "flex", gap: "0.7rem", alignItems: "flex-start" }}>
+                      <Avatar name={n.scribeName} />
+                      <div>
                       {n.noteId === highlightNoteId && (
                         <div style={{ fontSize: "0.75rem", color: "var(--text-info)", fontWeight: 600, marginBottom: "0.2rem" }}>
                           <i className="fas fa-share"></i> Shared with you
@@ -303,8 +318,8 @@ function BlockDetailInner() {
                       >
                         {n.scribeName}
                       </button>
-                      <div style={{ display: "flex", gap: "0.6rem", alignItems: "center", marginTop: "0.3rem" }}>
-                        <span className="seal" style={{ background: trustStyle.bg, color: trustStyle.color, borderRadius: "3px" }}>
+                      <div style={{ display: "flex", gap: "0.6rem", alignItems: "center", marginTop: "0.3rem", flexWrap: "wrap" }}>
+                        <span className="seal" style={{ background: trustStyle.bg, color: trustStyle.color }}>
                           {n.trustLabel}
                         </span>
                         {n.isRequestFulfillment && <span className="seal">Fixed request price</span>}
@@ -321,6 +336,7 @@ function BlockDetailInner() {
                         >
                           <i className="fas fa-flag"></i> Report this version
                         </button>
+                      </div>
                       </div>
                     </div>
 

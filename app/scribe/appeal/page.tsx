@@ -135,7 +135,7 @@ export default function ScribeAppealPage() {
                 background: STATUS_STYLES[appeal.status].bg,
                 color: STATUS_STYLES[appeal.status].color,
                 padding: "0.4rem 1rem",
-                borderRadius: "3px",
+                borderRadius: "10px",
                 fontSize: "0.85rem",
                 fontWeight: 600,
               }}
@@ -144,7 +144,7 @@ export default function ScribeAppealPage() {
               {STATUS_STYLES[appeal.status].label}
             </span>
 
-            <div style={{ marginTop: "1.2rem", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "4px", padding: "1.2rem" }}>
+            <div style={{ marginTop: "1.2rem", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "1.2rem" }}>
               <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "0.4rem" }}>Your appeal:</div>
               <p style={{ fontSize: "0.9rem", color: "var(--text-primary)", whiteSpace: "pre-wrap" }}>&ldquo;{appeal.reason}&rdquo;</p>
               <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "1rem" }}>
@@ -190,7 +190,7 @@ export default function ScribeAppealPage() {
                 placeholder="Explain what happened, what you've done differently since, and why you should get another chance..."
                 style={{
                   padding: "0.7rem",
-                  borderRadius: "3px",
+                  borderRadius: "10px",
                   border: "1px solid var(--border-blue)",
                   fontFamily: "inherit",
                   fontSize: "0.9rem",

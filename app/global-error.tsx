@@ -30,7 +30,7 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
                 background: "#16213A",
                 color: "white",
                 border: "none",
-                borderRadius: "3px",
+                borderRadius: "10px",
                 padding: "0.6rem 1.4rem",
                 cursor: "pointer",
                 fontSize: "0.9rem",

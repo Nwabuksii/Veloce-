@@ -38,7 +38,7 @@ export default function CouponConfirmDialog({ itemLabel, couponBalance, confirmi
       <div
         style={{
           background: "var(--surface)",
-          borderRadius: "4px",
+          borderRadius: "12px",
           padding: "1.5rem",
           width: "min(380px, 90vw)",
         }}

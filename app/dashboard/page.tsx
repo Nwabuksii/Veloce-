@@ -261,36 +261,12 @@ export default function DashboardPage() {
                 onClick={() => router.push(`/blocks/${block.id}`)}
                 style={{ cursor: "pointer" }}
               >
-                <div className="ledger-row-head">
-                  <span className="ledger-row-title">
-                    <span className="seal mono" style={{ marginRight: "0.6rem" }}>{block.courseCode}</span>
-                    {block.title}
-                  </span>
-                  {!block.unlocked && couponBalance != null && couponBalance > 0 ? (
-                    <span className="price-tag" style={{ color: "var(--text-pro)", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
-                      <i className="fas fa-ticket"></i> Use coupon
-                    </span>
-                  ) : block.discountedPrice != null ? (
-                    block.discountedPrice < block.price ? (
-                      <span>
-                        <span className="price-tag" style={{ textDecoration: "line-through", color: "var(--text-muted)", marginRight: "0.4rem" }}>
-                          ₦{block.price.toLocaleString()}
-                        </span>
-                        <span className="price-tag" style={{ color: "var(--text-success)" }}>
-                          ₦{block.discountedPrice.toLocaleString()}
-                        </span>
-                      </span>
-                    ) : (
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
-                        <span className="price-tag">₦{block.discountedPrice.toLocaleString()}</span>
-                        <span className="seal">Fixed price</span>
-                      </span>
-                    )
-                  ) : (
-                    <span className="price-tag">₦{block.price.toLocaleString()}</span>
-                  )}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.6rem" }}>
+                  <span className="seal mono">{block.courseCode}</span>
+                  {block.unlocked && <span className="stamp stamp-success">Unlocked</span>}
                 </div>
 
+                <div className="ledger-row-title" style={{ marginTop: "0.5rem" }}>{block.title}</div>
                 <div className="ledger-row-meta">{block.courseName}</div>
 
                 {block.scribeName && (
@@ -307,6 +283,7 @@ export default function DashboardPage() {
                       fontSize: "0.8rem",
                       color: "var(--text-info)",
                       display: "block",
+                      textAlign: "left",
                     }}
                   >
                     by {block.scribeName}
@@ -314,29 +291,52 @@ export default function DashboardPage() {
                 )}
 
                 {block.topics.length > 0 && (
-                  <ul style={{ fontSize: "0.8rem", color: "var(--text-secondary)", margin: "0.3rem 0 0", paddingLeft: "1.1rem" }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginTop: "0.2rem" }}>
                     {block.topics.map((t, i) => (
-                      <li key={i}>{t}</li>
+                      <span key={i} className="pill pill-muted">{t}</span>
                     ))}
-                  </ul>
+                  </div>
                 )}
 
-                <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", marginTop: "0.3rem" }}>
-                  {block.liveNoteCount > 1 ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      {block.unlocked && <span className="stamp stamp-success">Unlocked</span>}
-                      <button className="btn btn-primary" onClick={(e) => { e.stopPropagation(); openVersionPicker(block); }}>
-                        <i className="fas fa-layer-group"></i> {block.liveNoteCount} versions
-                      </button>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.6rem", paddingTop: "0.7rem", borderTop: "1px solid var(--border-light)" }}>
+                  <div>
+                    <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                      {block.discountedPrice != null && block.discountedPrice < block.price ? "Discounted" : "Flat fee"}
                     </div>
+                    {!block.unlocked && couponBalance != null && couponBalance > 0 ? (
+                      <span className="price-tag" style={{ color: "var(--text-pro)" }}>Use coupon</span>
+                    ) : block.discountedPrice != null ? (
+                      block.discountedPrice < block.price ? (
+                        <span>
+                          <span className="price-tag" style={{ textDecoration: "line-through", color: "var(--text-muted)", marginRight: "0.4rem", fontSize: "0.85rem" }}>
+                            ₦{block.price.toLocaleString()}
+                          </span>
+                          <span className="price-tag" style={{ color: "var(--text-success)" }}>
+                            ₦{block.discountedPrice.toLocaleString()}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="price-tag">₦{block.discountedPrice.toLocaleString()}</span>
+                      )
+                    ) : (
+                      <span className="price-tag">₦{block.price.toLocaleString()}</span>
+                    )}
+                  </div>
+
+                  {block.liveNoteCount > 1 ? (
+                    <button className="btn btn-primary" onClick={(e) => { e.stopPropagation(); openVersionPicker(block); }}>
+                      <i className="fas fa-layer-group"></i> {block.liveNoteCount} versions
+                    </button>
                   ) : block.unlocked ? (
-                    <span className="stamp stamp-success">Unlocked</span>
+                    <button className="btn" onClick={(e) => { e.stopPropagation(); router.push(`/blocks/${block.id}`); }}>
+                      <i className="fas fa-book-open"></i> View
+                    </button>
                   ) : (
                     <button className="btn btn-primary" onClick={(e) => { e.stopPropagation(); handleBuyClick(block); }}>
                       {couponBalance != null && couponBalance > 0 ? (
-                        <><i className="fas fa-ticket"></i> use coupon</>
+                        <><i className="fas fa-ticket"></i> Use coupon</>
                       ) : (
-                        <><i className="fas fa-lock"></i> purchase</>
+                        <><i className="fas fa-lock"></i> Instant Unlock</>
                       )}
                     </button>
                   )}
@@ -362,7 +362,7 @@ export default function DashboardPage() {
             <div
               style={{
                 background: "var(--surface)",
-                borderRadius: "4px",
+                borderRadius: "12px",
                 padding: "1.5rem",
                 width: "min(480px, 92vw)",
                 maxHeight: "80vh",

@@ -136,7 +136,7 @@ export default function AdminPayoutsPage() {
                 style={{
                   background: "var(--surface)",
                   border: p.status === "PROCESSING" ? "2px solid var(--text-info)" : "1px solid var(--border-blue)",
-                  borderRadius: "4px",
+                  borderRadius: "12px",
                   padding: "1rem",
                   display: "flex",
                   justifyContent: "space-between",

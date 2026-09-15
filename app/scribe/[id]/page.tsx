@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
 import Logo from "@/app/components/Logo";
 import ProfileMenu from "@/app/components/ProfileMenu";
+import Avatar from "@/app/components/Avatar";
 import { friendlyErrorMessage, apiFetch } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
 
@@ -113,7 +114,7 @@ export default function ScribeProfilePage() {
 
   return (
     <div className="page-wrap">
-      <div className="app-container" style={{ maxWidth: 720 }}>
+      <div className="app-container" style={{ maxWidth: 960 }}>
         <div className="top-bar">
           <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
             <Logo size={34} />
@@ -137,100 +138,121 @@ export default function ScribeProfilePage() {
 
         {profile && (
           <div style={{ marginTop: "1.5rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
-              <div>
-                <h2 style={{ fontSize: "1.5rem" }}>{profile.fullName}</h2>
-                <span
-                  style={{
-                    display: "inline-block",
-                    marginTop: "0.4rem",
-                    background: TRUST_STYLES[profile.trustLevel].bg,
-                    color: TRUST_STYLES[profile.trustLevel].color,
-                    padding: "0.25rem 0.9rem",
-                    borderRadius: "3px",
-                    fontSize: "0.8rem",
-                    fontWeight: 600,
-                  }}
-                >
-                  <i className="fas fa-shield-alt"></i> {profile.trustLabel}
-                </span>
-                {!profile.isActiveScribe && (
-                  <span
-                    style={{
-                      display: "inline-block",
-                      marginTop: "0.4rem",
-                      marginLeft: "0.5rem",
-                      background: "var(--bg-danger)",
-                      color: "var(--text-danger)",
-                      padding: "0.25rem 0.9rem",
-                      borderRadius: "3px",
-                      fontSize: "0.8rem",
-                      fontWeight: 600,
-                    }}
-                  >
-                    No longer an active scribe
-                  </span>
+            <div style={{ display: "flex", gap: "1.1rem", alignItems: "flex-start", flexWrap: "wrap" }}>
+              <div style={{ transform: "scale(1.7)", transformOrigin: "top left", marginRight: "0.6rem" }}>
+                <Avatar name={profile.fullName} />
+              </div>
+
+              <div style={{ flex: "1 1 260px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
+                  <div>
+                    <h2 style={{ fontSize: "1.5rem" }}>{profile.fullName}</h2>
+                    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "0.3rem",
+                          background: TRUST_STYLES[profile.trustLevel].bg,
+                          color: TRUST_STYLES[profile.trustLevel].color,
+                          padding: "0.3rem 0.9rem",
+                          borderRadius: "999px",
+                          fontSize: "0.78rem",
+                          fontWeight: 700,
+                        }}
+                      >
+                        <i className="fas fa-shield-alt"></i> {profile.trustLabel}
+                      </span>
+                      {!profile.isActiveScribe && (
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            background: "var(--bg-danger)",
+                            color: "var(--text-danger)",
+                            padding: "0.3rem 0.9rem",
+                            borderRadius: "999px",
+                            fontSize: "0.78rem",
+                            fontWeight: 700,
+                          }}
+                        >
+                          No longer an active scribe
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "0.6rem" }}>
+                    {!profile.isSelf && profile.isActiveScribe && (
+                      <button
+                        className={`btn ${profile.isFollowing ? "" : "btn-primary"}`}
+                        onClick={toggleFollow}
+                        disabled={followLoading}
+                      >
+                        <i className={`fas ${profile.isFollowing ? "fa-user-check" : "fa-user-plus"}`}></i>{" "}
+                        {profile.isFollowing ? "Following" : "Follow Scribe"}
+                      </button>
+                    )}
+                    {!profile.isSelf && (
+                      <button className="btn" onClick={() => setReporting((v) => !v)}>
+                        <i className="fas fa-flag"></i> Report
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {reporting && (
+                  <div style={{ marginTop: "1rem", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "10px", padding: "1rem", display: "flex", flexDirection: "column", gap: "0.7rem" }}>
+                    <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+                      Why are you reporting {profile.fullName}? (harassment, scam, fake notes, etc.)
+                    </label>
+                    <textarea
+                      value={reportReason}
+                      onChange={(e) => setReportReason(e.target.value)}
+                      rows={3}
+                      placeholder="Describe what happened..."
+                      style={{ padding: "0.6rem", borderRadius: "8px", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem" }}
+                    />
+                    <div style={{ display: "flex", gap: "0.6rem" }}>
+                      <button className="btn btn-primary" onClick={submitReport} disabled={reportSubmitting}>
+                        {reportSubmitting ? "Submitting..." : "Submit report"}
+                      </button>
+                      <button className="btn" onClick={() => setReporting(false)}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {reportStatus && !reporting && (
+                  <p style={{ color: "var(--text-success)", marginTop: "0.6rem", fontSize: "0.85rem" }}>{reportStatus}</p>
                 )}
               </div>
-
-              {!profile.isSelf && profile.isActiveScribe && (
-                <button
-                  className={`btn ${profile.isFollowing ? "" : "btn-primary"}`}
-                  onClick={toggleFollow}
-                  disabled={followLoading}
-                >
-                  <i className={`fas ${profile.isFollowing ? "fa-user-check" : "fa-user-plus"}`}></i>{" "}
-                  {profile.isFollowing ? "Following" : "Follow"}
-                </button>
-              )}
-              {!profile.isSelf && (
-                <button className="btn" onClick={() => setReporting((v) => !v)}>
-                  <i className="fas fa-flag"></i> Report user
-                </button>
-              )}
             </div>
 
-            {reporting && (
-              <div style={{ marginTop: "1rem", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "4px", padding: "1rem", display: "flex", flexDirection: "column", gap: "0.7rem" }}>
-                <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-                  Why are you reporting {profile.fullName}? (harassment, scam, fake notes, etc.)
-                </label>
-                <textarea
-                  value={reportReason}
-                  onChange={(e) => setReportReason(e.target.value)}
-                  rows={3}
-                  placeholder="Describe what happened..."
-                  style={{ padding: "0.6rem", borderRadius: "3px", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem" }}
-                />
-                <div style={{ display: "flex", gap: "0.6rem" }}>
-                  <button className="btn btn-primary" onClick={submitReport} disabled={reportSubmitting}>
-                    {reportSubmitting ? "Submitting..." : "Submit report"}
-                  </button>
-                  <button className="btn" onClick={() => setReporting(false)}>
-                    Cancel
-                  </button>
-                </div>
+            <div className="stat-row">
+              <div className="stat-card" style={{ flex: "1 1 180px" }}>
+                <div className="stat-label"><i className="fas fa-star" style={{ color: "var(--star)" }}></i> Overall rating</div>
+                <div className="stat-value">{profile.avgRating != null ? profile.avgRating.toFixed(1) : "—"}</div>
+                <div className="stat-sub">{profile.ratingCount} verified reviews</div>
               </div>
-            )}
-            {reportStatus && !reporting && (
-              <p style={{ color: "var(--text-success)", marginTop: "0.6rem", fontSize: "0.85rem" }}>{reportStatus}</p>
-            )}
-
-            <div style={{ display: "flex", gap: "1rem", margin: "1.2rem 0", flexWrap: "wrap" }}>
-              <div className="role-pill">
-                <i className="fas fa-shopping-cart"></i> {profile.paidSubscriberCount} paid subscriber
-                {profile.paidSubscriberCount === 1 ? "" : "s"}
+              <div className="stat-card" style={{ flex: "1 1 180px" }}>
+                <div className="stat-label"><i className="fas fa-shopping-cart"></i> Paid buyers</div>
+                <div className="stat-value">{profile.paidSubscriberCount}</div>
+                <div className="stat-sub">scholars</div>
               </div>
-              <div className="role-pill">
-                <i className="fas fa-users"></i> {profile.followerCount} follower{profile.followerCount === 1 ? "" : "s"}
+              <div className="stat-card" style={{ flex: "1 1 180px" }}>
+                <div className="stat-label"><i className="fas fa-users"></i> Followers</div>
+                <div className="stat-value">{profile.followerCount}</div>
+                <div className="stat-sub">active</div>
               </div>
-              <div className="role-pill">
-                <i className="fas fa-star" style={{ color: "var(--star)" }}></i>{" "}
-                {profile.avgRating != null ? `${profile.avgRating.toFixed(1)} (${profile.ratingCount})` : "No ratings yet"}
+              <div className="stat-card" style={{ flex: "1 1 180px" }}>
+                <div className="stat-label"><i className="fas fa-layer-group"></i> Authored blocks</div>
+                <div className="stat-value">{profile.blocks.length}</div>
+                <div className="stat-sub">packs</div>
               </div>
             </div>
 
-            <h3 style={{ marginTop: "1.5rem", fontSize: "1.1rem" }}>
+            <h3 style={{ marginTop: "1.8rem", fontSize: "1.1rem" }}>
               <i className="fas fa-layer-group" style={{ color: "var(--text-info)" }}></i> Live notes
             </h3>
 
@@ -240,11 +262,16 @@ export default function ScribeProfilePage() {
 
             <div className="ledger-list" style={{ marginTop: "0.8rem" }}>
               {profile.blocks.map((b) => (
-                <div key={b.noteId} className="ledger-row" onClick={() => router.push(`/blocks/${b.blockId}`)} style={{ cursor: "pointer" }}>
-                  <div className="badge">{b.courseCode}</div>
-                  <h3>{b.blockTitle}</h3>
-                  <div className="meta">{b.courseName}</div>
-                  <span className="price-tag">₦{b.price.toLocaleString()}</span>
+                <div key={b.noteId} className="ledger-row press-on-tap" onClick={() => router.push(`/blocks/${b.blockId}`)} style={{ cursor: "pointer" }}>
+                  <span className="seal mono">{b.courseCode}</span>
+                  <div className="ledger-row-title" style={{ marginTop: "0.4rem" }}>{b.blockTitle}</div>
+                  <div className="ledger-row-meta">{b.courseName}</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.6rem", paddingTop: "0.7rem", borderTop: "1px solid var(--border-light)" }}>
+                    <span className="price-tag">₦{b.price.toLocaleString()}</span>
+                    <button className="btn btn-primary" onClick={(e) => { e.stopPropagation(); router.push(`/blocks/${b.blockId}`); }}>
+                      <i className="fas fa-lock"></i> Instant Unlock
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

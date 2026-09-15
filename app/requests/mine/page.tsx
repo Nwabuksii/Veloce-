@@ -72,7 +72,7 @@ export default function MyRequestsPage() {
               style={{
                 background: "var(--surface)",
                 border: "1px solid var(--border-blue)",
-                borderRadius: "4px",
+                borderRadius: "12px",
                 padding: "1rem 1.2rem",
                 display: "flex",
                 justifyContent: "space-between",
@@ -99,7 +99,7 @@ export default function MyRequestsPage() {
                       background: "var(--bg-success)",
                       color: "var(--text-success)",
                       padding: "0.25rem 0.9rem",
-                      borderRadius: "3px",
+                      borderRadius: "10px",
                       fontSize: "0.8rem",
                       fontWeight: 600,
                       marginBottom: "0.5rem",
@@ -128,7 +128,7 @@ export default function MyRequestsPage() {
                     background: "var(--bg-warning)",
                     color: "var(--text-warning)",
                     padding: "0.25rem 0.9rem",
-                    borderRadius: "3px",
+                    borderRadius: "10px",
                     fontSize: "0.8rem",
                     fontWeight: 600,
                   }}
