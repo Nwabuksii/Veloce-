@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, FormEvent } from "react";
+import { useEffect, useState, FormEvent, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
 import Logo from "@/app/components/Logo";
@@ -36,7 +36,20 @@ const inputStyle: React.CSSProperties = {
 // a production build doesn't try to statically prerender it.
 export const dynamic = "force-dynamic";
 
+// useSearchParams() opts the whole tree into client-side rendering during
+// prerendering, and Next requires a Suspense boundary around whatever uses
+// it — force-dynamic alone doesn't satisfy that during the build. The
+// actual page logic lives in ScribeUploadForm below; this default export
+// just supplies the required boundary around it.
 export default function ScribeUploadPage() {
+  return (
+    <Suspense fallback={null}>
+      <ScribeUploadForm />
+    </Suspense>
+  );
+}
+
+function ScribeUploadForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState<1 | 2 | 3>(1);
