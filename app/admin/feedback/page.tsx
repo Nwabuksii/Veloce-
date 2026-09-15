@@ -56,7 +56,7 @@ export default function AdminFeedbackPage() {
           </h2>
 
           {loading ? (
-            <SkeletonList count={4} />
+            <SkeletonList rows={4} />
           ) : error ? (
             <p style={{ color: "var(--text-danger)", marginTop: "1rem" }}>{error}</p>
           ) : feedback.length === 0 ? (
