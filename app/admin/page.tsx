@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
 import ProfileMenu from "@/app/components/ProfileMenu";
 import Logo from "@/app/components/Logo";
+import { fetchAdminCounts, AdminCounts } from "@/lib/admin-counts";
 
 interface HubLink {
   icon: string;
   label: string;
   description: string;
   href: string;
+  countKey?: keyof Omit<AdminCounts, "total">;
 }
 
 interface HubGroup {
@@ -22,36 +24,37 @@ const GROUPS: HubGroup[] = [
   {
     title: "Trust & moderation",
     links: [
-      { icon: "fa-user-cog", label: "Scribe applications", description: "Approve or reject people applying to become scribes", href: "/admin/applications" },
-      { icon: "fa-undo", label: "Appeals", description: "Demoted scribes asking for reinstatement", href: "/admin/appeals" },
-      { icon: "fa-flag", label: "Moderation queue", description: "Newly uploaded notes awaiting review", href: "/admin/moderation" },
-      { icon: "fa-exclamation-triangle", label: "Reports", description: "Content reports and refund requests from students", href: "/admin/reports" },
+      { icon: "fa-user-cog", label: "Scribe applications", description: "Approve or reject people applying to become scribes", href: "/admin/applications", countKey: "applications" },
+      { icon: "fa-undo", label: "Appeals", description: "Demoted scribes asking for reinstatement", href: "/admin/appeals", countKey: "appeals" },
+      { icon: "fa-flag", label: "Moderation queue", description: "Newly uploaded notes awaiting review", href: "/admin/moderation", countKey: "moderation" },
+      { icon: "fa-exclamation-triangle", label: "Reports", description: "Content reports and refund requests from students", href: "/admin/reports", countKey: "reports" },
     ],
   },
   {
     title: "Money",
     links: [
-      { icon: "fa-money-bill-wave", label: "Payouts", description: "Scribe withdrawal requests awaiting approval", href: "/admin/payouts" },
-      { icon: "fa-chart-line", label: "Financial ledger", description: "Revenue, scribe pool, and coupon stats", href: "/admin/finance" },
+      { icon: "fa-money-bill-wave", label: "Payouts", description: "Scribe withdrawal requests awaiting approval", href: "/admin/payouts", countKey: "payouts" },
+      { icon: "fa-chart-line", label: "Financial ledger", description: "Revenue, scribe pool, and coupon stats", href: "/admin/finance", countKey: "disputes" },
     ],
   },
   {
     title: "People",
     links: [
       { icon: "fa-ban", label: "Manage users", description: "Ban or unban an account", href: "/admin/users" },
-      { icon: "fa-user-minus", label: "Manage scribes", description: "Demote a scribe back to student", href: "/admin/scribes" },
+      { icon: "fa-user-minus", label: "Manage scribes", description: "Demote a scribe back to student", href: "/admin/scribes", countKey: "demotedScribes" },
       { icon: "fa-envelope-open-text", label: "Message a user", description: "Send someone a direct message", href: "/admin/messages" },
     ],
   },
   {
     title: "Feedback",
-    links: [{ icon: "fa-comment-dots", label: "Feedback inbox", description: "What people are saying about the site", href: "/admin/feedback" }],
+    links: [{ icon: "fa-comment-dots", label: "Feedback inbox", description: "What people are saying about the site", href: "/admin/feedback", countKey: "feedback" }],
   },
 ];
 
 export default function AdminHubPage() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
+  const [counts, setCounts] = useState<AdminCounts | null>(null);
 
   useEffect(() => {
     const user = getStoredUser();
@@ -65,6 +68,11 @@ export default function AdminHubPage() {
     }
     setReady(true);
   }, [router]);
+
+  useEffect(() => {
+    if (!ready) return;
+    fetchAdminCounts().then(setCounts);
+  }, [ready]);
 
   if (!ready) return null;
 
@@ -99,6 +107,27 @@ export default function AdminHubPage() {
                     <div className="ledger-row-head">
                       <span className="ledger-row-title">
                         <i className={`fas ${link.icon}`} style={{ color: "var(--accent)", width: "1.2rem" }}></i> {link.label}
+                        {link.countKey && counts && counts[link.countKey] > 0 && (
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              marginLeft: "0.5rem",
+                              background: "var(--text-danger)",
+                              color: "white",
+                              borderRadius: "999px",
+                              minWidth: 18,
+                              height: 18,
+                              padding: "0 0.35rem",
+                              fontSize: "0.65rem",
+                              fontWeight: 700,
+                              verticalAlign: "middle",
+                            }}
+                          >
+                            {counts[link.countKey] > 9 ? "9+" : counts[link.countKey]}
+                          </span>
+                        )}
                       </span>
                     </div>
                     <div className="ledger-row-meta">{link.description}</div>
