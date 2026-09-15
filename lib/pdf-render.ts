@@ -36,6 +36,14 @@ import { createCanvas, loadImage, type SKRSContext2D } from "@napi-rs/canvas";
 // @ts-ignore — pdfjs-dist's legacy Node build has no first-party types for this exact entry point
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 
+// Explicitly resolve the worker file with require() rather than letting
+// pdfjs-dist derive it internally from import.meta.url — under Vercel's
+// bundler that internal derivation is what led to the file not being
+// found at runtime. require.resolve() just resolves the path (doesn't
+// execute anything), and next.config.js's outputFileTracingIncludes
+// makes sure the actual file ships in the deployed function.
+pdfjsLib.GlobalWorkerOptions.workerSrc = require.resolve("pdfjs-dist/legacy/build/pdf.worker.mjs");
+
 // pdf.js needs something that can hand it fresh canvases for internal
 // operations (transparency groups, soft masks) beyond the one canvas we
 // give it directly for the actual page output.
