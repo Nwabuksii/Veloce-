@@ -15,7 +15,7 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, user) => {
 
   // Look up the admin's last-seen timestamps for view-only sections.
   const views = await prisma.adminSectionView.findMany({
-    where: { adminId: user.id, section: { in: ["feedback", "ledger"] } },
+    where: { adminId: user.sub, section: { in: ["feedback", "ledger"] } },
   });
   const lastSeen: Record<string, Date | null> = {
     feedback: null,
