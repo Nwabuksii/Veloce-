@@ -7,7 +7,7 @@ import Logo from "@/app/components/Logo";
 import ProfileMenu from "@/app/components/ProfileMenu";
 import Avatar from "@/app/components/Avatar";
 import { SkeletonStatRow, SkeletonList } from "@/app/components/Skeleton";
-import { friendlyErrorMessage } from "@/lib/api-client";
+import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
 
 interface Transaction {
@@ -66,6 +66,13 @@ export default function AdminFinancePage() {
       router.push("/dashboard");
       return;
     }
+
+    // Clear the "unseen disputes" badge — this admin has now opened the page.
+    apiFetch("/api/admin/seen", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ section: "ledger" }),
+    }).catch(() => {});
 
     fetch("/api/admin/finance")
       .then(async (res) => {
@@ -221,4 +228,4 @@ export default function AdminFinancePage() {
       </div>
     </div>
   );
-}
+    }
