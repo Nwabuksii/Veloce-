@@ -28,6 +28,14 @@ export default function AdminFeedbackPage() {
       router.push("/login");
       return;
     }
+
+    // Clear the "unseen feedback" badge — this admin has now opened the page.
+    apiFetch("/api/admin/seen", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ section: "feedback" }),
+    }).catch(() => {});
+
     apiFetch("/api/feedback")
       .then((data) => setFeedback(data.feedback))
       .catch((err) => setError(friendlyErrorMessage(err)))
@@ -88,4 +96,4 @@ export default function AdminFeedbackPage() {
       </div>
     </div>
   );
-}
+            }
