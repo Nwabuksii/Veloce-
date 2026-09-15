@@ -21,9 +21,9 @@ export const POST = requireRole("ADMIN", async (req: NextRequest, user) => {
 
   await prisma.adminSectionView.upsert({
     where: {
-      adminId_section: { adminId: user.id, section },
+      adminId_section: { adminId: user.sub, section },
     },
-    create: { adminId: user.id, section, lastSeenAt: new Date() },
+    create: { adminId: user.sub, section, lastSeenAt: new Date() },
     update: { lastSeenAt: new Date() },
   });
 
