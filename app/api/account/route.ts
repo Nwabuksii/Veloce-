@@ -5,6 +5,10 @@ import { requireRole } from "@/lib/session";
 import { hashPassword, verifyPassword } from "@/lib/auth";
 import { passwordSchema } from "@/lib/password-policy";
 
+// Force Next.js to evaluate this API route dynamically at runtime,
+// preventing static generation errors during Vercel builds.
+export const dynamic = "force-dynamic";
+
 // Deliberately does NOT allow changing fullName — only email, password,
 // and/or the display theme. Email and password both require the user's
 // current password to confirm it's really them (a stolen session cookie
