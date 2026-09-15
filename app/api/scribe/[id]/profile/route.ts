@@ -49,7 +49,7 @@ export const GET = requireRole<RouteContext>(
         where: { followerId_scribeId: { followerId: viewer.sub, scribeId } },
       }),
       prisma.note.findMany({
-        where: { scribeId, status: "LIVE" },
+        where: { scribeId, status: { in: ["LIVE", "APPROVED"] } },
         include: { block: { include: { course: true } } },
         orderBy: { createdAt: "desc" },
       }),

@@ -23,12 +23,6 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
       ? v.request.claims.find((n) => n.blockId === v.request.blockId)
       : null;
 
-    // The request row can flip to FULFILLED (and get a blockId) the
-    // moment a scribe claims it — before they've actually uploaded and
-    // gotten a note LIVE. Only surface fulfilledBlock once there's a
-    // real, live note behind it; otherwise this reads as "Fulfilled" with
-    // a button that leads nowhere buyable. The frontend already falls
-    // back to a "Still open" badge when fulfilledBlock is null.
     return {
       id: v.request.id,
       requestedTitle: v.request.requestedTitle,
@@ -36,10 +30,9 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
       courseName: v.request.course.name,
       status: v.request.status,
       voteCount: v.request.votes.length,
-      fulfilledBlock:
-        v.request.block && fulfillingNote
-          ? { id: v.request.block.id, title: v.request.block.title, price: v.request.block.price, noteId: fulfillingNote.id }
-          : null,
+      fulfilledBlock: v.request.block
+        ? { id: v.request.block.id, title: v.request.block.title, price: v.request.block.price, noteId: fulfillingNote?.id ?? null }
+        : null,
     };
   });
 
