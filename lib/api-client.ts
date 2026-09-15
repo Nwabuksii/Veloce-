@@ -11,7 +11,6 @@ function extractErrorMessage(data: any): string | null {
   if (!data) return null;
   if (typeof data.error === "string") return data.error;
 
-  // zod's .flatten() shape: { formErrors: string[], fieldErrors: {...} }
   if (data.error?.formErrors?.[0]) return data.error.formErrors[0];
   const fieldErrors = data.error?.fieldErrors;
   if (fieldErrors) {
@@ -21,18 +20,17 @@ function extractErrorMessage(data: any): string | null {
   return null;
 }
 
-/**
- * Fetch + parse JSON, but turn every failure mode into a plain, readable
- * ApiError instead of throwing raw network/parsing errors:
- *  - fetch() itself throwing (offline, DNS failure, server unreachable, CORS)
- *  - the server responding with non-JSON (a crash page, a proxy timeout
- *    page, an empty body)
- *  - a normal { error: "..." } / zod-flattened error from the API
- */
 export async function apiFetch<T = any>(url: string, options?: RequestInit): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(url, options);
+    res = await fetch(url, {
+      credentials: "include",
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(options?.headers || {}),
+      },
+    });
   } catch {
     const err = new ApiError("No internet connection — check your network and try again.");
     throw err;
@@ -66,12 +64,10 @@ export async function apiFetch<T = any>(url: string, options?: RequestInit): Pro
   return data as T;
 }
 
-/** Use in every catch block in place of `err instanceof Error ? err.message : "..."` */
 export function friendlyErrorMessage(err: unknown): string {
   if (err instanceof ApiError) return err.message;
 
   if (err instanceof Error) {
-    // Catches anything that slipped through without going via apiFetch.
     if (/failed to fetch|networkerror|load failed/i.test(err.message)) {
       return "No internet connection — check your network and try again.";
     }
