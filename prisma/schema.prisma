@@ -1,4 +1,4 @@
- // Veloce — Prisma Schema
+// Veloce — Prisma Schema
 // Multi-university academic notes marketplace
 
 generator client {
@@ -106,9 +106,9 @@ model User {
   // Set once the signup verification link is clicked. Login is blocked
   // entirely until this is non-null — see app/api/auth/login/route.ts.
   emailVerifiedAt             DateTime?
-  emailVerificationToken       String?   @unique
-  emailVerificationExpiresAt   DateTime?
-  lastVerificationEmailSentAt  DateTime? // rate-limits the resend button
+  emailVerificationToken      String?   @unique
+  emailVerificationExpiresAt  DateTime?
+  lastVerificationEmailSentAt DateTime? // rate-limits the resend button
   fullName     String
 
   // Display preference — synced to whatever device/browser the person
@@ -158,20 +158,22 @@ model User {
 
   scribeApplications ScribeApplication[]
   notes              Note[]               @relation("ScribeNotes")
-  purchases         Purchase[]
-  requestVotes      RequestVote[]
-  reviews           Review[]
-  payouts           Payout[]
-  following         Follow[]           @relation("Following") // scribes this user follows
-  followers         Follow[]           @relation("Followers") // followers of this user (meaningful when role = SCRIBE)
-  reportsFiled      Report[]           @relation("ReportsFiled")
-  reportsReceived   Report[]           @relation("ReportsReceived")
+  purchases          Purchase[]
+  requestVotes       RequestVote[]
+  reviews            Review[]
+  payouts            Payout[]
+  following          Follow[]             @relation("Following") // scribes this user follows
+  followers          Follow[]             @relation("Followers") // followers of this user (meaningful when role = SCRIBE)
+  reportsFiled       Report[]             @relation("ReportsFiled")
+  reportsReceived    Report[]             @relation("ReportsReceived")
 
-  createdAt          DateTime           @default(now())
-  receivedMessages   AdminMessage[]     @relation("MessageRecipient")
-  sentMessages       AdminMessage[]     @relation("MessageSender")
+  createdAt          DateTime             @default(now())
+  receivedMessages   AdminMessage[]       @relation("MessageRecipient")
+  sentMessages       AdminMessage[]       @relation("MessageSender")
   feedback           Feedback[]
+  adminSectionViews  AdminSectionView[]   @relation("AdminSectionViews")
 }
+
 // One-way messages from an Admin to a specific user — e.g. explaining a
 // rejected application or a demotion. No reply thread by design.
 // senderId is nullable so automated system messages (new-account welcome)
@@ -478,6 +480,11 @@ model RateLimitHit {
   count       Int      @default(1)
   windowStart DateTime @default(now())
 }
+
+// ─────────────────────────────────────────────
+// Admin section view tracking
+// ─────────────────────────────────────────────
+
 // Tracks when each admin last opened a "view-only" admin section whose
 // badge should clear on visit (feedback, financial ledger). Action
 // sections (reports, applications, etc.) don't use this — their badges
@@ -486,7 +493,7 @@ model AdminSectionView {
   id         String   @id @default(uuid())
   adminId    String
   admin      User     @relation("AdminSectionViews", fields: [adminId], references: [id], onDelete: Cascade)
-  section    String   // "feedback" | "ledger"
+  section    String // "feedback" | "ledger"
   lastSeenAt DateTime @default(now())
 
   @@unique([adminId, section])
