@@ -13,36 +13,9 @@
 // run `npm install`, the fix is almost always a small signature tweak
 // here, not a change to the overall architecture.
 
-// pdfjs-dist v4 calls Promise.withResolvers() internally, which only
-// exists natively in Node 22+. On an older Node runtime (18.x, most
-// 20.x builds — common on serverless hosts that haven't been bumped
-// yet), every single getDocument() call throws immediately with
-// "Promise.withResolvers is not a function" — regardless of whether
-// the PDF itself is fine. This polyfills it if it's missing, so PDF
-// parsing doesn't depend on the exact Node version deployed.
-if (typeof (Promise as any).withResolvers !== "function") {
-  (Promise as any).withResolvers = function withResolvers<T>() {
-    let resolve!: (value: T | PromiseLike<T>) => void;
-    let reject!: (reason?: unknown) => void;
-    const promise = new Promise<T>((res, rej) => {
-      resolve = res;
-      reject = rej;
-    });
-    return { promise, resolve, reject };
-  };
-}
-
 import { createCanvas, loadImage, type SKRSContext2D } from "@napi-rs/canvas";
 // @ts-ignore — pdfjs-dist's legacy Node build has no first-party types for this exact entry point
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
-
-// Explicitly resolve the worker file with require() rather than letting
-// pdfjs-dist derive it internally from import.meta.url — under Vercel's
-// bundler that internal derivation is what led to the file not being
-// found at runtime. require.resolve() just resolves the path (doesn't
-// execute anything), and next.config.js's outputFileTracingIncludes
-// makes sure the actual file ships in the deployed function.
-pdfjsLib.GlobalWorkerOptions.workerSrc = require.resolve("pdfjs-dist/legacy/build/pdf.worker.mjs");
 
 // pdf.js needs something that can hand it fresh canvases for internal
 // operations (transparency groups, soft masks) beyond the one canvas we
