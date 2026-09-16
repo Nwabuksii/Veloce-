@@ -52,8 +52,12 @@ export const POST = requireRole<RouteContext>("ADMIN", async (req: NextRequest, 
   }
   const { reason } = parsed.data;
 
+  // Only auto-resolve the content complaints (BLOCK-type) — a pending
+  // REFUND-type report on this same note is a separate buyer asking for
+  // their money back, and removing the version doesn't refund anyone. Leave
+  // those pending so they still show up as their own actionable claim.
   const pendingReports = await prisma.report.findMany({
-    where: { noteId: note.id, status: "PENDING" },
+    where: { noteId: note.id, status: "PENDING", type: "BLOCK" },
     include: { reporter: true },
   });
 
