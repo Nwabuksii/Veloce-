@@ -17,7 +17,7 @@ export const GET = requireRole<RouteContext>(
 
     const scribe = await prisma.user.findUnique({
       where: { id: scribeId },
-      select: { id: true, fullName: true, role: true, createdAt: true, bannedAt: true },
+      select: { id: true, fullName: true, role: true, createdAt: true, bannedAt: true, avatarUrl: true, avatarDisplay: true },
     });
 
     if (!scribe) {
@@ -40,7 +40,7 @@ export const GET = requireRole<RouteContext>(
       return NextResponse.json({ error: "This user is not a scribe" }, { status: 404 });
     }
 
-    const [purchases, reviews, rejectedCount, followerCount, myFollow, liveNotes] = await Promise.all([
+    const [purchases, reviews, rejectedCount, followerCount, myFollow, liveNotes, myPurchasedNoteIds] = await Promise.all([
       prisma.purchase.findMany({ where: { note: { scribeId } }, select: { buyerId: true } }),
       prisma.review.findMany({ where: { note: { scribeId } }, select: { rating: true } }),
       prisma.note.count({ where: { scribeId, status: "REJECTED" } }),
@@ -53,7 +53,16 @@ export const GET = requireRole<RouteContext>(
         include: { block: { include: { course: true } } },
         orderBy: { createdAt: "desc" },
       }),
+      // So this list can say "Read" instead of "Instant Unlock" for a note
+      // the viewer already owns — same owned-per-note check as the block
+      // page (see app/blocks/[id]/page.tsx), just missing here before.
+      prisma.purchase.findMany({
+        where: { buyerId: viewer.sub, refundedAt: null },
+        select: { noteId: true },
+      }),
     ]);
+
+    const ownedNoteIds = new Set(myPurchasedNoteIds.map((p) => p.noteId));
 
     const paidSubscriberCount = new Set(purchases.map((p) => p.buyerId)).size;
     const avgRating = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : null;
@@ -68,6 +77,7 @@ export const GET = requireRole<RouteContext>(
       profile: {
         id: scribe.id,
         fullName: scribe.fullName,
+        avatarUrl: scribe.avatarDisplay === "custom" ? scribe.avatarUrl : null,
         joinedAt: scribe.createdAt,
         isActiveScribe,
         paidSubscriberCount,
@@ -86,6 +96,7 @@ export const GET = requireRole<RouteContext>(
           courseCode: n.block.course.code,
           courseName: n.block.course.name,
           price: n.block.price,
+          owned: ownedNoteIds.has(n.id),
         })),
       },
     });

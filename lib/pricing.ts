@@ -6,12 +6,12 @@ export const SCRIBE_SHARE = 0.6;
 export const PLATFORM_SHARE = 1 - SCRIBE_SHARE;
 
 // Founder-set fixed pricing for any note that fulfills a student request
-// (Note.fulfillsRequestId is set). This overrides the normal scribe-set
-// block price AND the normal 60/40 percentage split entirely — every
-// request-fulfillment sale is always ₦900 total, always ₦600 to the
-// scribe, always ₦300 to the platform, no rounding involved since the
-// numbers are exact. Applies to every buyer of that note, not just the
-// student(s) who originally voted for the request.
+// (Note.fulfillsRequestId is set) — but only for the student(s) who actually
+// requested it (has a RequestVote on that request). Everyone else still pays
+// the scribe's normal block price. For an eligible buyer this overrides the
+// normal scribe-set block price AND the normal 60/40 percentage split
+// entirely — always ₦900 total, always ₦600 to the scribe, always ₦300 to
+// the platform, no rounding involved since the numbers are exact.
 export const REQUEST_FULFILLED_PRICE = 900;
 export const REQUEST_FULFILLED_SCRIBE_CUT = 600;
 export const REQUEST_FULFILLED_PLATFORM_CUT = REQUEST_FULFILLED_PRICE - REQUEST_FULFILLED_SCRIBE_CUT;

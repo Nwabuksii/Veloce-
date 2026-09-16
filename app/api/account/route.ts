@@ -21,8 +21,12 @@ const updateSchema = z
     newEmail: z.string().email().optional(),
     newPassword: passwordSchema.optional(),
     theme: z.enum(["light", "dark"]).optional(),
+    // Which icon shows for this person — "custom" only works if they've
+    // actually uploaded one (see POST /api/account/avatar); switching
+    // this alone never uploads or deletes anything.
+    avatarDisplay: z.enum(["default", "custom"]).optional(),
   })
-  .refine((data) => data.newEmail || data.newPassword || data.theme, {
+  .refine((data) => data.newEmail || data.newPassword || data.theme || data.avatarDisplay, {
     message: "Provide something to update",
   })
   .refine((data) => !(data.newEmail || data.newPassword) || data.currentPassword, {
@@ -33,7 +37,7 @@ const updateSchema = z
 export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
   const dbUser = await prisma.user.findUnique({
     where: { id: user.sub },
-    select: { id: true, email: true, fullName: true, role: true, theme: true, couponBalance: true },
+    select: { id: true, email: true, fullName: true, role: true, theme: true, couponBalance: true, avatarUrl: true, avatarDisplay: true },
   });
 
   if (!dbUser) {
@@ -50,14 +54,18 @@ export const PATCH = requireRole("STUDENT", async (req: NextRequest, user) => {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { currentPassword, newEmail, newPassword, theme } = parsed.data;
+  const { currentPassword, newEmail, newPassword, theme, avatarDisplay } = parsed.data;
 
   const dbUser = await prisma.user.findUnique({ where: { id: user.sub } });
   if (!dbUser) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const data: { email?: string; passwordHash?: string; theme?: string } = {};
+  if (avatarDisplay === "custom" && !dbUser.avatarUrl) {
+    return NextResponse.json({ error: "Upload a profile icon before switching to it" }, { status: 400 });
+  }
+
+  const data: { email?: string; passwordHash?: string; theme?: string; avatarDisplay?: string } = {};
 
   // Only touch password verification at all if this request is actually
   // trying to change something that needs it.
@@ -78,6 +86,10 @@ export const PATCH = requireRole("STUDENT", async (req: NextRequest, user) => {
     data.theme = theme;
   }
 
+  if (avatarDisplay) {
+    data.avatarDisplay = avatarDisplay;
+  }
+
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: "Nothing to change" }, { status: 400 });
   }
@@ -86,7 +98,7 @@ export const PATCH = requireRole("STUDENT", async (req: NextRequest, user) => {
     const updated = await prisma.user.update({
       where: { id: user.sub },
       data,
-      select: { id: true, email: true, fullName: true, role: true, theme: true, couponBalance: true },
+      select: { id: true, email: true, fullName: true, role: true, theme: true, couponBalance: true, avatarUrl: true, avatarDisplay: true },
     });
     return NextResponse.json({ user: updated });
   } catch (err: any) {

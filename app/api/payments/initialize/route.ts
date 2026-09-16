@@ -47,9 +47,9 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
 
     const reference = `veloce_${randomUUID()}`;
 
-    // Any note that fulfills a student request is always sold at the
-    // founder-fixed price, for every buyer — not conditional on whether
-    // this particular buyer voted for the request. See lib/pricing.ts.
+    // Fixed pricing is a thank-you for the student(s) who actually
+    // requested this note — not a discount for every buyer of a
+    // request-fulfilling block. See lib/pricing.ts and RequestVote.
     let discountApplied = false;
     let amountToCharge = block.price;
 
@@ -59,8 +59,13 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
     });
 
     if (noteWithRequest?.fulfillsRequestId) {
-      discountApplied = true;
-      amountToCharge = REQUEST_FULFILLED_PRICE;
+      const votedForIt = await prisma.requestVote.findUnique({
+        where: { requestId_studentId: { requestId: noteWithRequest.fulfillsRequestId, studentId: user.sub } },
+      });
+      if (votedForIt) {
+        discountApplied = true;
+        amountToCharge = REQUEST_FULFILLED_PRICE;
+      }
     }
 
     // A coupon (granted 1-per-successful-refund) is spent automatically on

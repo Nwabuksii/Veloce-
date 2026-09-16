@@ -32,6 +32,24 @@ export async function readNoteFile(fileUrl: string): Promise<Buffer> {
   return Buffer.from(arrayBuffer);
 }
 
+// Profile icons: small, public-by-nature (unlike note files/pages, there's
+// no access control to enforce — anyone who can see a person's name can
+// see their avatar), so the blob URL is stored directly on User.avatarUrl
+// and used as-is. Keyed by user id so re-uploading just produces a new
+// object; the old one is simply an orphaned blob, same tradeoff already
+// made for note pages above.
+export async function saveAvatarImage(buffer: Buffer, userId: string, contentType: string): Promise<string> {
+  const ext = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
+  const key = `avatars/${userId}-${randomUUID()}.${ext}`;
+
+  const blob = await put(key, buffer, {
+    access: "public",
+    contentType,
+  });
+
+  return blob.url;
+}
+
 // Cached, plain (un-watermarked) render of a single PDF page — see
 // lib/pdf-render.ts. One of these gets created the first time ANY viewer
 // opens a given page; every viewer after that reuses it as the base image

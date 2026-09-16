@@ -15,7 +15,7 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
   const courseId = url.searchParams.get("courseId");
   const departmentId = url.searchParams.get("departmentId");
 
-  const [blocks, purchases] = await Promise.all([
+  const [blocks, purchases, myVotes] = await Promise.all([
     prisma.block.findMany({
       where: {
         course: {
@@ -59,18 +59,24 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
       where: { buyerId: user.sub, refundedAt: null },
       select: { blockId: true },
     }),
+    // Which requests THIS student actually asked for — the fixed
+    // fulfillment price is a thank-you for the person(s) who requested it,
+    // not a discount for every future buyer of that block. See lib/pricing.ts.
+    prisma.requestVote.findMany({
+      where: { studentId: user.sub },
+      select: { requestId: true },
+    }),
   ]);
 
   const purchasedIds = new Set(purchases.map((p) => p.blockId));
+  const myRequestIds = new Set(myVotes.map((v) => v.requestId));
 
   const result = blocks.map((b) => {
-    // Fixed pricing now applies to every buyer of a request-fulfilling
-    // note, not just students who voted for that specific request — see
-    // lib/pricing.ts. This is still a block-level approximation: if a
-    // block has several scribe versions and only some fulfill a request,
-    // the exact price still depends on which version gets bought, same
-    // as before.
-    const hasFulfillmentPricing = b.notes.some((n) => n.fulfillsRequestId);
+    // Block-level approximation: if this block has several scribe versions
+    // and only some fulfill a request this student voted for, the exact
+    // price still depends on which version gets bought — same caveat as
+    // before, just now also gated on "did THIS student ask for it".
+    const hasFulfillmentPricing = b.notes.some((n) => n.fulfillsRequestId && myRequestIds.has(n.fulfillsRequestId));
     const scribe = b.notes[0];
 
     return {

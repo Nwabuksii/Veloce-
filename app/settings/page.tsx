@@ -7,6 +7,7 @@ import Logo from "@/app/components/Logo";
 import ProfileMenu from "@/app/components/ProfileMenu";
 import { SkeletonCard } from "@/app/components/Skeleton";
 import ThemeToggle from "@/app/components/ThemeToggle";
+import AvatarPicker from "@/app/components/AvatarPicker";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 
 type Tab = "about" | "faq" | "contact" | "account" | "display";
@@ -271,9 +272,12 @@ export default function SettingsPage() {
             <div style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "1.2rem" }}>
               <h2 style={{ marginBottom: "0.3rem" }}>Display</h2>
               <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "1rem" }}>
-                Choose how Veloce looks on this device.
+                Choose how Veloce looks, and how you show up around the app.
               </p>
-              <ThemeToggle />
+              <AvatarPicker />
+              <div style={{ marginTop: "1rem" }}>
+                <ThemeToggle />
+              </div>
             </div>
           )}
         </div>

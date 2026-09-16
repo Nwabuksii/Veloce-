@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
 import Logo from "@/app/components/Logo";
@@ -16,11 +16,13 @@ interface ProfileBlock {
   courseCode: string;
   courseName: string;
   price: number;
+  owned: boolean;
 }
 
 interface Profile {
   id: string;
   fullName: string;
+  avatarUrl: string | null;
   joinedAt: string;
   isActiveScribe: boolean;
   paidSubscriberCount: number;
@@ -55,6 +57,8 @@ export default function ScribeProfilePage() {
   const [reportReason, setReportReason] = useState("");
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reportStatus, setReportStatus] = useState("");
+  const [noteSearch, setNoteSearch] = useState("");
+  const [noteSort, setNoteSort] = useState<"recent" | "title" | "price">("recent");
 
   useEffect(() => {
     const user = getStoredUser();
@@ -112,6 +116,24 @@ export default function ScribeProfilePage() {
     }
   }
 
+  const visibleBlocks = useMemo(() => {
+    if (!profile) return [];
+    const q = noteSearch.trim().toLowerCase();
+    const filtered = q
+      ? profile.blocks.filter(
+          (b) =>
+            b.blockTitle.toLowerCase().includes(q) ||
+            b.courseName.toLowerCase().includes(q) ||
+            b.courseCode.toLowerCase().includes(q)
+        )
+      : profile.blocks;
+
+    // API returns createdAt desc already, so "recent" needs no re-sort.
+    if (noteSort === "title") return [...filtered].sort((a, b) => a.blockTitle.localeCompare(b.blockTitle));
+    if (noteSort === "price") return [...filtered].sort((a, b) => a.price - b.price);
+    return filtered;
+  }, [profile, noteSearch, noteSort]);
+
   return (
     <div className="page-wrap">
       <div className="app-container" style={{ maxWidth: 960 }}>
@@ -140,7 +162,7 @@ export default function ScribeProfilePage() {
           <div style={{ marginTop: "1.5rem" }}>
             <div style={{ display: "flex", gap: "1.1rem", alignItems: "flex-start", flexWrap: "wrap" }}>
               <div style={{ transform: "scale(1.7)", transformOrigin: "top left", marginRight: "0.6rem" }}>
-                <Avatar name={profile.fullName} />
+                <Avatar name={profile.fullName} imageUrl={profile.avatarUrl} />
               </div>
 
               <div style={{ flex: "1 1 260px" }}>
@@ -256,21 +278,73 @@ export default function ScribeProfilePage() {
               <i className="fas fa-layer-group" style={{ color: "var(--text-info)" }}></i> Live notes
             </h3>
 
+            {profile.blocks.length > 0 && (
+              <div style={{ display: "flex", gap: "0.8rem", margin: "0.8rem 0", flexWrap: "wrap" }}>
+                <div style={{ position: "relative", flex: "1 1 220px" }}>
+                  <i
+                    className="fas fa-search"
+                    style={{ position: "absolute", left: "0.9rem", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }}
+                  ></i>
+                  <input
+                    value={noteSearch}
+                    onChange={(e) => setNoteSearch(e.target.value)}
+                    placeholder="Search this scribe's notes..."
+                    style={{
+                      width: "100%",
+                      padding: "0.55rem 0.9rem 0.55rem 2.2rem",
+                      borderRadius: "40px",
+                      border: "1px solid var(--border-blue)",
+                      fontSize: "0.85rem",
+                    }}
+                  />
+                </div>
+                <select
+                  value={noteSort}
+                  onChange={(e) => setNoteSort(e.target.value as typeof noteSort)}
+                  style={{
+                    padding: "0.55rem 1rem",
+                    borderRadius: "40px",
+                    border: "1px solid var(--border-blue)",
+                    fontSize: "0.85rem",
+                    background: "var(--surface)",
+                    color: "var(--text-primary)",
+                  }}
+                >
+                  <option value="recent">Most recent</option>
+                  <option value="title">Title (A–Z)</option>
+                  <option value="price">Price (low to high)</option>
+                </select>
+              </div>
+            )}
+
             {profile.blocks.length === 0 && (
               <p style={{ color: "var(--text-secondary)", marginTop: "0.6rem" }}>No live notes yet.</p>
             )}
+            {profile.blocks.length > 0 && visibleBlocks.length === 0 && (
+              <p style={{ color: "var(--text-secondary)", marginTop: "0.6rem" }}>No notes match your search.</p>
+            )}
 
             <div className="ledger-list" style={{ marginTop: "0.8rem" }}>
-              {profile.blocks.map((b) => (
+              {visibleBlocks.map((b) => (
                 <div key={b.noteId} className="ledger-row press-on-tap" onClick={() => router.push(`/blocks/${b.blockId}`)} style={{ cursor: "pointer" }}>
                   <span className="seal mono">{b.courseCode}</span>
                   <div className="ledger-row-title" style={{ marginTop: "0.4rem" }}>{b.blockTitle}</div>
                   <div className="ledger-row-meta">{b.courseName}</div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.6rem", paddingTop: "0.7rem", borderTop: "1px solid var(--border-light)" }}>
-                    <span className="price-tag">₦{b.price.toLocaleString()}</span>
-                    <button className="btn btn-primary" onClick={(e) => { e.stopPropagation(); router.push(`/blocks/${b.blockId}`); }}>
-                      <i className="fas fa-lock"></i> Instant Unlock
-                    </button>
+                    {b.owned ? (
+                      <span className="seal">Owned</span>
+                    ) : (
+                      <span className="price-tag">₦{b.price.toLocaleString()}</span>
+                    )}
+                    {b.owned ? (
+                      <button className="btn btn-primary" onClick={(e) => { e.stopPropagation(); router.push(`/notes/${b.noteId}/read`); }}>
+                        <i className="fas fa-book-open"></i> Read
+                      </button>
+                    ) : (
+                      <button className="btn btn-primary" onClick={(e) => { e.stopPropagation(); router.push(`/blocks/${b.blockId}`); }}>
+                        <i className="fas fa-lock"></i> Instant Unlock
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

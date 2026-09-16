@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser, clearSession, StoredUser } from "@/lib/client-session";
 import { fetchAdminCounts } from "@/lib/admin-counts";
+import Avatar from "@/app/components/Avatar";
 
 export default function ProfileMenu() {
   const router = useRouter();
@@ -50,14 +51,24 @@ export default function ProfileMenu() {
 
   if (!user) return null;
 
+  // The person's own choice (Settings > Display) of whether this shows
+  // their uploaded photo or the generic icon — uploading one doesn't
+  // force it on, see /api/account/avatar.
+  const showCustomIcon = user.avatarDisplay === "custom" && !!user.avatarUrl;
+
   return (
     <div ref={menuRef} style={{ position: "relative" }}>
       <button
-        className="role-pill"
+        className={`role-pill${showCustomIcon ? " role-pill-avatar" : ""}`}
         style={{ cursor: "pointer", position: "relative" }}
         onClick={() => setOpen((o) => !o)}
       >
-        <i className="fas fa-user-graduate"></i> {user.fullName} · {user.role}
+        {showCustomIcon ? (
+          <Avatar name={user.fullName} imageUrl={user.avatarUrl} size="sm" />
+        ) : (
+          <i className="fas fa-user-graduate"></i>
+        )}{" "}
+        {user.fullName} · {user.role}
         <i className="fas fa-chevron-down" style={{ fontSize: "0.65rem", marginLeft: "0.2rem" }}></i>
 
         {/* Messages badge — top-right corner (unchanged) */}

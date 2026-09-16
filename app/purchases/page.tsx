@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
 import Logo from "@/app/components/Logo";
@@ -36,6 +36,8 @@ export default function PurchasesPage() {
   const [refundReason, setRefundReason] = useState("");
   const [refundSubmitting, setRefundSubmitting] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"recent" | "oldest" | "title" | "scribe">("recent");
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 15000);
@@ -122,6 +124,26 @@ export default function PurchasesPage() {
     }
   }
 
+  const visiblePurchases = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const filtered = q
+      ? purchases.filter(
+          (p) =>
+            p.blockTitle.toLowerCase().includes(q) ||
+            p.courseName.toLowerCase().includes(q) ||
+            p.courseCode.toLowerCase().includes(q) ||
+            p.scribeName.toLowerCase().includes(q)
+        )
+      : purchases;
+
+    // The API already returns purchasedAt desc, so "recent" needs no
+    // re-sort — only the other options do.
+    if (sortBy === "oldest") return [...filtered].reverse();
+    if (sortBy === "title") return [...filtered].sort((a, b) => a.blockTitle.localeCompare(b.blockTitle));
+    if (sortBy === "scribe") return [...filtered].sort((a, b) => a.scribeName.localeCompare(b.scribeName));
+    return filtered;
+  }, [purchases, search, sortBy]);
+
   return (
     <div className="page-wrap">
       <div className="app-container">
@@ -143,14 +165,55 @@ export default function PurchasesPage() {
           </div>
         </div>
 
+        <div style={{ display: "flex", gap: "0.8rem", margin: "1.2rem 0", flexWrap: "wrap" }}>
+          <div style={{ position: "relative", flex: "1 1 260px" }}>
+            <i
+              className="fas fa-search"
+              style={{ position: "absolute", left: "0.9rem", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }}
+            ></i>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search your purchases..."
+              style={{
+                width: "100%",
+                padding: "0.55rem 0.9rem 0.55rem 2.2rem",
+                borderRadius: "40px",
+                border: "1px solid var(--border-blue)",
+                fontSize: "0.85rem",
+              }}
+            />
+          </div>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+            style={{
+              padding: "0.55rem 1rem",
+              borderRadius: "40px",
+              border: "1px solid var(--border-blue)",
+              fontSize: "0.85rem",
+              background: "var(--surface)",
+              color: "var(--text-primary)",
+            }}
+          >
+            <option value="recent">Most recent</option>
+            <option value="oldest">Oldest first</option>
+            <option value="title">Title (A–Z)</option>
+            <option value="scribe">Scribe (A–Z)</option>
+          </select>
+        </div>
+
         {loading && <SkeletonList rows={3} />}
         {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}
         {!loading && !error && purchases.length === 0 && (
           <p style={{ marginTop: "1rem", color: "var(--text-secondary)" }}>You haven't purchased any course notes yet.</p>
         )}
+        {!loading && !error && purchases.length > 0 && visiblePurchases.length === 0 && (
+          <p style={{ marginTop: "1rem", color: "var(--text-secondary)" }}>No purchases match your search.</p>
+        )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem" }}>
-          {purchases.map((p) => {
+          {visiblePurchases.map((p) => {
             const draft = drafts[p.purchaseId] || { rating: 0, comment: "" };
             return (
               <div key={p.purchaseId} className="ledger-row" style={{ maxWidth: 480 }}>

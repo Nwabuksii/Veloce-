@@ -17,6 +17,8 @@ export interface StoredUser {
   fullName: string;
   role: "STUDENT" | "SCRIBE" | "ADMIN";
   theme?: "light" | "dark";
+  avatarUrl?: string | null;
+  avatarDisplay?: "default" | "custom";
 }
 
 const USER_KEY = "veloce_user";

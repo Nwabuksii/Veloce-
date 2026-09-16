@@ -115,6 +115,14 @@ model User {
   // signs into, not just localStorage on one machine. See lib/theme.ts.
   theme        String   @default("light")
 
+  // Profile icon: an uploaded image (Vercel Blob URL, same as note files —
+  // see lib/storage.ts saveAvatarImage), re-uploadable anytime. avatarDisplay
+  // is the person's own choice of whether it's actually shown — uploading
+  // doesn't force it on, and switching back to the generic icon doesn't
+  // delete the upload, so toggling back and forth needs no re-upload.
+  avatarUrl     String?
+  avatarDisplay String  @default("default") // "default" | "custom"
+
   // Coupons: granted 1-per-successful-refund, spent automatically on the
   // buyer's very next purchase (see app/api/payments/initialize/route.ts).
   couponBalance Int     @default(0)

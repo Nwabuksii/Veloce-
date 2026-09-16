@@ -13,7 +13,30 @@ function colorFor(name: string): string {
   return PALETTE[Math.abs(hash) % PALETTE.length];
 }
 
-export default function Avatar({ name, size = "md" }: { name: string; size?: "sm" | "md" }) {
+export default function Avatar({
+  name,
+  size = "md",
+  imageUrl,
+}: {
+  name: string;
+  size?: "sm" | "md";
+  // The person's uploaded profile icon — only passed when they've chosen
+  // to display it (avatarDisplay === "custom"). Omit/leave undefined to
+  // always fall back to the initials-on-color-background look.
+  imageUrl?: string | null;
+}) {
+  if (imageUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={imageUrl}
+        alt=""
+        className={`avatar avatar-image${size === "sm" ? " avatar-sm" : ""}`}
+        aria-hidden="true"
+      />
+    );
+  }
+
   return (
     <span
       className={`avatar${size === "sm" ? " avatar-sm" : ""}`}
