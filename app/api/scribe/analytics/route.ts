@@ -31,6 +31,32 @@ export const GET = requireRole("SCRIBE", async (req: NextRequest, user) => {
     },
   });
 
+  // Removals via /api/admin/notes/[id]/remove send the real admin-typed
+  // reason as an AdminMessage (see that route) rather than a dedicated
+  // column — no schema change needed, just read it back out here so the
+  // scribe sees it next to the note instead of only in their inbox.
+  const removalMessages = await prisma.adminMessage.findMany({
+    where: { recipientId: user.sub, subject: { contains: "was removed" } },
+    select: { subject: true, body: true },
+  });
+  function findRemovalReason(blockLabel: string): string | null {
+    const msg = removalMessages.find((m) => m.subject.includes(blockLabel));
+    if (!msg) return null;
+    const match = msg.body.match(/Reason given: "(.+)"/);
+    return match ? match[1] : null;
+  }
+
+  // For notes rejected straight out of the moderation queue, there's no
+  // typed reason anywhere — but the automated quality gate's signals
+  // (lib/quality-check.ts) explain what got them flagged in the first
+  // place, so use those as a best-effort reason instead of leaving it blank.
+  function automatedFlagReason(n: (typeof notes)[number]): string | null {
+    if (!n.flaggedForReview) return null;
+    if (n.similarityScore !== null && n.similarityScore > 0.75) return "Looked too similar to an existing upload";
+    if (n.qualityScore !== null && n.qualityScore < 0.3) return "Looked too short to be complete notes";
+    return "Flagged during automatic review";
+  }
+
   const allRatings = notes.flatMap((n) => n.reviews.map((r) => r.rating));
   const avgRating = allRatings.length > 0 ? allRatings.reduce((s, r) => s + r, 0) / allRatings.length : null;
   const totalReviews = allRatings.length;
@@ -67,6 +93,12 @@ export const GET = requireRole("SCRIBE", async (req: NextRequest, user) => {
         else if (p.purchasedAt >= sixtyDaysAgo) salesPrev30 += 1;
       }
 
+      const blockLabel = `${n.block.course.code} — ${n.block.title}`;
+      const reason =
+        n.status === "REJECTED" || n.status === "FLAGGED"
+          ? findRemovalReason(blockLabel) ?? automatedFlagReason(n) ?? (n.status === "REJECTED" ? "Rejected during manual review" : null)
+          : null;
+
       return {
         blockId: n.block.id,
         blockTitle: n.block.title,
@@ -77,6 +109,7 @@ export const GET = requireRole("SCRIBE", async (req: NextRequest, user) => {
         avgRating: noteAvgRating,
         reviewCount: noteRatings.length,
         status: n.status,
+        reason,
       };
     })
     .filter((b) => b.salesCount > 0 || b.status === "FLAGGED" || b.status === "REJECTED")
