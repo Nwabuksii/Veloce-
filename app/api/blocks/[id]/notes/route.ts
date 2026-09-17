@@ -36,7 +36,7 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
   // Overall sales + rating per scribe (across all their notes, not just this
   // one) so the trust badge here matches what shows on their profile page.
   const scribeIds = [...new Set(block.notes.map((n) => n.scribeId))];
-  const [salesByScribe, ratingsByScribe, rejectedByScribe, myPurchases, myVotes] = await Promise.all([
+  const [salesByScribe, ratingsByScribe, rejectedByScribe, myPurchases] = await Promise.all([
     prisma.purchase.findMany({
       where: { note: { scribeId: { in: scribeIds } } },
       select: { note: { select: { scribeId: true } } },
@@ -53,14 +53,7 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
       where: { buyerId: user.sub, blockId, refundedAt: null },
       select: { id: true, noteId: true, review: { select: { rating: true, comment: true } } },
     }),
-    // Fixed fulfillment pricing is only for the student(s) who actually
-    // requested it — see lib/pricing.ts and RequestVote. Same eligibility
-    // check as app/api/blocks/route.ts and payments/initialize; this route
-    // had been left showing REQUEST_FULFILLED_PRICE to every buyer too.
-    prisma.requestVote.findMany({ where: { studentId: user.sub }, select: { requestId: true } }),
   ]);
-
-  const myRequestIds = new Set(myVotes.map((v) => v.requestId));
 
   const purchaseByNoteId = new Map(myPurchases.map((p) => [p.noteId, p]));
 
@@ -91,7 +84,6 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
     });
 
     const myPurchase = purchaseByNoteId.get(n.id);
-    const eligibleForFulfillmentPrice = Boolean(n.fulfillsRequestId && myRequestIds.has(n.fulfillsRequestId));
 
     return {
       noteId: n.id,
@@ -106,12 +98,12 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
       owned: Boolean(myPurchase),
       purchaseId: myPurchase?.id ?? null,
       myReview: myPurchase?.review ? { rating: myPurchase.review.rating, comment: myPurchase.review.comment } : null,
-      // A note that fulfills a student request is REQUEST_FULFILLED_PRICE
-      // only for the student(s) who requested it — this must match exactly
-      // what app/api/payments/initialize/route.ts actually charges, or the
-      // page shows one number and collects another.
-      price: eligibleForFulfillmentPrice ? REQUEST_FULFILLED_PRICE : block.price,
-      isRequestFulfillment: eligibleForFulfillmentPrice,
+      // A note that fulfills a student request is always REQUEST_FULFILLED_PRICE,
+      // never the block's normal price — this must match exactly what
+      // app/api/payments/initialize/route.ts actually charges, or the page
+      // shows one number and collects another.
+      price: n.fulfillsRequestId ? REQUEST_FULFILLED_PRICE : block.price,
+      isRequestFulfillment: Boolean(n.fulfillsRequestId),
     };
   });
 

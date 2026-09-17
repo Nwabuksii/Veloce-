@@ -14,7 +14,7 @@ interface UserOption {
   fullName: string;
   email: string;
   role: string;
-  avatarUrl?: string | null;
+  avatarUrl: string | null;
 }
 interface SentMessage {
   subject: string;
@@ -246,7 +246,7 @@ export default function AdminMessagesPage() {
                               fontSize: "0.85rem",
                             }}
                           >
-                            <Avatar name={u.fullName} size="sm" imageUrl={u.avatarUrl} />
+                            <Avatar name={u.fullName} imageUrl={u.avatarUrl} size="sm" />
                             <div>
                               <strong>{u.fullName}</strong> · {u.role}
                               <div style={{ color: "var(--text-secondary)", fontSize: "0.78rem" }}>{u.email}</div>
@@ -268,7 +268,7 @@ export default function AdminMessagesPage() {
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                      <Avatar name={recipient.fullName} imageUrl={recipient.avatarUrl} />
+                      <Avatar name={recipient.fullName} imageUrl={recipient.avatarUrl} size="sm" />
                       <div>
                         <strong>{recipient.fullName}</strong>
                         <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>{recipient.email}</div>

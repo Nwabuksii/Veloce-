@@ -17,12 +17,25 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
         { email: { contains: q, mode: "insensitive" } },
       ],
     },
-    select: { id: true, fullName: true, email: true, role: true, bannedAt: true, banReason: true, banExpiresAt: true, avatarUrl: true, avatarDisplay: true },
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      role: true,
+      bannedAt: true,
+      banReason: true,
+      banExpiresAt: true,
+      avatarUrl: true,
+      avatarDisplay: true,
+    },
     take: 10,
     orderBy: { fullName: "asc" },
   });
 
   return NextResponse.json({
-    users: users.map((u) => ({ ...u, avatarUrl: u.avatarDisplay === "custom" ? u.avatarUrl : null })),
+    users: users.map((u) => ({
+      ...u,
+      avatarUrl: u.avatarDisplay === "custom" ? u.avatarUrl : null,
+    })),
   });
 });

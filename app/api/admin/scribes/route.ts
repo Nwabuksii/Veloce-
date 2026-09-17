@@ -22,8 +22,8 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, admin) => {
     fullName: s.fullName,
     email: s.email,
     joinedAt: s.createdAt,
-    avatarUrl: s.avatarDisplay === "custom" ? s.avatarUrl : null,
     uploadCount: s._count.notes,
+    avatarUrl: s.avatarDisplay === "custom" ? s.avatarUrl : null,
   }));
 
   return NextResponse.json({ scribes: result });

@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
 import ProfileMenu from "@/app/components/ProfileMenu";
+import Avatar from "@/app/components/Avatar";
 import { SkeletonList } from "@/app/components/Skeleton";
 import Logo from "@/app/components/Logo";
-import Avatar from "@/app/components/Avatar";
 import { friendlyErrorMessage } from "@/lib/api-client";
 
 interface ScribeView {
@@ -14,7 +14,7 @@ interface ScribeView {
   fullName: string;
   email: string;
   uploadCount: number;
-  avatarUrl?: string | null;
+  avatarUrl: string | null;
 }
 
 export default function ManageScribesPage() {
@@ -147,8 +147,8 @@ export default function ManageScribesPage() {
                 gap: "0.6rem",
               }}
             >
-              <div style={{ display: "flex", alignItems: "flex-start", gap: "0.6rem" }}>
-                <Avatar name={s.fullName} imageUrl={s.avatarUrl} />
+              <div style={{ display: "flex", gap: "0.6rem", alignItems: "flex-start" }}>
+                <Avatar name={s.fullName} imageUrl={s.avatarUrl} size="sm" />
                 <div>
                   <button
                     onClick={() => router.push(`/scribe/${s.id}`)}

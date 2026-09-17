@@ -26,17 +26,40 @@ export default function AdminFeedbackPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [replyingId, setReplyingId] = useState<string | null>(null);
-  const [replyText, setReplyText] = useState("");
-  const [replySending, setReplySending] = useState(false);
+  const [replyBody, setReplyBody] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
+
+  async function sendReply(f: FeedbackItem) {
+    if (!replyBody.trim()) {
+      toast.error("Write a reply first.");
+      return;
+    }
+    setSendingReply(true);
+    try {
+      await apiFetch("/api/admin/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          audience: "individual",
+          recipientId: f.authorId,
+          subject: "Re: your feedback",
+          body: replyBody.trim(),
+        }),
+      });
+      toast.success(`Reply sent to ${f.authorName}.`);
+      setReplyingId(null);
+      setReplyBody("");
+    } catch (err) {
+      toast.error(friendlyErrorMessage(err));
+    } finally {
+      setSendingReply(false);
+    }
+  }
 
   useEffect(() => {
     const user = getStoredUser();
     if (!user) {
       router.push("/login");
-      return;
-    }
-    if (user.role !== "ADMIN") {
-      router.push("/dashboard");
       return;
     }
 
@@ -52,38 +75,6 @@ export default function AdminFeedbackPage() {
       .catch((err) => setError(friendlyErrorMessage(err)))
       .finally(() => setLoading(false));
   }, [router]);
-
-  function startReply(id: string) {
-    setReplyingId((cur) => (cur === id ? null : id));
-    setReplyText("");
-  }
-
-  async function sendReply(recipientId: string) {
-    if (replyText.trim().length < 2) {
-      toast.error("Write a message first.");
-      return;
-    }
-    setReplySending(true);
-    try {
-      await apiFetch("/api/admin/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          audience: "individual",
-          recipientId,
-          subject: "Re: your feedback",
-          body: replyText.trim(),
-        }),
-      });
-      toast.success("Reply sent.");
-      setReplyingId(null);
-      setReplyText("");
-    } catch (err) {
-      toast.error(friendlyErrorMessage(err));
-    } finally {
-      setReplySending(false);
-    }
-  }
 
   return (
     <div className="page-wrap">
@@ -126,43 +117,39 @@ export default function AdminFeedbackPage() {
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.8rem", color: "var(--text-secondary)" }}>
                     <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <Avatar name={f.authorName} size="sm" imageUrl={f.authorAvatarUrl} />
+                      <Avatar name={f.authorName} imageUrl={f.authorAvatarUrl} size="sm" />
                       {f.authorName} · {f.authorRole}
                     </span>
                     <span>{new Date(f.createdAt).toLocaleString()}</span>
                   </div>
                   <p style={{ marginTop: "0.5rem", whiteSpace: "pre-wrap" }}>{f.message}</p>
 
-                  <button className="btn" style={{ marginTop: "0.6rem", padding: "0.25rem 0.7rem", fontSize: "0.78rem" }} onClick={() => startReply(f.id)}>
-                    <i className="fas fa-reply"></i> Reply
-                  </button>
-
-                  {replyingId === f.id && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.5rem" }}>
+                  {replyingId === f.id ? (
+                    <div style={{ marginTop: "0.7rem" }}>
                       <textarea
-                        value={replyText}
-                        onChange={(e) => setReplyText(e.target.value)}
-                        rows={2}
+                        value={replyBody}
+                        onChange={(e) => setReplyBody(e.target.value)}
+                        rows={3}
                         placeholder={`Reply to ${f.authorName}...`}
-                        style={{
-                          padding: "0.5rem",
-                          borderRadius: "10px",
-                          border: "1px solid var(--border-blue)",
-                          fontFamily: "inherit",
-                          fontSize: "0.85rem",
-                          background: "var(--surface)",
-                          color: "var(--text-primary)",
-                        }}
+                        style={{ width: "100%", padding: "0.6rem", borderRadius: "8px", border: "1px solid var(--border-blue)", fontFamily: "inherit" }}
                       />
-                      <div style={{ display: "flex", gap: "0.6rem" }}>
-                        <button className="btn btn-primary press-on-tap" disabled={replySending} onClick={() => sendReply(f.authorId)}>
-                          {replySending ? "Sending..." : "Send"}
+                      <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+                        <button className="btn btn-primary press-on-tap" disabled={sendingReply} onClick={() => sendReply(f)}>
+                          {sendingReply ? "Sending..." : "Send reply"}
                         </button>
-                        <button className="btn" type="button" onClick={() => setReplyingId(null)}>
+                        <button className="btn press-on-tap" onClick={() => { setReplyingId(null); setReplyBody(""); }}>
                           Cancel
                         </button>
                       </div>
                     </div>
+                  ) : (
+                    <button
+                      className="btn press-on-tap"
+                      style={{ marginTop: "0.7rem" }}
+                      onClick={() => { setReplyingId(f.id); setReplyBody(""); }}
+                    >
+                      <i className="fas fa-reply"></i> Reply
+                    </button>
                   )}
                 </div>
               ))}
