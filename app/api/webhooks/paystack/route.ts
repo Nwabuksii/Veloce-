@@ -4,6 +4,7 @@ import * as Sentry from "@sentry/nextjs";
 import { prisma } from "@/lib/prisma";
 import { generateReceiptImage } from "@/lib/receipt";
 import { sendEmail } from "@/lib/email";
+import { computeScribeCut } from "@/lib/pricing";
 
 // Register this URL (https://your-domain/api/webhooks/paystack) on the
 // Paystack Dashboard under Settings -> API Keys & Webhooks. Paystack signs
@@ -60,6 +61,8 @@ async function handleChargeSuccess(data: any) {
     blockId?: string;
     noteId?: string;
     discountApplied?: boolean;
+    creditApplied?: number;
+    fullPrice?: number;
   };
 
   // Metadata is something OUR OWN server set when initializing this
@@ -77,17 +80,32 @@ async function handleChargeSuccess(data: any) {
     return;
   }
 
+  // Any refund credit reserved at initialize time only actually gets spent
+  // once the purchase row is created — bundled in the same transaction so
+  // a duplicate webhook delivery (P2002 below) can never double-decrement.
+  const creditApplied = metadata.creditApplied ?? 0;
+  const amountPaid = data.amount / 100;
+  const fullPrice = metadata.fullPrice ?? amountPaid + creditApplied;
+
   try {
-    await prisma.purchase.create({
-      data: {
-        buyerId: metadata.userId,
-        noteId: metadata.noteId,
-        blockId: metadata.blockId,
-        amountPaid: data.amount / 100,
-        discountApplied: metadata.discountApplied ?? false,
-        paystackRef: reference,
-      },
-    });
+    await prisma.$transaction([
+      ...(creditApplied > 0
+        ? [prisma.user.update({ where: { id: metadata.userId }, data: { creditBalance: { decrement: creditApplied } } })]
+        : []),
+      prisma.purchase.create({
+        data: {
+          buyerId: metadata.userId,
+          noteId: metadata.noteId,
+          blockId: metadata.blockId,
+          amountPaid,
+          discountApplied: metadata.discountApplied ?? false,
+          creditApplied,
+          redeemedWithCoupon: creditApplied > 0,
+          scribeCutOverride: creditApplied > 0 ? computeScribeCut(fullPrice, metadata.discountApplied ?? false) : null,
+          paystackRef: reference,
+        },
+      }),
+    ]);
   } catch (err: any) {
     // P2002 = the client-side verify call won the race and created it a
     // moment earlier — not an error, just the other path getting there first.

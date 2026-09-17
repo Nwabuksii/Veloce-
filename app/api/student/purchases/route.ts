@@ -25,6 +25,8 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
     purchasedAt: p.purchasedAt,
     review: p.review ? { rating: p.review.rating, comment: p.review.comment } : null,
     refunded: p.refundedAt !== null,
+    amountPaid: p.amountPaid,
+    creditApplied: p.creditApplied,
     redeemedWithCoupon: p.redeemedWithCoupon,
     refundRequestStatus: p.reports[0]?.status ?? null,
   }));

@@ -34,7 +34,7 @@ const GROUPS: HubGroup[] = [
     title: "Money",
     links: [
       { icon: "fa-money-bill-wave", label: "Payouts", description: "Scribe withdrawal requests awaiting approval", href: "/admin/payouts", countKey: "payouts" },
-      { icon: "fa-chart-line", label: "Financial ledger", description: "Revenue, scribe pool, and coupon stats", href: "/admin/finance", countKey: "disputes" },
+      { icon: "fa-chart-line", label: "Financial ledger", description: "Revenue, scribe pool, and refund credit stats", href: "/admin/finance", countKey: "disputes" },
     ],
   },
   {

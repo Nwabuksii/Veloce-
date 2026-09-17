@@ -31,15 +31,22 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
   // scribe's cut on those out of pocket, not collecting anything for them.
   const platformRevenue = grossRevenue - scribePool;
 
-  // Coupons: 1 is granted per successful refund, so refund count *is*
-  // issuance count — no separate ledger table needed. Outstanding is
-  // simply issued minus redeemed, which stays exactly equal to the sum of
-  // every user's live couponBalance as long as coupons are only ever
-  // granted via refund and only ever spent via redemption (true by
-  // construction here), without an extra full-table scan to prove it.
-  const couponsIssued = purchases.filter((p) => p.refundedAt).length;
-  const couponsRedeemed = purchases.filter((p) => p.redeemedWithCoupon).length;
-  const couponsOutstanding = couponsIssued - couponsRedeemed;
+  // Credit: granted per-refund as a ₦ amount (not a flat count anymore —
+  // see schema comments), and can be partially spent across more than one
+  // purchase, so "issued minus redeemed" can't be inferred from counts
+  // the way old-style 1-per-refund coupons could. Issued/redeemed are
+  // summed straight off the purchase rows already fetched; outstanding is
+  // read directly off live user balances instead of derived, since a
+  // partially-spent credit isn't fully "issued" or "redeemed" — it's both.
+  const creditIssued = purchases
+    .filter((p) => p.refundedAt)
+    .reduce((sum, p) => sum + p.amountPaid + p.creditApplied, 0);
+  const creditRedeemed = purchases.reduce((sum, p) => sum + p.creditApplied, 0);
+  const outstandingBalance = await prisma.user.aggregate({
+    where: { universityId: adminUser.universityId },
+    _sum: { creditBalance: true },
+  });
+  const creditOutstanding = outstandingBalance._sum.creditBalance ?? 0;
 
   const recentTransactions = purchases.slice(0, 20).map((p) => ({
     id: p.id,
@@ -48,6 +55,7 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
     blockTitle: p.block.title,
     courseCode: p.block.course.code,
     amountPaid: p.amountPaid,
+    creditApplied: p.creditApplied,
     discountApplied: p.discountApplied,
     refunded: Boolean(p.refundedAt),
     disputed: Boolean(p.disputedAt),
@@ -62,9 +70,9 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
     transactionCount: activePurchases.length,
     scribeSharePercent: Math.round(SCRIBE_SHARE * 100),
     platformSharePercent: Math.round(PLATFORM_SHARE * 100),
-    couponsIssued,
-    couponsRedeemed,
-    couponsOutstanding,
+    creditIssued,
+    creditRedeemed,
+    creditOutstanding,
     recentTransactions,
   });
 });

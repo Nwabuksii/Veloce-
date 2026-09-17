@@ -123,9 +123,13 @@ model User {
   avatarUrl     String?
   avatarDisplay String  @default("default") // "default" | "custom"
 
-  // Coupons: granted 1-per-successful-refund, spent automatically on the
-  // buyer's very next purchase (see app/api/payments/initialize/route.ts).
-  couponBalance Int     @default(0)
+  // Refund credit: a running ₦ balance, not a count of "free purchase"
+  // tokens. Granted per-refund equal to exactly what the buyer lost (see
+  // app/api/admin/purchases/[id]/refund/route.ts), and applied as a
+  // partial-payment credit on the buyer's next purchase(s) — never more
+  // than that purchase's real price, with any leftover carried forward.
+  // See app/api/payments/initialize/route.ts.
+  creditBalance Int     @default(0)
   role         UserRole @default(STUDENT)
 
   universityId String
@@ -351,17 +355,22 @@ model Purchase {
   // lib/pricing.ts and lib/note-access.ts.
   refundedAt      DateTime?
 
-  // Coupon redemptions: the buyer paid nothing (amountPaid is 0), but the
-  // scribe is still paid as if it were a normal sale — scribeCutOverride
-  // holds exactly what they're owed, computed once at redemption time from
-  // whatever the note would have normally cost.
+  // Credit redemptions: creditApplied is how much of the buyer's credit
+  // balance (see User.creditBalance) went toward this purchase — can be
+  // partial (amountPaid > 0) or the full price (amountPaid is 0).
+  // redeemedWithCoupon is true whenever creditApplied > 0, in either case,
+  // and scribeCutOverride holds exactly what the scribe is owed, computed
+  // once at purchase time from the note's real price — never from
+  // amountPaid alone, since that would shortchange the scribe whenever
+  // credit covered part of the price.
   // Set alongside refundedAt specifically when a Paystack chargeback/dispute
   // triggers the reversal (see app/api/webhooks/paystack/route.ts), so the
   // admin finance page can tell "I approved this refund" apart from "the
-  // buyer's bank clawed this back without asking us." No coupon is granted
+  // buyer's bank clawed this back without asking us." No credit is granted
   // for a dispute — see the webhook handler for why.
   disputedAt         DateTime?
   redeemedWithCoupon Boolean @default(false)
+  creditApplied      Int     @default(0)
   scribeCutOverride  Int?
 }
 

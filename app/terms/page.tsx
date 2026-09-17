@@ -64,13 +64,14 @@ export default function TermsPage() {
           <p>
             You can request a refund on a purchase within 30 minutes of buying it, by going to your Purchases page.
             An admin reviews every request and decides whether to approve it — refunds are not automatic. If
-            approved, you lose access to that note, and you're issued one coupon, automatically applied to your next
-            purchase at no charge. Coupons do not expire and are not redeemable for cash.
+            approved, you lose access to that note, and you're issued credit equal to what you paid for it,
+            automatically applied toward your next purchase(s) — covering the price up to that amount, with any
+            leftover carried forward. Credit does not expire and is not redeemable for cash.
           </p>
           <p>
             <strong>Please use this process instead of disputing the charge with your bank.</strong> A bank dispute
             (chargeback) filed instead of using Veloce's own refund request will immediately revoke your access to
-            the note while the dispute is investigated, and does not entitle you to a coupon. Repeated chargebacks
+            the note while the dispute is investigated, and does not entitle you to credit. Repeated chargebacks
             instead of using the refund process may be treated as a violation of these terms.
           </p>
 
@@ -78,7 +79,7 @@ export default function TermsPage() {
           <p>
             You're responsible for keeping your account credentials to yourself. Veloce can suspend or ban an account
             — for a fixed period or indefinitely — for violating these terms, including: uploading content that
-            violates §2, reselling or redistributing purchased notes, abusing the refund or coupon system, or
+            violates §2, reselling or redistributing purchased notes, abusing the refund or credit system, or
             harassing other users. A ban does not erase a scribe's existing sales or earnings already owed to them.
           </p>
 

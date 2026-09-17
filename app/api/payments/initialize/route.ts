@@ -68,23 +68,29 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
       }
     }
 
-    // A coupon (granted 1-per-successful-refund) is spent automatically on
-    // the buyer's very next purchase — not optional, not something they
-    // choose to apply. The scribe is still paid in full for the version
-    // they buy; the platform absorbs the ₦0 collected here as the cost of
-    // making the refund right. See lib/pricing.ts.
+    // Refund credit (granted per-refund, a ₦ balance — see lib schema
+    // comments) is applied as a partial payment on the buyer's very next
+    // purchase, up to whatever it covers — not optional, not something
+    // they choose to apply. The scribe is still paid their full normal cut
+    // computed off the block's real price, never off what the buyer
+    // actually pays after credit; the platform absorbs the gap as the
+    // cost of making the refund right. See lib/pricing.ts.
     const buyer = await prisma.user.findUnique({
       where: { id: user.sub },
-      select: { couponBalance: true },
+      select: { creditBalance: true },
     });
 
-    if (buyer && buyer.couponBalance > 0) {
+    const creditAvailable = buyer?.creditBalance ?? 0;
+    const creditToApply = Math.min(creditAvailable, amountToCharge);
+    const remainingToCharge = amountToCharge - creditToApply;
+
+    if (creditToApply > 0 && remainingToCharge === 0) {
       const scribeCut = computeScribeCut(amountToCharge, discountApplied);
 
       const [, purchase] = await prisma.$transaction([
         prisma.user.update({
           where: { id: user.sub },
-          data: { couponBalance: { decrement: 1 } },
+          data: { creditBalance: { decrement: creditToApply } },
         }),
         prisma.purchase.create({
           data: {
@@ -94,11 +100,14 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
             amountPaid: 0,
             discountApplied: false,
             redeemedWithCoupon: true,
+            creditApplied: creditToApply,
             scribeCutOverride: scribeCut,
-            paystackRef: `coupon_${randomUUID()}`,
+            paystackRef: `credit_${randomUUID()}`,
           },
         }),
       ]);
+
+      const remainingBalance = creditAvailable - creditToApply;
 
       const [buyerRecord, scribe] = await Promise.all([
         prisma.user.findUnique({ where: { id: user.sub }, select: { fullName: true } }),
@@ -110,16 +119,16 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
           {
             recipientId: user.sub,
             senderId: null,
-            subject: `Coupon used — "${block.title}"`,
-            body: `Your coupon was used to unlock "${block.title}". No charge — enjoy! You have ${buyer.couponBalance - 1} coupon${buyer.couponBalance - 1 === 1 ? "" : "s"} left.`,
+            subject: `Credit used — "${block.title}"`,
+            body: `₦${creditToApply.toLocaleString()} of your credit was used to unlock "${block.title}". No charge — enjoy! You have ₦${remainingBalance.toLocaleString()} credit left.`,
           },
           ...(scribe
             ? [
                 {
                   recipientId: scribe.id,
                   senderId: null,
-                  subject: `Your version of "${block.title}" was claimed with a coupon`,
-                  body: `${buyerRecord?.fullName ?? "A student"} unlocked your version of "${block.title}" using a coupon. You're still credited the full ₦${scribeCut.toLocaleString()} for it — the platform covers the cost of coupons, not you.`,
+                  subject: `Your version of "${block.title}" was claimed with credit`,
+                  body: `${buyerRecord?.fullName ?? "A student"} unlocked your version of "${block.title}" using refund credit. You're still credited the full ₦${scribeCut.toLocaleString()} for it — the platform covers the cost of credit, not you.`,
                 },
               ]
             : []),
@@ -129,15 +138,26 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
       return NextResponse.json({ freeViaCoupon: true, noteId: purchase.noteId });
     }
 
+    // Not fully covered by credit (or no credit at all) — Paystack is
+    // charged for whatever's left, and creditToApply/amountToCharge travel
+    // in the metadata so the webhook/verify routes can finish the job once
+    // payment actually succeeds. The credit balance is NOT decremented
+    // here — only once the purchase row is actually created — so an
+    // abandoned checkout never burns credit for nothing.
+    // (Known edge case: two checkouts started back-to-back before either
+    // completes could both reserve the same credit in their metadata,
+    // since the balance isn't locked between initialize and confirm. Rare
+    // enough for a low-value, per-user balance that it isn't worth a
+    // reservation system for now.)
     const { authorization_url } = await initializeTransaction({
       email: user.email,
-      amount: amountToCharge,
+      amount: remainingToCharge,
       reference,
       callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/payment/callback`,
-      metadata: { userId: user.sub, blockId, noteId: note.id, discountApplied },
+      metadata: { userId: user.sub, blockId, noteId: note.id, discountApplied, creditApplied: creditToApply, fullPrice: amountToCharge },
     });
 
-    return NextResponse.json({ authorizationUrl: authorization_url, reference });
+    return NextResponse.json({ authorizationUrl: authorization_url, reference, creditApplied: creditToApply });
   } catch (err) {
     // Surface the real reason instead of letting Next.js return a generic HTML 500,
     // which is what was making the client show "Something went wrong."

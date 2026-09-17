@@ -17,6 +17,7 @@ interface Transaction {
   blockTitle: string;
   courseCode: string;
   amountPaid: number;
+  creditApplied: number;
   discountApplied: boolean;
   refunded: boolean;
   disputed: boolean;
@@ -31,9 +32,9 @@ interface FinanceData {
   transactionCount: number;
   scribeSharePercent: number;
   platformSharePercent: number;
-  couponsIssued: number;
-  couponsRedeemed: number;
-  couponsOutstanding: number;
+  creditIssued: number;
+  creditRedeemed: number;
+  creditOutstanding: number;
   recentTransactions: Transaction[];
 }
 
@@ -160,12 +161,12 @@ export default function AdminFinancePage() {
             </div>
 
             <h2 style={{ marginTop: "2rem" }}>
-              <i className="fas fa-ticket" style={{ color: "var(--star)" }}></i> Coupons
+              <i className="fas fa-ticket" style={{ color: "var(--star)" }}></i> Refund credit
             </h2>
             <div className="stat-row" style={{ marginTop: "0.8rem" }}>
-              <StatCard label="Issued" value={String(data.couponsIssued)} sub="1 per successful refund" />
-              <StatCard label="Redeemed" value={String(data.couponsRedeemed)} sub="used on a free purchase" />
-              <StatCard label="Outstanding" value={String(data.couponsOutstanding)} sub="sitting unused right now" />
+              <StatCard label="Issued" value={`₦${data.creditIssued.toLocaleString()}`} sub="granted across all refunds" />
+              <StatCard label="Redeemed" value={`₦${data.creditRedeemed.toLocaleString()}`} sub="applied toward purchases" />
+              <StatCard label="Outstanding" value={`₦${data.creditOutstanding.toLocaleString()}`} sub="sitting unspent right now" />
             </div>
 
             <h2 style={{ marginTop: "2rem" }}>
@@ -198,13 +199,16 @@ export default function AdminFinancePage() {
                           <span className="pill" style={{ background: "var(--bg-danger)", color: "var(--text-danger)" }}>Refunded</span>
                         ) : t.redeemedWithCoupon ? (
                           <span className="pill" style={{ background: "var(--bg-pro)", color: "var(--text-pro)" }}>
-                            <i className="fas fa-ticket"></i> Coupon
+                            <i className="fas fa-ticket"></i> {t.amountPaid === 0 ? "Credit" : `Credit + ₦${t.amountPaid.toLocaleString()}`}
                           </span>
                         ) : (
                           <span className="pill pill-success">Paid</span>
                         )}
                         <div className="tx-row-amount">
                           <div className="amount">₦{t.amountPaid.toLocaleString()}</div>
+                          {t.creditApplied > 0 && (
+                            <div style={{ fontSize: "0.7rem", color: "var(--text-pro)" }}>+₦{t.creditApplied.toLocaleString()} credit</div>
+                          )}
                           <div className="date">{new Date(t.purchasedAt).toLocaleDateString()}</div>
                         </div>
                       </div>

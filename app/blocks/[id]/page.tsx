@@ -57,7 +57,7 @@ function BlockDetailInner() {
   const [noteReportReason, setNoteReportReason] = useState("");
   const [noteReportSubmitting, setNoteReportSubmitting] = useState(false);
   const [noteReportStatus, setNoteReportStatus] = useState<{ noteId: string; message: string } | null>(null);
-  const [couponBalance, setCouponBalance] = useState<number | null>(null);
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [pendingCouponNoteId, setPendingCouponNoteId] = useState<string | null>(null);
   const [couponConfirming, setCouponConfirming] = useState(false);
 
@@ -71,8 +71,8 @@ function BlockDetailInner() {
     load();
     fetch("/api/account")
       .then((res) => res.json())
-      .then((data) => setCouponBalance(data.user?.couponBalance ?? 0))
-      .catch(() => setCouponBalance(0));
+      .then((data) => setCreditBalance(data.user?.creditBalance ?? 0))
+      .catch(() => setCreditBalance(0));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, blockId]);
 
@@ -118,7 +118,7 @@ function BlockDetailInner() {
       });
 
       if (data.freeViaCoupon) {
-        toast.success("Coupon used — no charge!");
+        toast.success("Credit used — no charge!");
         router.push(`/notes/${data.noteId}/read`);
         return;
       }
@@ -134,7 +134,7 @@ function BlockDetailInner() {
   // checkout page to give someone a natural "wait, cancel that" moment —
   // this dialog is that moment instead.
   function handleBuyClick(noteId: string) {
-    if (couponBalance != null && couponBalance > 0) {
+    if (creditBalance != null && creditBalance > 0) {
       setPendingCouponNoteId(noteId);
       return;
     }
@@ -351,11 +351,13 @@ function BlockDetailInner() {
                         onClick={() => handleBuyClick(n.noteId)}
                         disabled={purchasingNoteId === n.noteId}
                       >
-                        <i className={couponBalance != null && couponBalance > 0 ? "fas fa-ticket" : "fas fa-lock"}></i>{" "}
+                        <i className={creditBalance != null && creditBalance > 0 ? "fas fa-ticket" : "fas fa-lock"}></i>{" "}
                         {purchasingNoteId === n.noteId
                           ? "Redirecting..."
-                          : couponBalance != null && couponBalance > 0
-                          ? "Use coupon"
+                          : creditBalance != null && creditBalance > 0
+                          ? creditBalance >= n.price
+                            ? "Use credit (free)"
+                            : `Use ₦${creditBalance.toLocaleString()} credit — pay ₦${(n.price - creditBalance).toLocaleString()}`
                           : `Buy for ₦${n.price.toLocaleString()}`}
                       </button>
                     )}
@@ -409,9 +411,11 @@ function BlockDetailInner() {
         )}
       </div>
 
-      {pendingCouponNoteId && (
+      {pendingCouponNoteId && creditBalance != null && (
         <CouponConfirmDialog
           itemLabel={`${blockTitle} — ${notes.find((n) => n.noteId === pendingCouponNoteId)?.scribeName ?? "this version"}`}
+          price={notes.find((n) => n.noteId === pendingCouponNoteId)?.price ?? price}
+          creditBalance={creditBalance}
           confirming={couponConfirming}
           onConfirm={confirmCouponBuy}
           onCancel={() => setPendingCouponNoteId(null)}

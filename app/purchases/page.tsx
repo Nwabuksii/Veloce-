@@ -21,6 +21,8 @@ interface PurchaseView {
   purchasedAt: string;
   review: { rating: number; comment: string | null } | null;
   refunded: boolean;
+  amountPaid: number;
+  creditApplied: number;
   redeemedWithCoupon: boolean;
   refundRequestStatus: "PENDING" | "DISMISSED" | "ACTIONED" | null;
 }
@@ -244,9 +246,12 @@ export default function PurchasesPage() {
                     <i className="fas fa-file-pdf"></i> Read note
                   </button>
                 )}
-                {p.redeemedWithCoupon && (
+                {p.creditApplied > 0 && (
                   <div style={{ fontSize: "0.75rem", color: "var(--text-pro)", marginTop: "0.3rem" }}>
-                    <i className="fas fa-ticket"></i> Unlocked with a coupon
+                    <i className="fas fa-ticket"></i>{" "}
+                    {p.amountPaid === 0
+                      ? `Unlocked with ₦${p.creditApplied.toLocaleString()} credit`
+                      : `₦${p.creditApplied.toLocaleString()} credit applied — you paid ₦${p.amountPaid.toLocaleString()}`}
                   </div>
                 )}
 

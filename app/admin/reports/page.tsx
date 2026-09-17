@@ -18,7 +18,7 @@ interface ReportItem {
   block: { id: string; title: string; course: { code: string; name: string } } | null;
   reportedUser: { id: string; fullName: string; email: string; role: string } | null;
   note: { id: string; scribe: { id: string; fullName: string } } | null;
-  purchase: { id: string; purchasedAt: string; amountPaid: number; refundedAt: string | null; redeemedWithCoupon: boolean } | null;
+  purchase: { id: string; purchasedAt: string; amountPaid: number; creditApplied: number; refundedAt: string | null; redeemedWithCoupon: boolean } | null;
 }
 
 // Every pending report about the same underlying thing — a note version, a
@@ -394,7 +394,11 @@ export default function AdminReportsPage() {
                                 {r.type === "REFUND" && r.purchase && (
                                   <>
                                     {" "}
-                                    · wants a refund for {r.purchase.redeemedWithCoupon ? "a coupon purchase" : `₦${r.purchase.amountPaid.toLocaleString()}`} paid{" "}
+                                    · wants a refund for{" "}
+                                    {r.purchase.amountPaid === 0
+                                      ? `a ₦${r.purchase.creditApplied.toLocaleString()} credit purchase`
+                                      : `₦${r.purchase.amountPaid.toLocaleString()}${r.purchase.creditApplied > 0 ? ` (+₦${r.purchase.creditApplied.toLocaleString()} credit)` : ""}`}{" "}
+                                    paid{" "}
                                     {new Date(r.purchase.purchasedAt).toLocaleDateString()}
                                     {r.purchase.refundedAt && <span style={{ color: "var(--text-danger)" }}> · already refunded</span>}
                                   </>

@@ -37,7 +37,7 @@ const updateSchema = z
 export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
   const dbUser = await prisma.user.findUnique({
     where: { id: user.sub },
-    select: { id: true, email: true, fullName: true, role: true, theme: true, couponBalance: true, avatarUrl: true, avatarDisplay: true },
+    select: { id: true, email: true, fullName: true, role: true, theme: true, creditBalance: true, avatarUrl: true, avatarDisplay: true },
   });
 
   if (!dbUser) {
@@ -98,7 +98,7 @@ export const PATCH = requireRole("STUDENT", async (req: NextRequest, user) => {
     const updated = await prisma.user.update({
       where: { id: user.sub },
       data,
-      select: { id: true, email: true, fullName: true, role: true, theme: true, couponBalance: true, avatarUrl: true, avatarDisplay: true },
+      select: { id: true, email: true, fullName: true, role: true, theme: true, creditBalance: true, avatarUrl: true, avatarDisplay: true },
     });
     return NextResponse.json({ user: updated });
   } catch (err: any) {

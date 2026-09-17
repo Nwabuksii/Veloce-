@@ -42,6 +42,12 @@ export const POST = requireRole<RouteContext>("ADMIN", async (req: NextRequest, 
     ? purchase.scribeCutOverride ?? 0
     : computeScribeCut(purchase.amountPaid, Boolean(purchase.note.fulfillsRequestId));
 
+  // What the buyer actually loses: cash paid plus whatever credit they'd
+  // already spent on this purchase — refunding should make them whole on
+  // the full value, not just the cash portion, or a credit-funded purchase
+  // that gets refunded would destroy value for nothing.
+  const creditToGrant = purchase.amountPaid + purchase.creditApplied;
+
   const pendingReports = await prisma.report.findMany({
     where: { purchaseId: purchase.id, type: "REFUND", status: "PENDING" },
   });
@@ -55,7 +61,7 @@ export const POST = requireRole<RouteContext>("ADMIN", async (req: NextRequest, 
     }),
     prisma.user.update({
       where: { id: purchase.buyerId },
-      data: { couponBalance: { increment: 1 } },
+      data: { creditBalance: { increment: creditToGrant } },
     }),
     ...(pendingReports.length > 0
       ? [
@@ -70,7 +76,7 @@ export const POST = requireRole<RouteContext>("ADMIN", async (req: NextRequest, 
         recipientId: purchase.buyerId,
         senderId: adminUser.sub,
         subject: `Refund processed — "${purchase.block.title}"`,
-        body: `Your purchase of "${purchase.block.title}" was refunded and you no longer have access to it. As an apology for the trouble, you've been given 1 coupon — it'll be used automatically on your next purchase, no charge.`,
+        body: `Your purchase of "${purchase.block.title}" was refunded and you no longer have access to it. As an apology for the trouble, you've been given ₦${creditToGrant.toLocaleString()} in credit — it'll be applied automatically toward your next purchase(s), covering the price up to that amount.`,
       },
     }),
     prisma.adminMessage.create({

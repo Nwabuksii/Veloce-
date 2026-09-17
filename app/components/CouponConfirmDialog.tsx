@@ -2,25 +2,28 @@
 
 interface CouponConfirmDialogProps {
   itemLabel: string;
-  couponBalance: number;
+  price: number;
+  creditBalance: number;
   confirming: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
 /**
- * Shown right before a coupon-funded purchase actually goes through — a
- * coupon purchase skips Paystack entirely, so there's no external checkout
- * page giving the person a natural "wait, was that a mistake?" moment.
- * This dialog is that moment instead.
+ * Shown right before a purchase applies the buyer's refund credit — a
+ * fully-covered purchase skips Paystack entirely, so there's no external
+ * checkout page giving the person a natural "wait, was that a mistake?"
+ * moment. This dialog is that moment either way, whether credit covers
+ * the whole price or just part of it.
  *
- * couponBalance is the count BEFORE this purchase — coupons aren't capped
- * at 1 (two separate successful refunds genuinely give two coupons), so
- * the remaining-after-use figure has to be computed from the real balance,
- * not assumed to always land on 0.
+ * creditBalance is the balance BEFORE this purchase — credit only ever
+ * covers up to the item's price, so however much is left over carries
+ * forward untouched.
  */
-export default function CouponConfirmDialog({ itemLabel, couponBalance, confirming, onConfirm, onCancel }: CouponConfirmDialogProps) {
-  const remaining = Math.max(0, couponBalance - 1);
+export default function CouponConfirmDialog({ itemLabel, price, creditBalance, confirming, onConfirm, onCancel }: CouponConfirmDialogProps) {
+  const creditToApply = Math.min(creditBalance, price);
+  const remainingToPay = price - creditToApply;
+  const remainingCredit = creditBalance - creditToApply;
 
   return (
     <div
@@ -45,15 +48,19 @@ export default function CouponConfirmDialog({ itemLabel, couponBalance, confirmi
         onClick={(e) => e.stopPropagation()}
       >
         <h3 style={{ marginTop: 0, display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <i className="fas fa-ticket" style={{ color: "var(--text-pro)" }}></i> Use a coupon?
+          <i className="fas fa-ticket" style={{ color: "var(--text-pro)" }}></i> Use your credit?
         </h3>
         <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-          This uses 1 of your {couponBalance} coupon{couponBalance === 1 ? "" : "s"} to unlock{" "}
-          <strong>{itemLabel}</strong> for free — no charge. You'll have {remaining} left after this.
+          This applies ₦{creditToApply.toLocaleString()} of your ₦{creditBalance.toLocaleString()} credit toward{" "}
+          <strong>{itemLabel}</strong> (₦{price.toLocaleString()}).{" "}
+          {remainingToPay === 0
+            ? "No charge — it's fully covered."
+            : `You'll still pay ₦${remainingToPay.toLocaleString()} via Paystack.`}{" "}
+          You'll have ₦{remainingCredit.toLocaleString()} credit left after this.
         </p>
         <div style={{ display: "flex", gap: "0.6rem", marginTop: "1.2rem" }}>
           <button className="btn btn-primary press-on-tap" disabled={confirming} onClick={onConfirm}>
-            {confirming ? "Unlocking..." : "Yes, use coupon"}
+            {confirming ? "Processing..." : "Yes, apply credit"}
           </button>
           <button className="btn" type="button" onClick={onCancel} disabled={confirming}>
             Cancel
