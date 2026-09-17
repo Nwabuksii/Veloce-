@@ -32,7 +32,7 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
 export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
   const feedback = await prisma.feedback.findMany({
     where: { user: { universityId: adminUser.universityId } },
-    include: { user: { select: { fullName: true, role: true } } },
+    include: { user: { select: { id: true, fullName: true, role: true, avatarUrl: true, avatarDisplay: true } } },
     orderBy: { createdAt: "desc" },
     take: 200,
   });
@@ -42,8 +42,10 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
       id: f.id,
       message: f.message,
       createdAt: f.createdAt,
+      authorId: f.user.id,
       authorName: f.user.fullName,
       authorRole: f.user.role,
+      authorAvatarUrl: f.user.avatarDisplay === "custom" ? f.user.avatarUrl : null,
     })),
   });
 });

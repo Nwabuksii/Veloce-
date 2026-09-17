@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
 import Logo from "@/app/components/Logo";
 import ProfileMenu from "@/app/components/ProfileMenu";
+import Avatar from "@/app/components/Avatar";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { formatDateDDMMYYYY } from "@/lib/date-format";
 
@@ -16,6 +17,7 @@ interface UserResult {
   bannedAt: string | null;
   banReason: string | null;
   banExpiresAt: string | null;
+  avatarUrl?: string | null;
 }
 
 export default function AdminUsersPage() {
@@ -150,16 +152,19 @@ export default function AdminUsersPage() {
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.6rem" }}>
-                  <div>
-                    <strong>{u.fullName}</strong>{" "}
-                    <span style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>({u.role})</span>
-                    <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>{u.email}</div>
-                    {isBanned && (
-                      <div style={{ fontSize: "0.8rem", color: "var(--text-danger)", marginTop: "0.4rem" }}>
-                        Banned {u.banExpiresAt ? `until ${new Date(u.banExpiresAt).toLocaleDateString()}` : "until further notice"}
-                        {u.banReason && ` — "${u.banReason}"`}
-                      </div>
-                    )}
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "0.6rem" }}>
+                    <Avatar name={u.fullName} imageUrl={u.avatarUrl} />
+                    <div>
+                      <strong>{u.fullName}</strong>{" "}
+                      <span style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>({u.role})</span>
+                      <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>{u.email}</div>
+                      {isBanned && (
+                        <div style={{ fontSize: "0.8rem", color: "var(--text-danger)", marginTop: "0.4rem" }}>
+                          Banned {u.banExpiresAt ? `until ${new Date(u.banExpiresAt).toLocaleDateString()}` : "until further notice"}
+                          {u.banReason && ` — "${u.banReason}"`}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {isBanned ? (

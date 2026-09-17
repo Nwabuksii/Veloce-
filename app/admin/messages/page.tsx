@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
 import Logo from "@/app/components/Logo";
 import ProfileMenu from "@/app/components/ProfileMenu";
+import Avatar from "@/app/components/Avatar";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { friendlyErrorMessage } from "@/lib/api-client";
 
@@ -13,6 +14,7 @@ interface UserOption {
   fullName: string;
   email: string;
   role: string;
+  avatarUrl?: string | null;
 }
 interface SentMessage {
   subject: string;
@@ -232,7 +234,9 @@ export default function AdminMessagesPage() {
                               setResults([]);
                             }}
                             style={{
-                              display: "block",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.6rem",
                               width: "100%",
                               textAlign: "left",
                               padding: "0.6rem 0.8rem",
@@ -242,8 +246,11 @@ export default function AdminMessagesPage() {
                               fontSize: "0.85rem",
                             }}
                           >
-                            <strong>{u.fullName}</strong> · {u.role}
-                            <div style={{ color: "var(--text-secondary)", fontSize: "0.78rem" }}>{u.email}</div>
+                            <Avatar name={u.fullName} size="sm" imageUrl={u.avatarUrl} />
+                            <div>
+                              <strong>{u.fullName}</strong> · {u.role}
+                              <div style={{ color: "var(--text-secondary)", fontSize: "0.78rem" }}>{u.email}</div>
+                            </div>
                           </button>
                         ))}
                       </div>
@@ -260,9 +267,12 @@ export default function AdminMessagesPage() {
                       alignItems: "center",
                     }}
                   >
-                    <div>
-                      <strong>{recipient.fullName}</strong>
-                      <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>{recipient.email}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                      <Avatar name={recipient.fullName} imageUrl={recipient.avatarUrl} />
+                      <div>
+                        <strong>{recipient.fullName}</strong>
+                        <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>{recipient.email}</div>
+                      </div>
                     </div>
                     <button type="button" className="btn" onClick={() => setRecipient(null)}>
                       Change

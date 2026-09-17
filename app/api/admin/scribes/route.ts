@@ -10,6 +10,8 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, admin) => {
       fullName: true,
       email: true,
       createdAt: true,
+      avatarUrl: true,
+      avatarDisplay: true,
       _count: { select: { notes: true } },
     },
     orderBy: { fullName: "asc" },
@@ -20,6 +22,7 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, admin) => {
     fullName: s.fullName,
     email: s.email,
     joinedAt: s.createdAt,
+    avatarUrl: s.avatarDisplay === "custom" ? s.avatarUrl : null,
     uploadCount: s._count.notes,
   }));
 

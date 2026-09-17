@@ -6,6 +6,7 @@ import { getStoredUser } from "@/lib/client-session";
 import ProfileMenu from "@/app/components/ProfileMenu";
 import { SkeletonList } from "@/app/components/Skeleton";
 import Logo from "@/app/components/Logo";
+import Avatar from "@/app/components/Avatar";
 import { friendlyErrorMessage } from "@/lib/api-client";
 
 interface ScribeView {
@@ -13,6 +14,7 @@ interface ScribeView {
   fullName: string;
   email: string;
   uploadCount: number;
+  avatarUrl?: string | null;
 }
 
 export default function ManageScribesPage() {
@@ -145,15 +147,18 @@ export default function ManageScribesPage() {
                 gap: "0.6rem",
               }}
             >
-              <div>
-                <button
-                  onClick={() => router.push(`/scribe/${s.id}`)}
-                  style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontWeight: 600, color: "var(--text-primary)" }}
-                >
-                  {s.fullName}
-                </button>
-                <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-                  {s.email} · {s.uploadCount} upload{s.uploadCount === 1 ? "" : "s"}
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "0.6rem" }}>
+                <Avatar name={s.fullName} imageUrl={s.avatarUrl} />
+                <div>
+                  <button
+                    onClick={() => router.push(`/scribe/${s.id}`)}
+                    style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontWeight: 600, color: "var(--text-primary)" }}
+                  >
+                    {s.fullName}
+                  </button>
+                  <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+                    {s.email} · {s.uploadCount} upload{s.uploadCount === 1 ? "" : "s"}
+                  </div>
                 </div>
               </div>
 

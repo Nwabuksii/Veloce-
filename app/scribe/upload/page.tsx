@@ -465,7 +465,22 @@ function ScribeUploadForm() {
               <i className="fas fa-cloud-upload-alt" style={{ color: "var(--text-info)" }}></i> Upload your PDF
             </h2>
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem" }}>
-              <input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} required />
+              <input
+                type="file"
+                accept="application/pdf"
+                required
+                onChange={(e) => {
+                  const f = e.target.files?.[0] || null;
+                  if (f && f.size > 3 * 1024 * 1024) {
+                    setStatus(`File is too large — 3MB max (yours is ${(f.size / (1024 * 1024)).toFixed(1)}MB).`);
+                    e.target.value = "";
+                    setFile(null);
+                    return;
+                  }
+                  setStatus("");
+                  setFile(f);
+                }}
+              />
 
               {status && <p style={{ color: "var(--text-secondary)" }}>{status}</p>}
 

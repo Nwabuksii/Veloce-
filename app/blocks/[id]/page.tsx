@@ -15,6 +15,7 @@ interface NoteVersion {
   noteId: string;
   scribeId: string;
   scribeName: string;
+  scribeAvatarUrl: string | null;
   trustLevel: string;
   trustLabel: string;
   noteAvgRating: number | null;
@@ -305,7 +306,7 @@ function BlockDetailInner() {
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.6rem" }}>
                     <div style={{ display: "flex", gap: "0.7rem", alignItems: "flex-start" }}>
-                      <Avatar name={n.scribeName} />
+                      <Avatar name={n.scribeName} imageUrl={n.scribeAvatarUrl} />
                       <div>
                       {n.noteId === highlightNoteId && (
                         <div style={{ fontSize: "0.75rem", color: "var(--text-info)", fontWeight: 600, marginBottom: "0.2rem" }}>
