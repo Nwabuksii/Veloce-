@@ -102,10 +102,10 @@ export async function renderPdfPageToImage(pdfBuffer: Buffer, pageNum: number): 
 }
 
 /**
- * Stamps a moderate, tiled, diagonal watermark (a handful of repeats, not
- * a dense fill) over an already-rendered page image. Cheap relative to
- * the PDF render itself, so this runs fresh on every view — the result
- * must never be cached, since it's personalized to whoever's looking.
+ * Stamps a tiled, diagonal watermark over an already-rendered page image.
+ * Cheap relative to the PDF render itself, so this runs fresh on every
+ * view — the result must never be cached, since it's personalized to
+ * whoever's looking.
  */
 export async function stampWatermark(baseImageBuffer: Buffer, lines: string[]): Promise<Buffer> {
   const img = await loadImage(baseImageBuffer);
@@ -118,18 +118,19 @@ export async function stampWatermark(baseImageBuffer: Buffer, lines: string[]): 
 
   ctx.save();
   ctx.font = `${Math.max(14, Math.round(img.width / 42))}px sans-serif`;
-  ctx.fillStyle = "rgba(30, 30, 30, 0.16)";
+  // Slightly stronger than before (0.16 -> 0.22) and noticeably denser
+  // tiling below — a screenshot of any corner of the page should still
+  // clearly carry the watermark, not just the odd fragment of it.
+  ctx.fillStyle = "rgba(30, 30, 30, 0.22)";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  // A handful of repeats across the page, not a dense grid — spacing
-  // scales with page size so it looks consistent across different PDFs.
-  const stepX = img.width / 2.2;
-  const stepY = img.height / 3.2;
+  const stepX = img.width / 1.6;
+  const stepY = img.height / 4.5;
   const angle = (-28 * Math.PI) / 180;
 
-  for (let row = -1; row < 4; row++) {
-    for (let col = -1; col < 3; col++) {
+  for (let row = -1; row < 7; row++) {
+    for (let col = -1; col < 4; col++) {
       const x = col * stepX + (row % 2 === 0 ? 0 : stepX / 2);
       const y = row * stepY;
       ctx.save();

@@ -85,7 +85,11 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     );
   }
 
-  const watermarked = await stampWatermark(baseImageBuffer, [viewer.email, viewer.fullName]);
+  const watermarked = await stampWatermark(baseImageBuffer, [
+    viewer.email,
+    viewer.fullName,
+    new Date().toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+  ]);
 
   return new NextResponse(new Uint8Array(watermarked), {
     headers: {

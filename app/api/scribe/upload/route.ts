@@ -16,12 +16,19 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
     const formData = await req.formData();
     const blockId = formData.get("blockId");
     const file = formData.get("file");
+    const attestedOriginal = formData.get("attestedOriginal");
 
     if (typeof blockId !== "string" || !blockId) {
       return NextResponse.json({ error: "blockId is required" }, { status: 400 });
     }
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "A PDF file is required" }, { status: 400 });
+    }
+    if (attestedOriginal !== "true") {
+      return NextResponse.json(
+        { error: "You must confirm these are your own original notes before uploading." },
+        { status: 400 }
+      );
     }
     if (file.type !== "application/pdf") {
       return NextResponse.json({ error: "Only PDF files are accepted" }, { status: 400 });
@@ -53,7 +60,7 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
       return NextResponse.json({ error: "This doesn't look like a real PDF file" }, { status: 400 });
     }
 
-    let parsed: { text?: string; numpages: number };
+    let parsed: { text?: string; numpages: number; info?: { Producer?: string; Creator?: string } };
     try {
       parsed = await pdfParse(buffer);
     } catch (err) {
@@ -110,8 +117,21 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
 
     const result = runQualityGate(
       extractedText,
-      existingNotes.map((n) => n.extractedText || "")
+      existingNotes.map((n) => n.extractedText || ""),
+      parsed.info
     );
+
+    // A scribe's very first upload is the riskiest moment — they haven't
+    // proven anything yet, and the automated checks above only catch
+    // specific patterns (too short, duplicate, slide-tool metadata), not
+    // "genuinely unproven scribe." Force it into manual review regardless
+    // of what the automated gate found, on top of whatever it already did.
+    const priorUploadCount = await prisma.note.count({ where: { scribeId: user.sub } });
+    const reasons = [...result.reasons];
+    if (priorUploadCount === 0) {
+      reasons.push("First upload from this scribe — manual review required");
+    }
+    const flagged = result.flagged || priorUploadCount === 0;
 
     const storedFilename = await saveNoteFile(buffer, file.name);
 
@@ -124,15 +144,17 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
         pageCount,
         similarityScore: result.maxSimilarity,
         qualityScore: result.qualityScore,
-        flaggedForReview: result.flagged,
+        flaggedForReview: flagged,
+        flagReason: reasons.length > 0 ? reasons.join("; ") : null,
+        attestedOriginal: true,
         fulfillsRequestId: fulfilledRequest?.id,
-        status: result.flagged ? "FLAGGED" : "LIVE",
+        status: flagged ? "FLAGGED" : "LIVE",
       },
     });
 
     return NextResponse.json({
       note: { id: note.id, status: note.status },
-      message: result.flagged
+      message: flagged
         ? "Uploaded — flagged for admin review before it goes live."
         : "Uploaded and live!",
     });

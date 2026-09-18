@@ -263,6 +263,19 @@ model Note {
   similarityScore  Float? // vs other notes in same block — high score = likely duplicate
   qualityScore     Float? // AI completeness/quality pass, 0-1
   flaggedForReview Boolean @default(false)
+  // Human-readable reasons the automated gate (or an upload-time policy
+  // rule, e.g. "first upload from this scribe") flagged this note —
+  // semicolon-joined, shown as-is in the moderation queue. Null when
+  // flaggedForReview is false. See lib/quality-check.ts.
+  flagReason String?
+
+  // The scribe's own affirmative confirmation, checked at upload time,
+  // that this is their original work from attending the lecture — not
+  // sourced from slides, a textbook, or someone else's notes. Doesn't
+  // prove anything by itself, but it's what turns "we found out later"
+  // into a clear-cut policy violation with a paper trail, not just a
+  // he-said-she-said dispute. See app/scribe/upload/page.tsx.
+  attestedOriginal Boolean @default(false)
 
   // If this note was uploaded to fulfill a demand-feed request
   fulfillsRequestId String?

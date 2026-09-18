@@ -383,6 +383,23 @@ function BlockDetailInner() {
                         <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
                           Why are you reporting {n.scribeName}&apos;s version specifically?
                         </label>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+                          {[
+                            "Not genuine — looks copied from slides/a textbook, not real lecture notes",
+                            "Incomplete or missing pages",
+                            "Doesn't match what this block is supposed to cover",
+                          ].map((preset) => (
+                            <button
+                              key={preset}
+                              type="button"
+                              className="btn"
+                              style={{ fontSize: "0.75rem", padding: "0.3rem 0.6rem" }}
+                              onClick={() => setNoteReportReason(preset)}
+                            >
+                              {preset}
+                            </button>
+                          ))}
+                        </div>
                         <textarea
                           value={noteReportReason}
                           onChange={(e) => setNoteReportReason(e.target.value)}

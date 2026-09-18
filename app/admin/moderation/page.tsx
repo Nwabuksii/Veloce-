@@ -12,6 +12,7 @@ interface FlaggedNote {
   id: string;
   similarityScore: number | null;
   qualityScore: number | null;
+  flagReason: string | null;
   block: { title: string; course: { code: string } };
   scribe: { fullName: string; email: string };
 }
@@ -109,6 +110,11 @@ export default function ModerationPage() {
                   Similarity: {n.similarityScore != null ? `${Math.round(n.similarityScore * 100)}%` : "—"} · Quality:{" "}
                   {n.qualityScore != null ? `${Math.round(n.qualityScore * 100)}%` : "—"}
                 </div>
+                {n.flagReason && (
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-warning)", marginTop: "0.3rem" }}>
+                    <i className="fas fa-flag"></i> {n.flagReason}
+                  </div>
+                )}
                 <div style={{ display: "flex", gap: "0.6rem", marginTop: "0.8rem" }}>
                   <button
                     className="btn"

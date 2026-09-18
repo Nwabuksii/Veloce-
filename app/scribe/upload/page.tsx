@@ -76,6 +76,7 @@ function ScribeUploadForm() {
 
   // Step 3 — file
   const [file, setFile] = useState<File | null>(null);
+  const [attested, setAttested] = useState(false);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -243,7 +244,7 @@ function ScribeUploadForm() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!file || !resolvedBlockId) return;
+    if (!file || !resolvedBlockId || !attested) return;
 
     setStatus("");
     setLoading(true);
@@ -252,6 +253,7 @@ function ScribeUploadForm() {
       const formData = new FormData();
       formData.append("blockId", resolvedBlockId);
       formData.append("file", file);
+      formData.append("attestedOriginal", "true");
 
       const res = await fetch("/api/scribe/upload", {
         method: "POST",
@@ -467,13 +469,27 @@ function ScribeUploadForm() {
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem" }}>
               <input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} required />
 
+              <label style={{ display: "flex", gap: "0.6rem", alignItems: "flex-start", fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+                <input
+                  type="checkbox"
+                  checked={attested}
+                  onChange={(e) => setAttested(e.target.checked)}
+                  style={{ marginTop: "0.2rem" }}
+                  required
+                />
+                <span>
+                  I confirm these are my own original notes, taken from attending this lecture myself — not copied from
+                  slides, a textbook, or another student's work.
+                </span>
+              </label>
+
               {status && <p style={{ color: "var(--text-secondary)" }}>{status}</p>}
 
               <div style={{ display: "flex", gap: "0.6rem" }}>
                 <button type="button" className="btn" onClick={() => setStep(2)}>
                   <i className="fas fa-arrow-left"></i> Back
                 </button>
-                <button className="btn btn-primary" type="submit" disabled={loading}>
+                <button className="btn btn-primary" type="submit" disabled={loading || !attested}>
                   {loading ? "Uploading..." : "Upload"}
                 </button>
               </div>
