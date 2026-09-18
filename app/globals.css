@@ -28,6 +28,7 @@ html { color-scheme: light; }
   --border-light: #EBEEF4;
   --border-blue: #D8E0EC;
   --surface: #FFFFFF;
+  --skeleton-shine: #F3F2F1;
 
   --text-danger: #DC2626;
   --text-success: #16A34A;
@@ -65,10 +66,15 @@ html[data-theme="dark"] {
   --text-muted: #7E879C;
   --bg-page: #0F1220;
   --bg-pill: #1D2A44;
-  --border: #2C3247;
-  --border-light: #2C3247;
-  --border-blue: #2C3247;
+  /* Borders were all one near-invisible slate (#2C3247) before — barely
+     distinguishable from --surface (#1A1E2E), so every card, divider, and
+     form field outline disappeared into the page. Each now gets its own,
+     clearly-lighter-than-surface value instead of sharing one. */
+  --border: #3A4160;
+  --border-light: #333A54;
+  --border-blue: #46538C;
   --surface: #1A1E2E;
+  --skeleton-shine: #3A425E;
 
   --text-danger: #F87171;
   --text-success: #4ADE80;
@@ -89,6 +95,22 @@ html[data-theme="dark"] {
 
 
 body { background: var(--bg-page); min-height: 100vh; color: var(--text-primary); }
+
+/* Every text input, textarea, and select in the app is styled per-context
+   with inline `border: var(--border-blue)` etc, but NONE of them ever set
+   a background or text color — so without this, every form field renders
+   with the browser's default white background + black text, in EITHER
+   theme. Invisible in light mode (looks intentional), glaringly wrong in
+   dark mode (a bright white box on every page). This is the one rule that
+   makes every field in the app actually belong to its theme. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select {
+  background: var(--surface);
+  color: var(--text-primary);
+  font-family: inherit;
+}
+input::placeholder, textarea::placeholder {
+  color: var(--text-muted);
+}
 
 /* Anything tabular or factual — course codes, prices, stats — sets in
    mono, never the body typeface. This is the single most ownable visual
@@ -318,7 +340,7 @@ img, svg { max-width: 100%; }
   100% { background-position: 200% 0; }
 }
 .skeleton {
-  background: linear-gradient(90deg, var(--stone-light) 25%, #f3f2f1 37%, var(--stone-light) 63%);
+  background: linear-gradient(90deg, var(--stone-light) 25%, var(--skeleton-shine) 37%, var(--stone-light) 63%);
   background-size: 400% 100%;
   animation: skeleton-shimmer 1.4s ease infinite;
   border-radius: 0.5rem;

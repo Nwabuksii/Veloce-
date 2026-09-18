@@ -183,9 +183,8 @@ export default function DashboardPage() {
             <Logo size={34} />
             <div>
               <h1>
-                Veloce <span className="accent">.</span>
+                Veloce
               </h1>
-              <div className="logo-sub">Babcock · pilot</div>
             </div>
             <CouponBadge creditBalance={creditBalance} />
           </div>

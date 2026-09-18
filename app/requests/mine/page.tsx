@@ -49,7 +49,7 @@ export default function MyRequestsPage() {
             <Logo size={34} />
             <div>
               <h1>
-                Veloce <span className="accent">.</span>
+                Veloce
               </h1>
               <div className="logo-sub">My requests</div>
             </div>

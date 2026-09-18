@@ -109,7 +109,7 @@ export default function AdminUsersPage() {
             <Logo size={34} />
             <div>
               <h1>
-                Veloce <span className="accent">.</span>
+                Veloce
               </h1>
               <div className="logo-sub">Manage users</div>
             </div>

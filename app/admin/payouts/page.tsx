@@ -99,7 +99,7 @@ export default function AdminPayoutsPage() {
             <Logo size={34} />
             <div>
               <h1>
-                Veloce <span className="accent">.</span>
+                Veloce
               </h1>
               <div className="logo-sub">Admin control hub</div>
             </div>

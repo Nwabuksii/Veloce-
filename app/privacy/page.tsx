@@ -10,7 +10,7 @@ export default function PrivacyPolicyPage() {
         <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "1.5rem" }}>
           <Logo size={34} />
           <h1>
-            Veloce <span className="accent">.</span>
+            Veloce
           </h1>
         </div>
 

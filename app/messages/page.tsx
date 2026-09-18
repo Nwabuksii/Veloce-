@@ -62,7 +62,7 @@ export default function MessagesPage() {
             <Logo size={34} />
             <div>
               <h1>
-                Veloce <span className="accent">.</span>
+                Veloce
               </h1>
               <div className="logo-sub">Messages</div>
             </div>

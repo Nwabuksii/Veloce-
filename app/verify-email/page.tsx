@@ -44,7 +44,7 @@ function VerifyEmailInner() {
           <Logo size={150} />
         </div>
         <div className="split-auth-brand">
-          Veloce <span>.</span>
+          Veloce
         </div>
       </div>
 

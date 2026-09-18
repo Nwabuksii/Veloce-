@@ -175,7 +175,7 @@ export default function RequestsPage() {
             <Logo size={34} />
             <div>
               <h1>
-                Veloce <span className="accent">.</span>
+                Veloce
               </h1>
               <div className="logo-sub">Request a block</div>
             </div>

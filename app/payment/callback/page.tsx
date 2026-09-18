@@ -33,7 +33,7 @@ function PaymentCallbackContent() {
     <div className="auth-page">
       <div className="auth-card" style={{ textAlign: "center" }}>
         <h1>
-          Veloce <span className="accent">.</span>
+          Veloce
         </h1>
         <p className="auth-sub">{status}</p>
       </div>
@@ -47,7 +47,7 @@ export default function PaymentCallbackPage() {
       <div className="auth-page">
         <div className="auth-card" style={{ textAlign: "center" }}>
           <h1>
-            Veloce <span className="accent">.</span>
+            Veloce
           </h1>
           <p className="auth-sub">Verifying your payment...</p>
         </div>

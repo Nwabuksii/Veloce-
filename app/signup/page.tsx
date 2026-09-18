@@ -45,7 +45,7 @@ export default function SignupPage() {
           <Logo size={150} />
         </div>
         <div className="split-auth-brand">
-          Veloce <span>.</span>
+          Veloce
         </div>
         <p className="split-auth-tagline">
           Join Babcock's own marketplace for course notes — buy, sell, and never scramble for notes again.
