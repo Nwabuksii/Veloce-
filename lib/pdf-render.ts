@@ -119,12 +119,20 @@ export async function stampWatermark(baseImageBuffer: Buffer, lines: string[]): 
 
   ctx.save();
   ctx.font = `${Math.max(14, Math.round(img.width / 42))}px sans-serif`;
-  // Slightly stronger than before (0.16 -> 0.22) and noticeably denser
-  // tiling below — a screenshot of any corner of the page should still
-  // clearly carry the watermark, not just the odd fragment of it.
-  ctx.fillStyle = "rgba(30, 30, 30, 0.22)";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
+
+  // Dark fill + a light stroke outline around each glyph, rather than a
+  // single fillStyle — a flat gray fill at readable opacity disappears
+  // over light backgrounds (which most note pages are), and disappears
+  // over dark backgrounds if made too light instead. Outlining every
+  // letter keeps it visible regardless of what's underneath, without
+  // needing to guess the page's background color ahead of time. Opacity
+  // pushed up further (0.22 -> 0.42) since it was reported as effectively
+  // invisible in practice at the old value.
+  ctx.lineWidth = Math.max(2, Math.round(img.width / 500));
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
+  ctx.fillStyle = "rgba(20, 20, 20, 0.42)";
 
   const stepX = img.width / 1.6;
   const stepY = img.height / 4.5;
@@ -137,6 +145,7 @@ export async function stampWatermark(baseImageBuffer: Buffer, lines: string[]): 
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(angle);
+      ctx.strokeText(text, 0, 0);
       ctx.fillText(text, 0, 0);
       ctx.restore();
     }
