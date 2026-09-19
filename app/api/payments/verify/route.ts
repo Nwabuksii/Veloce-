@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { verifyTransaction } from "@/lib/paystack";
-import { computeScribeCut } from "@/lib/pricing";
+import { computeScribeCutForCreditRedemption } from "@/lib/pricing";
 
 export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
   try {
@@ -38,7 +38,6 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
 
     const creditApplied = metadata.creditApplied ?? 0;
     const amountPaid = tx.amount / 100;
-    const fullPrice = metadata.fullPrice ?? amountPaid + creditApplied;
 
     let purchase;
     try {
@@ -50,7 +49,10 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
         discountApplied: metadata.discountApplied ?? false,
         creditApplied,
         redeemedWithCoupon: creditApplied > 0,
-        scribeCutOverride: creditApplied > 0 ? computeScribeCut(fullPrice, metadata.discountApplied ?? false) : null,
+        // Fixed, never price/discount-based — see lib/pricing.ts. This is a
+        // reassignment of the cut already reclaimed on the refunded sale
+        // that generated this credit, not a new price-dependent payout.
+        scribeCutOverride: creditApplied > 0 ? computeScribeCutForCreditRedemption() : null,
         paystackRef: reference,
       };
 

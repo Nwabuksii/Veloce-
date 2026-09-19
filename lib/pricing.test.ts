@@ -2,11 +2,14 @@ import { describe, it, expect } from "vitest";
 import {
   computeScribeCut,
   computePlatformCut,
+  computeScribeCutForCreditRedemption,
+  computePlatformCutForCreditRedemption,
   SCRIBE_SHARE,
   PLATFORM_SHARE,
   REQUEST_FULFILLED_PRICE,
   REQUEST_FULFILLED_SCRIBE_CUT,
   REQUEST_FULFILLED_PLATFORM_CUT,
+  CREDIT_REDEMPTION_SCRIBE_CUT,
 } from "./pricing";
 
 // These are deliberately narrow, pure-function tests — no database, no
@@ -72,5 +75,36 @@ describe("computePlatformCut", () => {
         expect(scribeCut + platformCut).toBe(amount);
       }
     }
+  });
+});
+
+describe("credit redemption (refund coupons)", () => {
+  // These pin down the exact scenarios from the spec: a refund reclaims
+  // only the scribe's ₦600, never the platform's cut, and that ₦600 is a
+  // fixed reassignment to whichever new scribe the credit is later spent
+  // with — never a price/discount-based split of that new sale.
+
+  it("scribe cut on any credit-redeemed sale is always fixed ₦600", () => {
+    expect(computeScribeCutForCreditRedemption()).toBe(600);
+    expect(computeScribeCutForCreditRedemption()).toBe(CREDIT_REDEMPTION_SCRIBE_CUT);
+  });
+
+  it("platform cut on a credit-redeemed sale is 100% of the cash actually charged, never split", () => {
+    // Buying a discounted (₦900) block with a ₦900 face-value coupon:
+    // credit fully covers it, no cash changes hands, nothing new to the platform.
+    expect(computePlatformCutForCreditRedemption(0)).toBe(0);
+    // Buying a non-discounted (₦1,000) block with a ₦900 face-value coupon:
+    // ₦100 cash top-up, all ₦100 goes to the platform — not 60/40 split.
+    expect(computePlatformCutForCreditRedemption(100)).toBe(100);
+  });
+
+  it("scribe cut plus platform cut on a credit-redeemed sale never reaches into the platform's original cut", () => {
+    // Regardless of the cash top-up, the scribe's fixed ₦600 never comes
+    // out of platformRevenue — it's reclaimed credit, not fresh revenue.
+    const scribeCut = computeScribeCutForCreditRedemption();
+    const cashTopUp = 100;
+    const platformCut = computePlatformCutForCreditRedemption(cashTopUp);
+    expect(scribeCut).toBe(600);
+    expect(platformCut).toBe(cashTopUp); // never scribeCut-adjusted, never negative
   });
 });

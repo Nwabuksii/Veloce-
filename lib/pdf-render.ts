@@ -57,11 +57,12 @@ class NodeCanvasFactory {
   }
 }
 
-// Readable-on-screen resolution rather than print quality — keeps cached
-// base images (and the bandwidth to serve them) small. ~1.4x a standard
-// PDF page's default scale renders comfortably sharp on a phone screen.
-const RENDER_SCALE = 1.4;
-const JPEG_QUALITY = 80; // 0-100
+// Bumped up from 1.4/80 — noticeably crisper on both phone and desktop
+// screens (text edges and thin diagram lines were visibly soft before),
+// at the cost of somewhat larger cached base images/bandwidth. Still a
+// JPEG raster, not print-quality, but should read clearly when zoomed.
+const RENDER_SCALE = 2.2;
+const JPEG_QUALITY = 92; // 0-100
 
 export async function getPdfPageCount(pdfBuffer: Buffer): Promise<number> {
   const doc = await pdfjsLib.getDocument({ data: new Uint8Array(pdfBuffer) }).promise;

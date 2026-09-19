@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
-import { computeScribeCut } from "@/lib/pricing";
+import { computeScribeCut, computeScribeCutForCreditRedemption } from "@/lib/pricing";
 
 interface RouteContext {
   params: { id: string };
@@ -38,14 +38,21 @@ export const POST = requireRole<RouteContext>("ADMIN", async (req: NextRequest, 
     return NextResponse.json({ error: "This purchase has already been refunded" }, { status: 409 });
   }
 
+  // What's reversed from the scribe (and the only thing this refund ever
+  // touches): a fixed ₦600 if this sale itself was paid via credit,
+  // otherwise the normal cut on what was actually paid. The platform's cut
+  // on this sale is NEVER reversed here — it stays banked, permanently.
   const lostCut = purchase.redeemedWithCoupon
-    ? purchase.scribeCutOverride ?? 0
+    ? purchase.scribeCutOverride ?? computeScribeCutForCreditRedemption()
     : computeScribeCut(purchase.amountPaid, Boolean(purchase.note.fulfillsRequestId));
 
-  // What the buyer actually loses: cash paid plus whatever credit they'd
-  // already spent on this purchase — refunding should make them whole on
-  // the full value, not just the cash portion, or a credit-funded purchase
-  // that gets refunded would destroy value for nothing.
+  // What the buyer gets back as spendable credit: cash paid plus whatever
+  // credit they'd already spent on this purchase — this is the credit's
+  // FACE VALUE (used only to work out how much top-up cash, if any, a
+  // future purchase needs), not the amount that actually moves anywhere.
+  // Only ₦600 of it ever moves — to whichever scribe they eventually buy
+  // from with it — the rest is the platform's already-banked cut, which
+  // this face value does not touch or re-grant. See lib/pricing.ts.
   const creditToGrant = purchase.amountPaid + purchase.creditApplied;
 
   const pendingReports = await prisma.report.findMany({

@@ -4,7 +4,7 @@ import * as Sentry from "@sentry/nextjs";
 import { prisma } from "@/lib/prisma";
 import { generateReceiptImage } from "@/lib/receipt";
 import { sendEmail } from "@/lib/email";
-import { computeScribeCut } from "@/lib/pricing";
+import { computeScribeCutForCreditRedemption } from "@/lib/pricing";
 
 // Register this URL (https://your-domain/api/webhooks/paystack) on the
 // Paystack Dashboard under Settings -> API Keys & Webhooks. Paystack signs
@@ -85,7 +85,6 @@ async function handleChargeSuccess(data: any) {
   // a duplicate webhook delivery (P2002 below) can never double-decrement.
   const creditApplied = metadata.creditApplied ?? 0;
   const amountPaid = data.amount / 100;
-  const fullPrice = metadata.fullPrice ?? amountPaid + creditApplied;
 
   try {
     await prisma.$transaction([
@@ -101,7 +100,10 @@ async function handleChargeSuccess(data: any) {
           discountApplied: metadata.discountApplied ?? false,
           creditApplied,
           redeemedWithCoupon: creditApplied > 0,
-          scribeCutOverride: creditApplied > 0 ? computeScribeCut(fullPrice, metadata.discountApplied ?? false) : null,
+          // Fixed, never price/discount-based — see lib/pricing.ts. This is a
+          // reassignment of the cut already reclaimed on the refunded sale
+          // that generated this credit, not a new price-dependent payout.
+          scribeCutOverride: creditApplied > 0 ? computeScribeCutForCreditRedemption() : null,
           paystackRef: reference,
         },
       }),

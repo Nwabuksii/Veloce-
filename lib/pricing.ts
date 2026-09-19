@@ -32,6 +32,46 @@ export function computePlatformCut(amountPaid: number, isRequestFulfillment: boo
   return amountPaid - computeScribeCut(amountPaid, isRequestFulfillment);
 }
 
+// ─────────────────────────────────────────────
+// Credit redemption (refund coupons)
+// ─────────────────────────────────────────────
+//
+// When a purchase is refunded, the platform's cut on that original sale is
+// NEVER touched — it stays banked, permanently. Only the scribe's cut
+// (always ₦600, whether the original sale was the flat 1000 tier or the
+// 900 request-fulfilled tier) is reversible, and it's granted back to the
+// buyer as spendable credit. The credit's FACE VALUE the buyer sees and
+// spends against (₦900 or ₦1,000 — see app/api/admin/purchases/[id]/refund)
+// is bigger than that ₦600 on purpose: it's what determines how much extra
+// cash, if any, they need to add when redeeming it. But only ₦600 of it
+// ever actually MOVES anywhere — to whichever new scribe they buy from.
+//
+// So any time a purchase is paid for using credit (fully or partially):
+//   - the scribe gets this fixed cut, never a price/discount-based one
+//   - the platform's cut is exactly whatever fresh cash the buyer pays on
+//     top of their credit — 100% of it, never split 60/40 — because that
+//     cash is the ONLY new money involved. The ₦600 to the scribe is a
+//     reassignment of money already collected (and reversed) on the
+//     original sale, not a new expense the platform is absorbing.
+// This is what keeps "refunds never touch the platform's cut" true even
+// after the credit gets spent somewhere else.
+export const CREDIT_REDEMPTION_SCRIBE_CUT = REQUEST_FULFILLED_SCRIBE_CUT; // ₦600, fixed
+
+/** Scribe's cut on any purchase paid for (wholly or partly) with credit — always fixed, never price-based. */
+export function computeScribeCutForCreditRedemption(): number {
+  return CREDIT_REDEMPTION_SCRIBE_CUT;
+}
+
+/**
+ * Platform's cut on a credit-redeemed purchase — 100% of the actual cash
+ * charged (`amountPaid`), since the credit portion isn't fresh revenue.
+ * Named separately from computePlatformCut so it's never confused with the
+ * proportional-split version used for normal (non-credit) sales.
+ */
+export function computePlatformCutForCreditRedemption(amountPaid: number): number {
+  return amountPaid;
+}
+
 // Withdrawals — a scribe can request one withdrawal per calendar month,
 // only during the first 7 days of that month, for any amount up to their
 // available balance, above this floor.

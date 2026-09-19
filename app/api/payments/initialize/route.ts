@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { initializeTransaction } from "@/lib/paystack";
-import { REQUEST_FULFILLED_PRICE, computeScribeCut } from "@/lib/pricing";
+import { REQUEST_FULFILLED_PRICE, computeScribeCutForCreditRedemption } from "@/lib/pricing";
 
 export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
   try {
@@ -71,10 +71,13 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
     // Refund credit (granted per-refund, a ₦ balance — see lib schema
     // comments) is applied as a partial payment on the buyer's very next
     // purchase, up to whatever it covers — not optional, not something
-    // they choose to apply. The scribe is still paid their full normal cut
-    // computed off the block's real price, never off what the buyer
-    // actually pays after credit; the platform absorbs the gap as the
-    // cost of making the refund right. See lib/pricing.ts.
+    // they choose to apply. The scribe is paid a fixed ₦600, never a
+    // price/discount-based cut, because that ₦600 is a reassignment of
+    // the cut already reclaimed from the originally-refunded sale — not
+    // new revenue. The platform's cut is whatever fresh cash the buyer
+    // pays beyond their credit (0 if credit fully covers it), and its
+    // cut on the ORIGINAL sale was never touched in the first place.
+    // See lib/pricing.ts.
     const buyer = await prisma.user.findUnique({
       where: { id: user.sub },
       select: { creditBalance: true },
@@ -85,7 +88,7 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
     const remainingToCharge = amountToCharge - creditToApply;
 
     if (creditToApply > 0 && remainingToCharge === 0) {
-      const scribeCut = computeScribeCut(amountToCharge, discountApplied);
+      const scribeCut = computeScribeCutForCreditRedemption();
 
       const [, purchase] = await prisma.$transaction([
         prisma.user.update({
@@ -128,7 +131,7 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
                   recipientId: scribe.id,
                   senderId: null,
                   subject: `Your version of "${block.title}" was claimed with credit`,
-                  body: `${buyerRecord?.fullName ?? "A student"} unlocked your version of "${block.title}" using refund credit. You're still credited the full ₦${scribeCut.toLocaleString()} for it — the platform covers the cost of credit, not you.`,
+                  body: `${buyerRecord?.fullName ?? "A student"} unlocked your version of "${block.title}" using refund credit. You're still credited the full ₦${scribeCut.toLocaleString()} for it — reassigned from an earlier refund, not deducted from you or the platform.`,
                 },
               ]
             : []),

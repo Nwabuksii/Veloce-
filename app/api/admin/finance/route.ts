@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
-import { SCRIBE_SHARE, PLATFORM_SHARE, computeScribeCut } from "@/lib/pricing";
+import {
+  SCRIBE_SHARE,
+  PLATFORM_SHARE,
+  computeScribeCut,
+  computePlatformCut,
+  computeScribeCutForCreditRedemption,
+  computePlatformCutForCreditRedemption,
+} from "@/lib/pricing";
 
 export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
   const purchases = await prisma.purchase.findMany({
@@ -20,16 +27,35 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
   // the transaction list below (marked refunded) for a full audit trail.
   const activePurchases = purchases.filter((p) => !p.refundedAt);
 
+  // grossRevenue is total cash actually collected (Paystack charges) —
+  // separate from platformRevenue below, since a credit-redeemed sale's
+  // cash goes 100% to the platform, not split with the scribe.
   const grossRevenue = activePurchases.reduce((sum, p) => sum + p.amountPaid, 0);
+
+  // Scribe pool and platform revenue are each computed per-row, never by
+  // subtracting one aggregate from the other. A credit-redeemed sale pays
+  // the scribe a fixed ₦600 that comes from credit reclaimed on an earlier
+  // refund — NOT out of this sale's cash, and NOT out of the platform's
+  // pocket — so it must never reduce platformRevenue. The platform's cut
+  // on a credit-redeemed sale is simply the cash actually charged (the
+  // buyer's top-up beyond their credit), in full, not a 60/40 split of it.
+  // See lib/pricing.ts.
   const scribePool = activePurchases.reduce(
     (sum, p) =>
-      sum + (p.redeemedWithCoupon ? p.scribeCutOverride ?? 0 : computeScribeCut(p.amountPaid, Boolean(p.note.fulfillsRequestId))),
+      sum +
+      (p.redeemedWithCoupon
+        ? p.scribeCutOverride ?? computeScribeCutForCreditRedemption()
+        : computeScribeCut(p.amountPaid, Boolean(p.note.fulfillsRequestId))),
     0
   );
-  // Can go negative on paper when coupon redemptions in a period outweigh
-  // paid sales — that's real and correct: the platform is footing the
-  // scribe's cut on those out of pocket, not collecting anything for them.
-  const platformRevenue = grossRevenue - scribePool;
+  const platformRevenue = activePurchases.reduce(
+    (sum, p) =>
+      sum +
+      (p.redeemedWithCoupon
+        ? computePlatformCutForCreditRedemption(p.amountPaid)
+        : computePlatformCut(p.amountPaid, Boolean(p.note.fulfillsRequestId))),
+    0
+  );
 
   // Credit: granted per-refund as a ₦ amount (not a flat count anymore —
   // see schema comments), and can be partially spent across more than one
