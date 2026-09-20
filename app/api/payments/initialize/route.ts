@@ -90,12 +90,37 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
     if (creditToApply > 0 && remainingToCharge === 0) {
       const scribeCut = computeScribeCutForCreditRedemption();
 
-      const [, purchase] = await prisma.$transaction([
-        prisma.user.update({
-          where: { id: user.sub },
+      // Guarded decrement, not a blind one: two near-simultaneous requests
+      // (e.g. a double-click, or someone scripting this deliberately) can
+      // both pass the `creditAvailable` check above off the same stale
+      // read before either writes anything. updateMany's WHERE clause
+      // re-checks creditBalance >= creditToApply at the moment it
+      // actually acquires the row lock, inside the transaction, so the
+      // second request to reach it sees the balance the first one just
+      // left behind and correctly fails the check instead of decrementing
+      // past zero. Without this, one refund's credit could be redeemed
+      // for two (or more) free notes by simply firing concurrent
+      // requests — no payment required at all, unlike the similar edge
+      // case noted below for the paid path.
+      const result = await prisma.$transaction(async (tx) => {
+        // Same race as the credit-balance one above, different failure
+        // mode: two concurrent requests for the SAME note (a double-click,
+        // or two tabs) could both pass the alreadyOwned check earlier in
+        // this handler before either has created a purchase — re-check it
+        // here, inside the lock, so the loser aborts instead of creating a
+        // second, worthless copy of a note the buyer already has.
+        const alreadyOwned = await tx.purchase.findFirst({
+          where: { buyerId: user.sub, noteId: note.id, refundedAt: null },
+        });
+        if (alreadyOwned) return null;
+
+        const updateResult = await tx.user.updateMany({
+          where: { id: user.sub, creditBalance: { gte: creditToApply } },
           data: { creditBalance: { decrement: creditToApply } },
-        }),
-        prisma.purchase.create({
+        });
+        if (updateResult.count === 0) return null;
+
+        return tx.purchase.create({
           data: {
             buyerId: user.sub,
             noteId: note.id,
@@ -107,8 +132,16 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
             scribeCutOverride: scribeCut,
             paystackRef: `credit_${randomUUID()}`,
           },
-        }),
-      ]);
+        });
+      });
+
+      if (!result) {
+        return NextResponse.json(
+          { error: "This didn't go through — you may already own this note, or your credit balance just changed. Please refresh and try again." },
+          { status: 409 }
+        );
+      }
+      const purchase = result;
 
       const remainingBalance = creditAvailable - creditToApply;
 
@@ -147,11 +180,12 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
     // payment actually succeeds. The credit balance is NOT decremented
     // here — only once the purchase row is actually created — so an
     // abandoned checkout never burns credit for nothing.
-    // (Known edge case: two checkouts started back-to-back before either
-    // completes could both reserve the same credit in their metadata,
-    // since the balance isn't locked between initialize and confirm. Rare
-    // enough for a low-value, per-user balance that it isn't worth a
-    // reservation system for now.)
+    // Two checkouts started back-to-back before either completes CAN both
+    // reserve the same credit in their metadata here, and/or both end up
+    // genuinely paid (e.g. a retry after a network hiccup made a
+    // successful charge look failed) — see lib/complete-purchase.ts for
+    // how that's reconciled once a charge actually succeeds, rather than
+    // trying to prevent it at reservation time here.
     const { authorization_url } = await initializeTransaction({
       email: user.email,
       amount: remainingToCharge,

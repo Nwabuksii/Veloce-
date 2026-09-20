@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/session";
 import { saveNoteFile } from "@/lib/storage";
 import { runQualityGate } from "@/lib/quality-check";
 import { getPdfPageCount } from "@/lib/pdf-render";
+import { notifyFollowersOfNewNote } from "@/lib/notify-followers";
 // @ts-expect-error — pdf-parse ships without its own type declarations
 import pdfParse from "pdf-parse";
 
@@ -151,6 +152,12 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
         status: flagged ? "FLAGGED" : "LIVE",
       },
     });
+
+    // Only when it's actually visible to anyone — a flagged upload still
+    // needs admin approval first (see the approve route for that path).
+    if (!flagged) {
+      await notifyFollowersOfNewNote(user.sub, block.title);
+    }
 
     return NextResponse.json({
       note: { id: note.id, status: note.status },

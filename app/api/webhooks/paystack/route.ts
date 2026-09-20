@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHmac } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 import * as Sentry from "@sentry/nextjs";
 import { prisma } from "@/lib/prisma";
 import { generateReceiptImage } from "@/lib/receipt";
 import { sendEmail } from "@/lib/email";
-import { computeScribeCutForCreditRedemption } from "@/lib/pricing";
+import { completePurchase } from "@/lib/complete-purchase";
 
 // Register this URL (https://your-domain/api/webhooks/paystack) on the
 // Paystack Dashboard under Settings -> API Keys & Webhooks. Paystack signs
@@ -19,7 +19,19 @@ export async function POST(req: NextRequest) {
     .update(rawBody)
     .digest("hex");
 
-  if (!signature || signature !== expectedSignature) {
+  // timingSafeEqual, not `!==` — a plain string comparison bails out at
+  // the first mismatched character, so how long the check takes leaks
+  // (in principle) how many leading hex characters an attacker's guess
+  // got right, letting the signature be reconstructed byte by byte over
+  // enough attempts. Needs a length check first since timingSafeEqual
+  // throws (rather than returning false) on mismatched buffer lengths —
+  // an attacker sending a short/malformed header shouldn't crash this.
+  const signatureBuffer = Buffer.from(signature ?? "", "hex");
+  const expectedBuffer = Buffer.from(expectedSignature, "hex");
+  const signatureValid =
+    signatureBuffer.length === expectedBuffer.length && timingSafeEqual(signatureBuffer, expectedBuffer);
+
+  if (!signature || !signatureValid) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
@@ -45,10 +57,13 @@ export async function POST(req: NextRequest) {
 // webhook is what still creates the Purchase row — Paystack notifies our
 // server directly, with nothing depending on their browser at all.
 //
-// Both this path and /api/payments/verify are duplicate-safe (unique
-// constraint on Purchase.paystackRef) and can run in either order —
-// whichever one runs first creates the row, the other one just finds it
-// already exists and does nothing further.
+// Both this path and /api/payments/verify call the same completePurchase
+// (see lib/complete-purchase.ts), which handles two distinct duplicate
+// scenarios: this exact reference being processed twice (whichever path
+// gets there first wins, the other just finds the row already exists),
+// and a genuinely different reference for a note the buyer already owns
+// (converted to credit rather than creating a second copy or silently
+// dropping their payment).
 async function handleChargeSuccess(data: any) {
   const reference: string | undefined = data?.reference;
   if (!reference) return;
@@ -81,40 +96,24 @@ async function handleChargeSuccess(data: any) {
   }
 
   // Any refund credit reserved at initialize time only actually gets spent
-  // once the purchase row is created — bundled in the same transaction so
-  // a duplicate webhook delivery (P2002 below) can never double-decrement.
-  const creditApplied = metadata.creditApplied ?? 0;
+  // once the purchase row is created — completePurchase handles that
+  // atomically, along with the case where this charge turns out to be a
+  // genuine duplicate for a note the buyer already owns.
   const amountPaid = data.amount / 100;
 
   try {
-    await prisma.$transaction([
-      ...(creditApplied > 0
-        ? [prisma.user.update({ where: { id: metadata.userId }, data: { creditBalance: { decrement: creditApplied } } })]
-        : []),
-      prisma.purchase.create({
-        data: {
-          buyerId: metadata.userId,
-          noteId: metadata.noteId,
-          blockId: metadata.blockId,
-          amountPaid,
-          discountApplied: metadata.discountApplied ?? false,
-          creditApplied,
-          redeemedWithCoupon: creditApplied > 0,
-          // Fixed, never price/discount-based — see lib/pricing.ts. This is a
-          // reassignment of the cut already reclaimed on the refunded sale
-          // that generated this credit, not a new price-dependent payout.
-          scribeCutOverride: creditApplied > 0 ? computeScribeCutForCreditRedemption() : null,
-          paystackRef: reference,
-        },
-      }),
-    ]);
+    await completePurchase({
+      reference,
+      amountPaid,
+      buyerId: metadata.userId,
+      noteId: metadata.noteId,
+      blockId: metadata.blockId,
+      discountApplied: metadata.discountApplied ?? false,
+      creditApplied: metadata.creditApplied ?? 0,
+    });
   } catch (err: any) {
-    // P2002 = the client-side verify call won the race and created it a
-    // moment earlier — not an error, just the other path getting there first.
-    if (err?.code !== "P2002") {
-      console.error("Paystack webhook: failed to create purchase", reference, err);
-      Sentry.captureException(err, { extra: { reference, context: "webhook-charge-success" } });
-    }
+    console.error("Paystack webhook: failed to create purchase", reference, err);
+    Sentry.captureException(err, { extra: { reference, context: "webhook-charge-success" } });
   }
 }
 

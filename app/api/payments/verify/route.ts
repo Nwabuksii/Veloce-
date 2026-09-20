@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { verifyTransaction } from "@/lib/paystack";
-import { computeScribeCutForCreditRedemption } from "@/lib/pricing";
+import { completePurchase } from "@/lib/complete-purchase";
 
 export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
   try {
@@ -36,47 +36,15 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
       return NextResponse.json({ error: "Payment metadata mismatch" }, { status: 400 });
     }
 
-    const creditApplied = metadata.creditApplied ?? 0;
-    const amountPaid = tx.amount / 100;
-
-    let purchase;
-    try {
-      const purchaseData = {
-        buyerId: user.sub,
-        noteId: metadata.noteId,
-        blockId: metadata.blockId,
-        amountPaid,
-        discountApplied: metadata.discountApplied ?? false,
-        creditApplied,
-        redeemedWithCoupon: creditApplied > 0,
-        // Fixed, never price/discount-based — see lib/pricing.ts. This is a
-        // reassignment of the cut already reclaimed on the refunded sale
-        // that generated this credit, not a new price-dependent payout.
-        scribeCutOverride: creditApplied > 0 ? computeScribeCutForCreditRedemption() : null,
-        paystackRef: reference,
-      };
-
-      if (creditApplied > 0) {
-        const [, created] = await prisma.$transaction([
-          prisma.user.update({ where: { id: user.sub }, data: { creditBalance: { decrement: creditApplied } } }),
-          prisma.purchase.create({ data: purchaseData }),
-        ]);
-        purchase = created;
-      } else {
-        purchase = await prisma.purchase.create({ data: purchaseData });
-      }
-    } catch (createErr: any) {
-      // Two near-simultaneous verify calls (e.g. React double-invoking the
-      // callback effect) can both pass the findUnique check above before
-      // either finishes writing. If this is that duplicate, the purchase
-      // already exists — treat it as success instead of an error.
-      if (createErr?.code === "P2002") {
-        purchase = await prisma.purchase.findUnique({ where: { paystackRef: reference } });
-        if (!purchase) throw createErr;
-      } else {
-        throw createErr;
-      }
-    }
+    const purchase = await completePurchase({
+      reference,
+      amountPaid: tx.amount / 100,
+      buyerId: user.sub,
+      noteId: metadata.noteId,
+      blockId: metadata.blockId,
+      discountApplied: metadata.discountApplied ?? false,
+      creditApplied: metadata.creditApplied ?? 0,
+    });
 
     return NextResponse.json({ purchase });
   } catch (err) {

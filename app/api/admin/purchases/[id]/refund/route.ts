@@ -61,40 +61,56 @@ export const POST = requireRole<RouteContext>("ADMIN", async (req: NextRequest, 
 
   const now = new Date();
 
-  await prisma.$transaction([
-    prisma.purchase.update({
-      where: { id: purchase.id },
+  // Interactive transaction, and the first write is a guarded updateMany
+  // (refundedAt: null in the WHERE) rather than the plain `update` used
+  // before — two admins (or one admin double-clicking) refunding the same
+  // purchase at nearly the same moment could both pass the `if
+  // (purchase.refundedAt)` check above off the same stale read and both
+  // proceed to grant credit, double-paying the buyer. The second write to
+  // reach this WHERE clause now sees the row the first one just updated
+  // and correctly matches zero rows instead.
+  const result = await prisma.$transaction(async (tx) => {
+    const updateResult = await tx.purchase.updateMany({
+      where: { id: purchase.id, refundedAt: null },
       data: { refundedAt: now },
-    }),
-    prisma.user.update({
+    });
+    if (updateResult.count === 0) return null;
+
+    await tx.user.update({
       where: { id: purchase.buyerId },
       data: { creditBalance: { increment: creditToGrant } },
-    }),
-    ...(pendingReports.length > 0
-      ? [
-          prisma.report.updateMany({
-            where: { id: { in: pendingReports.map((r) => r.id) } },
-            data: { status: "ACTIONED", reviewedAt: now, reviewedById: adminUser.sub },
-          }),
-        ]
-      : []),
-    prisma.adminMessage.create({
+    });
+
+    if (pendingReports.length > 0) {
+      await tx.report.updateMany({
+        where: { id: { in: pendingReports.map((r) => r.id) } },
+        data: { status: "ACTIONED", reviewedAt: now, reviewedById: adminUser.sub },
+      });
+    }
+
+    await tx.adminMessage.create({
       data: {
         recipientId: purchase.buyerId,
         senderId: adminUser.sub,
         subject: `Refund processed — "${purchase.block.title}"`,
         body: `Your purchase of "${purchase.block.title}" was refunded and you no longer have access to it. As an apology for the trouble, you've been given ₦${creditToGrant.toLocaleString()} in credit — it'll be applied automatically toward your next purchase(s), covering the price up to that amount.`,
       },
-    }),
-    prisma.adminMessage.create({
+    });
+    await tx.adminMessage.create({
       data: {
         recipientId: purchase.note.scribeId,
         senderId: adminUser.sub,
         subject: `A sale of "${purchase.block.title}" was refunded`,
         body: `An admin refunded a buyer's purchase of your version of "${purchase.block.title}". ₦${lostCut.toLocaleString()} has been reversed from your earnings for this sale.`,
       },
-    }),
-  ]);
+    });
+
+    return true;
+  });
+
+  if (!result) {
+    return NextResponse.json({ error: "This purchase has already been refunded" }, { status: 409 });
+  }
 
   return NextResponse.json({
     purchase: { id: purchase.id, refunded: true },

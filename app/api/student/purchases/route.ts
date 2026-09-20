@@ -14,6 +14,11 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
     orderBy: { purchasedAt: "desc" },
   });
 
+  // Gives the buyer a day or two before nudging — someone who bought five
+  // minutes ago clicking away to do something else isn't "neglecting" it.
+  const NUDGE_AFTER_MS = 2 * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+
   const result = purchases.map((p) => ({
     purchaseId: p.id,
     noteId: p.noteId,
@@ -29,6 +34,8 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
     creditApplied: p.creditApplied,
     redeemedWithCoupon: p.redeemedWithCoupon,
     refundRequestStatus: p.reports[0]?.status ?? null,
+    unopened:
+      p.firstOpenedAt === null && p.refundedAt === null && now - p.purchasedAt.getTime() > NUDGE_AFTER_MS,
   }));
 
   return NextResponse.json({ purchases: result });

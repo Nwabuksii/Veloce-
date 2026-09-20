@@ -189,19 +189,19 @@ function MenuItem({
       style={{
         display: "flex",
         alignItems: "center",
-        gap: "0.6rem",
+        gap: "0.7rem",
         width: "100%",
         textAlign: "left",
         background: "none",
         border: "none",
-        padding: "0.55rem 0.7rem",
+        padding: "0.75rem 0.8rem",
         borderRadius: "0.6rem",
-        fontSize: "0.85rem",
+        fontSize: "0.92rem",
         color: danger ? "var(--text-danger)" : "var(--text-primary)",
         cursor: "pointer",
       }}
     >
-      <i className={`fas ${icon}`} style={{ width: "16px" }}></i> {label}
+      <i className={`fas ${icon}`} style={{ width: "18px" }}></i> {label}
     </button>
   );
 }
