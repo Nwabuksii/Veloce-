@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Bold two-tone mark, not a reuse of Logo.tsx's thin outline + wave
+       detail: at actual favicon size (16-32px in a browser tab) that much
+       fine detail turns to noise; a solid, high-contrast shape is what
+       actually stays legible that small. Same two flat colors as
+       everywhere else (see LOGO_COLORS in app/components/Logo.tsx and the
+       ink/accent variables in globals.css). No gradient here either. -->
+  <rect width="100" height="100" rx="22" fill="#17342F" />
+  <path d="M 50 12 L 82 50 L 50 88 L 18 50 Z" fill="#FAF7F1" />
+  <path d="M 50 32 L 66 50 L 50 68 L 34 50 Z" fill="#DD6B33" />
+</svg>

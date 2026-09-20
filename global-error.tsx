@@ -1,0 +1,50 @@
+"use client";
+
+import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
+
+// Sentry flagged this as missing in the build log — without it, a crash
+// during React rendering itself (not inside an API route, where every
+// catch block already reports to Sentry manually) never gets reported at
+// all. This is Next.js App Router's documented way to catch that class of
+// error: global-error.tsx replaces the entire root layout when a truly
+// fatal, unrecovered error occurs, so it has to render its own <html> and
+// <body> rather than assuming app/layout.tsx is still around it.
+export default function GlobalError({ error }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => {
+    Sentry.captureException(error);
+  }, [error]);
+
+  return (
+    <html lang="en">
+      {/* Hardcoded, not var(...) — this replaces the entire root layout on
+          a fatal error, so it can't rely on globals.css having loaded.
+          Values below are kept in sync with the palette in globals.css by
+          hand for consistency, not by reference. */}
+      <body style={{ margin: 0, fontFamily: "sans-serif", background: "#FAF7F1", color: "#201D18" }}>
+        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
+          <div style={{ textAlign: "center", maxWidth: 420 }}>
+            <h1 style={{ fontSize: "1.4rem", marginBottom: "0.6rem" }}>Something went wrong</h1>
+            <p style={{ color: "#5E574A", marginBottom: "1.2rem" }}>
+              This has been reported automatically. Try reloading the page.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                background: "#17342F",
+                color: "white",
+                border: "none",
+                borderRadius: "10px",
+                padding: "0.6rem 1.4rem",
+                cursor: "pointer",
+                fontSize: "0.9rem",
+              }}
+            >
+              Reload
+            </button>
+          </div>
+        </div>
+      </body>
+    </html>
+  );
+}
