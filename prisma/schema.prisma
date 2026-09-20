@@ -385,6 +385,14 @@ model Purchase {
   redeemedWithCoupon Boolean @default(false)
   creditApplied      Int     @default(0)
   scribeCutOverride  Int?
+
+  // Set the first time the BUYER (never an admin or the scribe just
+  // previewing their own note) actually opens a page of this purchase —
+  // see app/api/notes/[id]/page/[num]/route.ts. Never updated again after
+  // that first write, so it answers one question only: "did they ever
+  // start reading this?" Powers the "you haven't opened this yet" nudge
+  // on the purchases page — nothing else reads it.
+  firstOpenedAt DateTime?
 }
 
 model Review {
