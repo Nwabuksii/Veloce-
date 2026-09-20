@@ -32,8 +32,8 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
   // behind a session, so the account itself is the meaningful identity to
   // limit, and a per-IP key would also wrongly lump together everyone on
   // a shared campus network.
-  const allowed = await checkRateLimit(`note-page:${user.sub}`, PAGE_VIEW_LIMIT, PAGE_VIEW_WINDOW_MS);
-  if (!allowed) {
+const withinLimit = await checkRateLimit(`note-page:${user.sub}`, PAGE_VIEW_LIMIT, PAGE_VIEW_WINDOW_MS);
+if (!withinLimit) {
     return NextResponse.json(
       { error: "You're loading pages too quickly — please slow down and try again shortly." },
       { status: 429 }
