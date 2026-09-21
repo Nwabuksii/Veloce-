@@ -89,28 +89,30 @@ export async function stampWatermark(baseImageBuffer: Buffer, lines: string[]): 
 
   ctx.save();
 
-  const fontSize = Math.max(24, Math.round(img.width / 22));
+  // Smaller font size
+  const fontSize = Math.max(14, Math.round(img.width / 45));
   ctx.font = `${fontSize}px "WatermarkFont", sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  // Ultra-high contrast styling
-  ctx.lineWidth = Math.max(6, Math.round(img.width / 150)); // Thicker outline
-  ctx.strokeStyle = "rgba(255, 255, 255, 1)"; // Pure, solid white outline
-  ctx.fillStyle = "rgba(15, 15, 15, 0.9)"; // Deep dark fill
+  // Highly transparent styling
+  ctx.lineWidth = Math.max(2, Math.round(img.width / 300));
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.25)"; // 25% opacity white outline
+  ctx.fillStyle = "rgba(15, 15, 15, 0.18)";      // 18% opacity dark fill
 
-  // Add a drop shadow for extra separation from the background
-  ctx.shadowColor = "rgba(0, 0, 0, 0.6)";
-  ctx.shadowBlur = 8;
-  ctx.shadowOffsetX = 3;
-  ctx.shadowOffsetY = 3;
+  ctx.shadowColor = "rgba(0, 0, 0, 0.1)"; // Very subtle shadow
+  ctx.shadowBlur = 4;
+  ctx.shadowOffsetX = 2;
+  ctx.shadowOffsetY = 2;
 
-  const stepX = img.width / 1.5;
-  const stepY = img.height / 4;
-  const angle = (-28 * Math.PI) / 180;
+  // Tighter grid spacing for "plenty" of repeats
+  const stepX = img.width / 2.5;
+  const stepY = img.height / 8;
+  const angle = (-30 * Math.PI) / 180;
 
-  for (let row = -1; row < 6; row++) {
-    for (let col = -1; col < 4; col++) {
+  // Expanded loop bounds to cover the entire canvas with a tighter grid
+  for (let row = -2; row < 12; row++) {
+    for (let col = -2; col < 6; col++) {
       const x = col * stepX + (row % 2 === 0 ? 0 : stepX / 2);
       const y = row * stepY;
 
@@ -118,7 +120,6 @@ export async function stampWatermark(baseImageBuffer: Buffer, lines: string[]): 
       ctx.translate(x, y);
       ctx.rotate(angle);
       
-      // Draw stroke first, then fill on top
       ctx.strokeText(text, 0, 0);
       ctx.fillText(text, 0, 0);
       
