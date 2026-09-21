@@ -91,21 +91,22 @@ export async function stampWatermark(baseImageBuffer: Buffer, lines: string[]): 
 
   ctx.save();
 
-  // Smaller font size
-  const fontSize = Math.max(14, Math.round(img.width / 45));
+  // Small and unobtrusive: about 40% smaller than before (width/80 vs
+  // width/45 — roughly 15px instead of 26px on a standard A4 page).
+  const fontSize = Math.max(11, Math.round(img.width / 80));
   ctx.font = `${fontSize}px "WatermarkFont", sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
   // Highly transparent styling
-  ctx.lineWidth = Math.max(2, Math.round(img.width / 300));
+  ctx.lineWidth = Math.max(1, Math.round(img.width / 700));
   ctx.strokeStyle = "rgba(255, 255, 255, 0.25)"; // 25% opacity white outline
   ctx.fillStyle = "rgba(15, 15, 15, 0.18)";      // 18% opacity dark fill
 
   ctx.shadowColor = "rgba(0, 0, 0, 0.1)"; // Very subtle shadow
-  ctx.shadowBlur = 4;
-  ctx.shadowOffsetX = 2;
-  ctx.shadowOffsetY = 2;
+  ctx.shadowBlur = 2;
+  ctx.shadowOffsetX = 1;
+  ctx.shadowOffsetY = 1;
 
   // Tighter grid spacing for "plenty" of repeats
   const stepX = img.width / 2.5;
