@@ -1,17 +1,11 @@
 import "./globals.css";
-// Self-hosted instead of the cdnjs <link> that was here before — icons
-// (all of them are "fas", so only the solid set + base styles are
-// needed, not the full "all.css") now ship as part of our own JS bundle
-// and get served from our own domain. If cdnjs.cloudflare.com is down,
-// blocked by the visitor's browser/network, or an ad-blocker strips
-// third-party stylesheet links, icons still render — nothing depends on
-// reaching an external host anymore.
 import "@fortawesome/fontawesome-free/css/fontawesome.min.css";
 import "@fortawesome/fontawesome-free/css/solid.min.css";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import ToastViewport from "./components/ToastViewport";
 import SiteChrome from "./components/SiteChrome";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme";
+import { headers } from "next/headers";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -35,11 +29,15 @@ export const viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Read the generated nonce from request headers
+  const nonce = (await headers()).get("x-nonce") || undefined;
+
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+        {/* Pass the nonce here so the browser allows this inline script */}
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
       </head>
       <body>
         <SiteChrome>{children}</SiteChrome>
