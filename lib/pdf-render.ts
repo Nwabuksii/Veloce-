@@ -10,8 +10,7 @@ if (typeof (Promise as any).withResolvers !== "function") {
   };
 }
 
-import { createCanvas, loadImage, GlobalFonts, type SKRSContext2D } from "@napi-rs/canvas";
-import path from "path";
+import { createCanvas, loadImage, type SKRSContext2D } from "@napi-rs/canvas";
 // @ts-ignore
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 
@@ -33,8 +32,8 @@ class NodeCanvasFactory {
   }
 }
 
-const RENDER_SCALE = 2.2;
-const JPEG_QUALITY = 92;
+const RENDER_SCALE = 2.0;
+const JPEG_QUALITY = 85;
 
 export async function getPdfPageCount(pdfBuffer: Buffer): Promise<number> {
   const doc = await pdfjsLib.getDocument({ data: new Uint8Array(pdfBuffer) }).promise;
@@ -70,27 +69,37 @@ export async function stampWatermark(baseImageBuffer: Buffer, lines: string[]): 
   const canvas = createCanvas(img.width, img.height);
   const ctx = canvas.getContext("2d") as unknown as SKRSContext2D;
 
+  // 1. Draw original background image
   ctx.drawImage(img as any, 0, 0, img.width, img.height);
 
-  const text = lines.join("  ·  ");
+  const text = lines.filter(Boolean).join("  ·  ");
+  if (!text) {
+    return await canvas.encode("jpeg", JPEG_QUALITY);
+  }
 
   ctx.save();
-  ctx.font = `${Math.max(14, Math.round(img.width / 42))}px sans-serif`;
+
+  // 2. Dynamic font size based on page dimensions
+  const fontSize = Math.max(20, Math.round(img.width / 25));
+  ctx.font = `bold ${fontSize}px sans-serif, Arial`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  ctx.lineWidth = Math.max(2, Math.round(img.width / 500));
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
-  ctx.fillStyle = "rgba(20, 20, 20, 0.42)";
+  // 3. High contrast colors: Dark fill with solid white outline
+  ctx.lineWidth = Math.max(4, Math.round(img.width / 250));
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+  ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
 
-  const stepX = img.width / 1.6;
-  const stepY = img.height / 4.5;
+  const stepX = img.width / 1.5;
+  const stepY = img.height / 4;
   const angle = (-28 * Math.PI) / 180;
 
-  for (let row = -1; row < 7; row++) {
+  // 4. Repeat grid across the entire canvas
+  for (let row = -1; row < 6; row++) {
     for (let col = -1; col < 4; col++) {
       const x = col * stepX + (row % 2 === 0 ? 0 : stepX / 2);
       const y = row * stepY;
+
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(angle);
@@ -103,4 +112,4 @@ export async function stampWatermark(baseImageBuffer: Buffer, lines: string[]): 
   ctx.restore();
 
   return await canvas.encode("jpeg", JPEG_QUALITY);
-      }
+}
