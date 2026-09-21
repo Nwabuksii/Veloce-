@@ -15,16 +15,15 @@ export async function GET(
       return new NextResponse("Invalid page number", { status: 400 });
     }
 
+    // Fetch the note without attempting to include the non-existent 'author' relation
     const note = await prisma.note.findUnique({
       where: { id: noteId },
-      include: { author: true },
     });
 
     if (!note) {
       return new NextResponse("Note not found", { status: 404 });
     }
 
-    // Check if base unwatermarked render already exists in DB
     let pageImage = await prisma.notePageImage.findUnique({
       where: {
         noteId_pageNum: { noteId, pageNum },
@@ -34,14 +33,11 @@ export async function GET(
     let baseImageBuffer: Buffer;
 
     if (pageImage) {
-      // Fetch base page render from Cloudinary
       baseImageBuffer = await readNoteFile(pageImage.imageUrl);
     } else {
-      // Render base PDF page to JPEG
       const pdfBuffer = await readNoteFile(note.fileUrl);
       baseImageBuffer = await renderPdfPageToImage(pdfBuffer, pageNum);
 
-      // Save base image URL to DB for quick re-use
       const savedImageUrl = await saveNotePageImage(noteId, pageNum, baseImageBuffer);
       pageImage = await prisma.notePageImage.create({
         data: {
@@ -52,17 +48,14 @@ export async function GET(
       });
     }
 
-    // Construct watermark text lines
+    // Construct watermark text lines using only available note data
     const watermarkLines = [
       note.title || "Veloce Note",
-      note.author?.name ? `By ${note.author.name}` : "",
       "PREVIEW ONLY",
     ];
 
-    // Always stamp watermark on top of base image buffer
     const watermarkedBuffer = await stampWatermark(baseImageBuffer, watermarkLines);
 
-    // Return JPEG directly to client with no-store cache control
     return new NextResponse(watermarkedBuffer, {
       status: 200,
       headers: {
@@ -75,4 +68,3 @@ export async function GET(
     return new NextResponse("Failed to generate page view", { status: 500 });
   }
 }
-
