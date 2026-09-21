@@ -1,7 +1,6 @@
-import { v2 as cloudinary } from "cloudinary";
+import { v2 as cloudinary, UploadApiOptions, UploadApiResponse } from "cloudinary";
 import { randomUUID } from "crypto";
 
-// Cloudinary initialization
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -10,29 +9,30 @@ cloudinary.config({
 
 function uploadBuffer(
   buffer: Buffer,
-  options: Parameters<typeof cloudinary.uploader.upload_stream>[0]
-): Promise<{ secure_url: string; public_id: string }> {
+  options: UploadApiOptions
+): Promise<UploadApiResponse> {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(options, (err, result) => {
       if (err || !result) return reject(err || new Error("Cloudinary upload failed"));
-      resolve({ secure_url: result.secure_url, public_id: result.public_id });
+      resolve(result);
     });
     stream.end(buffer);
   });
 }
 
 export async function saveNoteFile(buffer: Buffer, originalName: string): Promise<string> {
+  const ext = originalName.split(".").pop() || "pdf";
   const result = await uploadBuffer(buffer, {
     public_id: `notes/${randomUUID()}`,
     resource_type: "raw",
     type: "upload",
-    access_mode: "public", // Ensures server-side fetch can retrieve raw PDF bytes
+    access_mode: "public",
+    format: ext,
   });
   return result.secure_url;
 }
 
 export async function readNoteFile(fileUrl: string): Promise<Buffer> {
-  // Use user-agent header to avoid CDN edge blocking on serverless node fetches
   const res = await fetch(fileUrl, {
     headers: {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
