@@ -89,15 +89,21 @@ export async function stampWatermark(baseImageBuffer: Buffer, lines: string[]): 
 
   ctx.save();
 
-  // Apply the dynamically loaded font
-  const fontSize = Math.max(20, Math.round(img.width / 25));
+  const fontSize = Math.max(24, Math.round(img.width / 22));
   ctx.font = `${fontSize}px "WatermarkFont", sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  ctx.lineWidth = Math.max(4, Math.round(img.width / 250));
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
-  ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+  // Ultra-high contrast styling
+  ctx.lineWidth = Math.max(6, Math.round(img.width / 150)); // Thicker outline
+  ctx.strokeStyle = "rgba(255, 255, 255, 1)"; // Pure, solid white outline
+  ctx.fillStyle = "rgba(15, 15, 15, 0.9)"; // Deep dark fill
+
+  // Add a drop shadow for extra separation from the background
+  ctx.shadowColor = "rgba(0, 0, 0, 0.6)";
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetX = 3;
+  ctx.shadowOffsetY = 3;
 
   const stepX = img.width / 1.5;
   const stepY = img.height / 4;
@@ -111,8 +117,11 @@ export async function stampWatermark(baseImageBuffer: Buffer, lines: string[]): 
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(angle);
+      
+      // Draw stroke first, then fill on top
       ctx.strokeText(text, 0, 0);
       ctx.fillText(text, 0, 0);
+      
       ctx.restore();
     }
   }
