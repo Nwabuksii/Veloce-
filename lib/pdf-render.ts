@@ -11,6 +11,7 @@ if (typeof (Promise as any).withResolvers !== "function") {
 }
 
 import { createCanvas, loadImage, GlobalFonts, type SKRSContext2D } from "@napi-rs/canvas";
+import { WATERMARK_FONT_BASE64 } from "./watermark-font";
 // @ts-ignore
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 
@@ -30,6 +31,16 @@ class NodeCanvasFactory {
     canvasAndContext.canvas = null;
     canvasAndContext.context = null;
   }
+}
+
+const WATERMARK_FONT = "WatermarkFont";
+
+// Registered once per server process. The font is embedded in the code (see
+// watermark-font.ts) because Vercel has no system fonts to fall back on.
+function ensureWatermarkFont() {
+  if (GlobalFonts.has(WATERMARK_FONT)) return;
+  GlobalFonts.register(Buffer.from(WATERMARK_FONT_BASE64, "base64"), WATERMARK_FONT);
+  if (!GlobalFonts.has(WATERMARK_FONT)) console.error("Watermark font failed to register — watermark text will not render");
 }
 
 const RENDER_SCALE = 2.0;
@@ -76,16 +87,7 @@ export async function stampWatermark(baseImageBuffer: Buffer, lines: string[]): 
     return await canvas.encode("jpeg", JPEG_QUALITY);
   }
 
-  // Fetch and register font dynamically for Vercel
-  if (!GlobalFonts.has("WatermarkFont")) {
-    try {
-      const fontRes = await fetch("https://github.com/google/fonts/raw/main/ofl/roboto/Roboto-Bold.ttf");
-      const fontBuffer = await fontRes.arrayBuffer();
-      GlobalFonts.register(Buffer.from(fontBuffer), "WatermarkFont");
-    } catch (e) {
-      console.error("Failed to load font dynamically:", e);
-    }
-  }
+  ensureWatermarkFont();
 
   ctx.save();
 
