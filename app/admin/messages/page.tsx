@@ -3,8 +3,7 @@
 import { useEffect, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import Logo from "@/app/components/Logo";
-import ProfileMenu from "@/app/components/ProfileMenu";
+import PageHeader from "@/app/components/PageHeader";
 import Avatar from "@/app/components/Avatar";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { friendlyErrorMessage } from "@/lib/api-client";
@@ -37,7 +36,7 @@ const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "0.6rem",
   marginTop: "0.4rem",
-  borderRadius: "10px",
+  borderRadius: "8px",
   border: "1px solid var(--border-blue)",
 };
 
@@ -159,23 +158,11 @@ export default function AdminMessagesPage() {
   return (
     <div className="page-wrap">
       <div className="app-container">
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">Message users</div>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: "0.6rem" }}>
-            <button className="btn" onClick={() => router.push("/admin")}>
-              <i className="fas fa-arrow-left"></i> Applications
+        <PageHeader title="Message users" subtitle="Send a direct message to any user.">
+          <button className="btn" onClick={() => router.push("/admin")}>
+              <i className="fas fa-arrow-left"></i> Admin
             </button>
-            <ProfileMenu />
-          </div>
-        </div>
+        </PageHeader>
 
         <div style={{ marginTop: "1.5rem", maxWidth: 520 }}>
           <form onSubmit={handleSend} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -219,7 +206,7 @@ export default function AdminMessagesPage() {
                           right: 0,
                           background: "var(--surface)",
                           border: "1px solid var(--border-blue)",
-                          borderRadius: "10px",
+                          borderRadius: "8px",
                           marginTop: "0.3rem",
                           zIndex: 10,
                           boxShadow: "0 8px 20px -8px rgba(0,20,40,0.18)",
@@ -260,7 +247,7 @@ export default function AdminMessagesPage() {
                   <div
                     style={{
                       background: "var(--bg-info)",
-                      borderRadius: "10px",
+                      borderRadius: "8px",
                       padding: "0.7rem 1rem",
                       display: "flex",
                       justifyContent: "space-between",
@@ -287,7 +274,7 @@ export default function AdminMessagesPage() {
                 style={{
                   background: "var(--surface)",
                   border: "1px solid var(--border-blue)",
-                  borderRadius: "10px",
+                  borderRadius: "8px",
                   padding: "0.8rem 1rem",
                   display: "flex",
                   flexDirection: "column",

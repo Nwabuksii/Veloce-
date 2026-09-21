@@ -3,10 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import ProfileMenu from "@/app/components/ProfileMenu";
+import PageHeader from "@/app/components/PageHeader";
 import Avatar from "@/app/components/Avatar";
 import { SkeletonList } from "@/app/components/Skeleton";
-import Logo from "@/app/components/Logo";
 import { friendlyErrorMessage } from "@/lib/api-client";
 
 interface ScribeView {
@@ -94,29 +93,17 @@ export default function ManageScribesPage() {
   return (
     <div className="page-wrap">
       <div className="app-container">
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">Manage scribes</div>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: "0.6rem" }}>
-            <button className="btn" onClick={() => router.push("/admin")}>
-              <i className="fas fa-arrow-left"></i> Applications
+        <PageHeader title="Manage scribes" subtitle="Trust levels, suspensions and reinstatements.">
+          <button className="btn" onClick={() => router.push("/admin")}>
+              <i className="fas fa-arrow-left"></i> Admin
             </button>
-            <button className="btn" onClick={() => router.push("/admin/appeals")}>
-              <i className="fas fa-undo"></i> Appeals
-            </button>
-            <button className="btn" onClick={() => router.push("/admin/reports")}>
-              <i className="fas fa-exclamation-triangle"></i> Reports
-            </button>
-            <ProfileMenu />
-          </div>
-        </div>
+          <button className="btn" onClick={() => router.push("/admin/appeals")}>
+                <i className="fas fa-undo"></i> Appeals
+              </button>
+          <button className="btn" onClick={() => router.push("/admin/reports")}>
+                <i className="fas fa-exclamation-triangle"></i> Reports
+              </button>
+        </PageHeader>
 
         <p style={{ color: "var(--text-secondary)", marginTop: "1rem", fontSize: "0.9rem" }}>
           Demoting a scribe reverts them to Student on their next login and lets them submit one reinstatement
@@ -169,7 +156,7 @@ export default function ManageScribesPage() {
                     onChange={(e) => setDemoteReason(e.target.value)}
                     rows={2}
                     placeholder="Reason (optional) — shared with the scribe"
-                    style={{ padding: "0.5rem", borderRadius: "10px", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem" }}
+                    style={{ padding: "0.5rem", borderRadius: "8px", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem" }}
                   />
                   <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
                     <span style={{ fontSize: "0.85rem", color: "var(--text-danger)" }}>Demote for real?</span>

@@ -49,7 +49,12 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
         topics: { orderBy: { order: "asc" } },
         notes: {
           where: { status: "LIVE" },
-          select: { fulfillsRequestId: true, scribeId: true, scribe: { select: { fullName: true } } },
+          select: {
+            fulfillsRequestId: true,
+            scribeId: true,
+            scribe: { select: { fullName: true } },
+            reviews: { select: { rating: true } },
+          },
           orderBy: { createdAt: "asc" },
         },
       },
@@ -78,6 +83,10 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
     // before, just now also gated on "did THIS student ask for it".
     const hasFulfillmentPricing = b.notes.some((n) => n.fulfillsRequestId && myRequestIds.has(n.fulfillsRequestId));
     const scribe = b.notes[0];
+    // Block-level rating for the catalog card: every review across all of
+    // this block's live versions, so a block with competing uploads shows
+    // one combined score (each version's own rating is on the block page).
+    const ratings = b.notes.flatMap((n) => n.reviews.map((r) => r.rating));
 
     return {
       id: b.id,
@@ -91,6 +100,8 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
       scribeId: scribe?.scribeId ?? null,
       scribeName: scribe?.scribe.fullName ?? null,
       liveNoteCount: b.notes.length,
+      ratingAvg: ratings.length ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length : null,
+      ratingCount: ratings.length,
     };
   });
 

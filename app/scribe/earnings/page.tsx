@@ -3,8 +3,7 @@
 import { useEffect, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import Logo from "@/app/components/Logo";
-import ProfileMenu from "@/app/components/ProfileMenu";
+import PageHeader from "@/app/components/PageHeader";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 
@@ -212,23 +211,11 @@ export default function ScribeEarningsPage() {
   return (
     <div className="page-wrap">
       <div className="app-container" style={{ maxWidth: 560 }}>
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">Your earnings</div>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: "0.6rem" }}>
-            <button className="btn" onClick={() => router.push("/scribe/workspace")}>
+        <PageHeader title="Your earnings" subtitle="What you've earned and been paid.">
+          <button className="btn" onClick={() => router.push("/scribe/workspace")}>
               <i className="fas fa-arrow-left"></i> Workspace
             </button>
-            <ProfileMenu />
-          </div>
-        </div>
+        </PageHeader>
 
         {loading && <SkeletonList rows={3} />}
         {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}
@@ -237,7 +224,7 @@ export default function ScribeEarningsPage() {
           <div style={{ marginTop: "1.5rem" }}>
             <div
               style={{
-                background: "linear-gradient(135deg, var(--text-info), #1b5fb8)",
+                background: "var(--ink)",
                 borderRadius: "1.2rem",
                 padding: "1.8rem",
                 color: "white",
@@ -305,7 +292,7 @@ export default function ScribeEarningsPage() {
                 <select
                   value={bankCode}
                   onChange={(e) => setBankCode(e.target.value)}
-                  style={{ padding: "0.6rem", borderRadius: "10px", border: "1px solid var(--border-blue)" }}
+                  style={{ padding: "0.6rem", borderRadius: "8px", border: "1px solid var(--border-blue)" }}
                 >
                   <option value="">Select your bank</option>
                   {banks.map((b) => (
@@ -321,7 +308,7 @@ export default function ScribeEarningsPage() {
                   placeholder="10-digit account number"
                   value={accountNumber}
                   onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ""))}
-                  style={{ padding: "0.6rem", borderRadius: "10px", border: "1px solid var(--border-blue)" }}
+                  style={{ padding: "0.6rem", borderRadius: "8px", border: "1px solid var(--border-blue)" }}
                 />
                 {accountError && <p style={{ color: "var(--text-danger)", fontSize: "0.85rem" }}>{accountError}</p>}
                 <div style={{ display: "flex", gap: "0.6rem" }}>
@@ -359,7 +346,7 @@ export default function ScribeEarningsPage() {
                   placeholder={`Up to ₦${balance.toLocaleString()}`}
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
-                  style={{ flex: 1, padding: "0.6rem", borderRadius: "10px", border: "1px solid var(--border-blue)" }}
+                  style={{ flex: 1, padding: "0.6rem", borderRadius: "8px", border: "1px solid var(--border-blue)" }}
                 />
                 <button className="btn btn-primary" type="submit" disabled={withdrawSubmitting}>
                   {withdrawSubmitting ? "Requesting..." : "Withdraw"}
@@ -371,7 +358,7 @@ export default function ScribeEarningsPage() {
             {payouts.length > 0 && (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.8rem" }}>
                 {payouts.map((p) => (
-                  <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.85rem", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "10px", padding: "0.6rem 0.8rem" }}>
+                  <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.85rem", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "8px", padding: "0.6rem 0.8rem" }}>
                     <span>
                       ₦{p.amount.toLocaleString()} · {new Date(p.requestedAt).toLocaleDateString()}
                     </span>
@@ -380,7 +367,7 @@ export default function ScribeEarningsPage() {
                         background: STATUS_STYLES[p.status].bg,
                         color: STATUS_STYLES[p.status].color,
                         padding: "0.15rem 0.6rem",
-                        borderRadius: "10px",
+                        borderRadius: "8px",
                         fontWeight: 600,
                         fontSize: "0.75rem",
                       }}

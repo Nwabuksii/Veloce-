@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import Logo from "@/app/components/Logo";
-import ProfileMenu from "@/app/components/ProfileMenu";
+import PageHeader from "@/app/components/PageHeader";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
@@ -205,26 +204,14 @@ export default function AdminReportsPage() {
   return (
     <div className="page-wrap">
       <div className="app-container">
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">Admin control hub</div>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: "0.6rem" }}>
-            <button className="btn" onClick={() => router.push("/admin")}>
-              <i className="fas fa-arrow-left"></i> Applications
+        <PageHeader title="Reports" subtitle="Content reports and refund requests from students.">
+          <button className="btn" onClick={() => router.push("/admin")}>
+              <i className="fas fa-arrow-left"></i> Admin
             </button>
-            <button className="btn" onClick={() => router.push("/admin/appeals")}>
-              <i className="fas fa-undo"></i> Appeals
-            </button>
-            <ProfileMenu />
-          </div>
-        </div>
+          <button className="btn" onClick={() => router.push("/admin/appeals")}>
+                <i className="fas fa-undo"></i> Appeals
+              </button>
+        </PageHeader>
 
         <div style={{ marginTop: "1.5rem" }}>
           <h2>
@@ -272,7 +259,7 @@ export default function AdminReportsPage() {
                           background: isUser ? "var(--bg-danger)" : "var(--bg-info)",
                           color: isUser ? "var(--text-danger)" : "var(--text-info)",
                           padding: "0.15rem 0.7rem",
-                          borderRadius: "10px",
+                          borderRadius: "8px",
                           fontSize: "0.75rem",
                           fontWeight: 600,
                         }}
@@ -285,7 +272,7 @@ export default function AdminReportsPage() {
                           background: "var(--bg-danger)",
                           color: "var(--text-danger)",
                           padding: "0.15rem 0.6rem",
-                          borderRadius: "10px",
+                          borderRadius: "8px",
                           fontSize: "0.75rem",
                           fontWeight: 600,
                         }}
@@ -387,7 +374,7 @@ export default function AdminReportsPage() {
                       {g.reports.map((r) => {
                         const isClaimReplyOpen = replyTarget?.kind === "claim" && replyTarget.reportId === r.id;
                         return (
-                          <div key={r.id} style={{ background: "var(--bg-info)", borderRadius: "10px", padding: "0.7rem" }}>
+                          <div key={r.id} style={{ background: "var(--bg-info)", borderRadius: "8px", padding: "0.7rem" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem", flexWrap: "wrap" }}>
                               <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
                                 {r.reporter.fullName} ({r.reporter.email}) · {new Date(r.createdAt).toLocaleDateString()}
@@ -456,7 +443,7 @@ export default function AdminReportsPage() {
                         placeholder="e.g. Contains pages from a different course entirely..."
                         style={{
                           padding: "0.5rem",
-                          borderRadius: "10px",
+                          borderRadius: "8px",
                           border: "1px solid var(--border-blue)",
                           fontFamily: "inherit",
                           fontSize: "0.85rem",
@@ -515,7 +502,7 @@ function ReplyBox({
         placeholder={placeholder}
         style={{
           padding: "0.5rem",
-          borderRadius: "10px",
+          borderRadius: "8px",
           border: "1px solid var(--border-blue)",
           fontFamily: "inherit",
           fontSize: "0.85rem",

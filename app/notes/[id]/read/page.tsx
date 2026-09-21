@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import Logo from "@/app/components/Logo";
-import ProfileMenu from "@/app/components/ProfileMenu";
+import PageHeader from "@/app/components/PageHeader";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 
 // Deliberately the only way to view a note's actual content — there is no
@@ -47,23 +46,11 @@ export default function NoteReaderPage() {
   return (
     <div className="page-wrap">
       <div className="app-container" style={{ maxWidth: "100%" }}>
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">Reading notes</div>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: "0.6rem" }}>
-            <button className="btn" onClick={() => router.back()}>
+        <PageHeader title="Reading notes">
+          <button className="btn" onClick={() => router.back()}>
               <i className="fas fa-arrow-left"></i> Back
             </button>
-            <ProfileMenu />
-          </div>
-        </div>
+        </PageHeader>
 
         {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}
 

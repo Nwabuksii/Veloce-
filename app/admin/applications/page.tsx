@@ -3,9 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import ProfileMenu from "@/app/components/ProfileMenu";
+import PageHeader from "@/app/components/PageHeader";
 import { SkeletonList } from "@/app/components/Skeleton";
-import Logo from "@/app/components/Logo";
 import { friendlyErrorMessage } from "@/lib/api-client";
 
 interface Application {
@@ -70,26 +69,11 @@ export default function AdminApplicationsPage() {
   return (
     <div className="page-wrap">
       <div className="app-container">
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">
-                <button
-                  onClick={() => router.push("/admin")}
-                  style={{ background: "none", border: "none", padding: 0, color: "var(--text-info)", cursor: "pointer", font: "inherit" }}
-                >
-                  Admin
-                </button>
-                {" / Scribe applications"}
-              </div>
-            </div>
-          </div>
-          <ProfileMenu />
-        </div>
+        <PageHeader title="Scribe applications" subtitle="Review and decide on pending applications.">
+          <button className="btn" onClick={() => router.push("/admin")}>
+            <i className="fas fa-arrow-left"></i> Admin
+          </button>
+        </PageHeader>
 
         <div style={{ marginTop: "1.5rem" }}>
           <h2>

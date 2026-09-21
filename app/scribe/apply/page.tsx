@@ -3,9 +3,8 @@
 import { useEffect, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import ProfileMenu from "@/app/components/ProfileMenu";
+import PageHeader from "@/app/components/PageHeader";
 import { SkeletonCard } from "@/app/components/Skeleton";
-import Logo from "@/app/components/Logo";
 import { friendlyErrorMessage } from "@/lib/api-client";
 
 interface Application {
@@ -96,18 +95,7 @@ export default function ScribeApplyPage() {
   return (
     <div className="page-wrap">
       <div className="app-container" style={{ maxWidth: 560 }}>
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">Become a scribe</div>
-            </div>
-          </div>
-          <ProfileMenu />
-        </div>
+        <PageHeader title="Become a Scribe" subtitle="Share your notes with other students and earn from them." />
 
         {loading && <div style={{ marginTop: "1rem" }}><SkeletonCard height="4.5rem" /></div>}
         {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}
@@ -122,7 +110,7 @@ export default function ScribeApplyPage() {
                 background: STATUS_STYLES[application.status].bg,
                 color: STATUS_STYLES[application.status].color,
                 padding: "0.4rem 1rem",
-                borderRadius: "10px",
+                borderRadius: "8px",
                 fontSize: "0.85rem",
                 fontWeight: 600,
               }}
@@ -177,7 +165,7 @@ export default function ScribeApplyPage() {
                 placeholder="e.g. I've taken detailed notes for COS 201 all semester and want to share them, plus help other students who are struggling with..."
                 style={{
                   padding: "0.7rem",
-                  borderRadius: "10px",
+                  borderRadius: "8px",
                   border: "1px solid var(--border-blue)",
                   fontFamily: "inherit",
                   fontSize: "0.9rem",

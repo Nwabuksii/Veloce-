@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import Logo from "@/app/components/Logo";
-import ProfileMenu from "@/app/components/ProfileMenu";
+import PageHeader from "@/app/components/PageHeader";
 import Avatar from "@/app/components/Avatar";
 import { friendlyErrorMessage, apiFetch } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
@@ -137,23 +136,11 @@ export default function ScribeProfilePage() {
   return (
     <div className="page-wrap">
       <div className="app-container" style={{ maxWidth: 960 }}>
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">Scribe profile</div>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: "0.6rem" }}>
-            <button className="btn" onClick={() => router.back()}>
+        <PageHeader title="Scribe profile">
+          <button className="btn" onClick={() => router.back()}>
               <i className="fas fa-arrow-left"></i> Back
             </button>
-            <ProfileMenu />
-          </div>
-        </div>
+        </PageHeader>
 
         {loading && <p style={{ marginTop: "1rem", color: "var(--text-secondary)" }}>Loading profile...</p>}
         {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}
@@ -224,7 +211,7 @@ export default function ScribeProfilePage() {
                 </div>
 
                 {reporting && (
-                  <div style={{ marginTop: "1rem", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "10px", padding: "1rem", display: "flex", flexDirection: "column", gap: "0.7rem" }}>
+                  <div style={{ marginTop: "1rem", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "8px", padding: "1rem", display: "flex", flexDirection: "column", gap: "0.7rem" }}>
                     <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
                       Why are you reporting {profile.fullName}? (harassment, scam, fake notes, etc.)
                     </label>
@@ -292,7 +279,7 @@ export default function ScribeProfilePage() {
                     style={{
                       width: "100%",
                       padding: "0.55rem 0.9rem 0.55rem 2.2rem",
-                      borderRadius: "40px",
+                      borderRadius: "8px",
                       border: "1px solid var(--border-blue)",
                       fontSize: "0.85rem",
                     }}
@@ -303,7 +290,7 @@ export default function ScribeProfilePage() {
                   onChange={(e) => setNoteSort(e.target.value as typeof noteSort)}
                   style={{
                     padding: "0.55rem 1rem",
-                    borderRadius: "40px",
+                    borderRadius: "8px",
                     border: "1px solid var(--border-blue)",
                     fontSize: "0.85rem",
                     background: "var(--surface)",

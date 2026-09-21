@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import ProfileMenu from "@/app/components/ProfileMenu";
-import Logo from "@/app/components/Logo";
+import PageHeader from "@/app/components/PageHeader";
 import { fetchAdminCounts, AdminCounts } from "@/lib/admin-counts";
 
 interface HubLink {
@@ -79,18 +78,7 @@ export default function AdminHubPage() {
   return (
     <div className="page-wrap">
       <div className="app-container">
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">Admin</div>
-            </div>
-          </div>
-          <ProfileMenu />
-        </div>
+        <PageHeader title="Admin" subtitle="Control hub" />
 
         <div style={{ marginTop: "1.5rem", display: "flex", flexDirection: "column", gap: "1.8rem" }}>
           {GROUPS.map((group) => (

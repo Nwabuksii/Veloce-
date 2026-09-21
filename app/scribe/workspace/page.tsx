@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser, StoredUser } from "@/lib/client-session";
-import Logo from "@/app/components/Logo";
-import ProfileMenu from "@/app/components/ProfileMenu";
+import PageHeader from "@/app/components/PageHeader";
 import { friendlyErrorMessage } from "@/lib/api-client";
 
 interface ScribeNote {
@@ -75,29 +74,17 @@ export default function ScribeWorkspacePage() {
   return (
     <div className="page-wrap">
       <div className="app-container">
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">Scribe workspace</div>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: "0.8rem", alignItems: "center" }}>
-            <button className="btn" onClick={() => router.push(`/scribe/${user?.id}`)}>
+        <PageHeader title="Scribe workspace" subtitle="Your notes, their status and performance.">
+          <button className="btn" onClick={() => router.push(`/scribe/${user?.id}`)}>
               <i className="fas fa-id-badge"></i> My public profile
             </button>
-            <button className="btn" onClick={() => router.push("/scribe/earnings")}>
-              <i className="fas fa-wallet"></i> Earnings
-            </button>
-            <button className="btn btn-primary" onClick={() => router.push("/scribe/upload")}>
-              <i className="fas fa-plus"></i> Upload new note
-            </button>
-            <ProfileMenu />
-          </div>
-        </div>
+          <button className="btn" onClick={() => router.push("/scribe/earnings")}>
+                <i className="fas fa-wallet"></i> Earnings
+              </button>
+          <button className="btn btn-primary" onClick={() => router.push("/scribe/upload")}>
+                <i className="fas fa-plus"></i> Upload new note
+              </button>
+        </PageHeader>
 
         <div style={{ display: "flex", gap: "1rem", margin: "1.2rem 0", flexWrap: "wrap" }}>
           <div className="role-pill">
@@ -130,7 +117,7 @@ export default function ScribeWorkspacePage() {
                     background: style.bg,
                     color: style.color,
                     padding: "0.2rem 0.8rem",
-                    borderRadius: "10px",
+                    borderRadius: "8px",
                     fontSize: "0.75rem",
                     fontWeight: 600,
                   }}

@@ -14,7 +14,7 @@ export interface AdminCounts {
 
 /**
  * Fetches pending-action counts for every admin section.
- * Used by both the admin hub page and the ProfileMenu's "Admin panel"
+ * Used by both the admin hub page and the site header's "Admin"
  * badge. Caller is responsible for only calling this when the current
  * user is an ADMIN — the endpoint itself also enforces this.
  *

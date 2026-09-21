@@ -3,8 +3,7 @@
 import { useEffect, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import Logo from "@/app/components/Logo";
-import ProfileMenu from "@/app/components/ProfileMenu";
+import PageHeader from "@/app/components/PageHeader";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
 
@@ -44,18 +43,7 @@ export default function FeedbackPage() {
   return (
     <div className="page-wrap">
       <div className="app-container">
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">Feedback</div>
-            </div>
-          </div>
-          <ProfileMenu />
-        </div>
+        <PageHeader title="Feedback" subtitle="Tell us what's working and what isn't." />
 
         <div style={{ marginTop: "1.5rem", maxWidth: 480 }}>
           <h2>
@@ -93,7 +81,7 @@ export default function FeedbackPage() {
                 style={{
                   width: "100%",
                   padding: "0.7rem",
-                  borderRadius: "10px",
+                  borderRadius: "8px",
                   border: "1px solid var(--border-blue)",
                   fontFamily: "inherit",
                   fontSize: "0.9rem",

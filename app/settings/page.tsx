@@ -3,8 +3,7 @@
 import { useEffect, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser, saveUser, StoredUser } from "@/lib/client-session";
-import Logo from "@/app/components/Logo";
-import ProfileMenu from "@/app/components/ProfileMenu";
+import PageHeader from "@/app/components/PageHeader";
 import { SkeletonCard } from "@/app/components/Skeleton";
 import ThemeToggle from "@/app/components/ThemeToggle";
 import AvatarPicker from "@/app/components/AvatarPicker";
@@ -126,23 +125,11 @@ export default function SettingsPage() {
   return (
     <div className="page-wrap">
       <div className="app-container" style={{ maxWidth: 640 }}>
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">Settings</div>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: "0.6rem" }}>
-            <button className="btn" onClick={() => router.push("/dashboard")}>
-              <i className="fas fa-arrow-left"></i> Dashboard
+        <PageHeader title="Settings" subtitle="Manage your account and preferences.">
+          <button className="btn" onClick={() => router.push("/dashboard")}>
+              <i className="fas fa-arrow-left"></i> Catalog
             </button>
-            <ProfileMenu />
-          </div>
-        </div>
+        </PageHeader>
 
         <div style={{ display: "flex", gap: "0.5rem", marginTop: "1.5rem", flexWrap: "wrap" }}>
           {([
@@ -186,7 +173,7 @@ export default function SettingsPage() {
               {FAQ_ITEMS.map((item, i) => (
                 <details
                   key={i}
-                  style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "10px", padding: "0.9rem 1rem" }}
+                  style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "8px", padding: "0.9rem 1rem" }}
                 >
                   <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--text-primary)" }}>{item.q}</summary>
                   <p style={{ marginTop: "0.6rem", color: "var(--text-secondary)", fontSize: "0.9rem", lineHeight: 1.6 }}>{item.a}</p>
@@ -231,7 +218,7 @@ export default function SettingsPage() {
                     type="email"
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
-                    style={{ padding: "0.6rem", borderRadius: "10px", border: "1px solid var(--border-blue)" }}
+                    style={{ padding: "0.6rem", borderRadius: "8px", border: "1px solid var(--border-blue)" }}
                   />
                 </label>
 
@@ -242,7 +229,7 @@ export default function SettingsPage() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="At least 8 characters"
-                    style={{ padding: "0.6rem", borderRadius: "10px", border: "1px solid var(--border-blue)" }}
+                    style={{ padding: "0.6rem", borderRadius: "8px", border: "1px solid var(--border-blue)" }}
                   />
                 </label>
 
@@ -252,7 +239,7 @@ export default function SettingsPage() {
                     type="password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    style={{ padding: "0.6rem", borderRadius: "10px", border: "1px solid var(--border-blue)" }}
+                    style={{ padding: "0.6rem", borderRadius: "8px", border: "1px solid var(--border-blue)" }}
                   />
                 </label>
 

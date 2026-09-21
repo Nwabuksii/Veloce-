@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import Logo from "@/app/components/Logo";
-import ProfileMenu from "@/app/components/ProfileMenu";
+import PageHeader from "@/app/components/PageHeader";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { friendlyErrorMessage } from "@/lib/api-client";
 
@@ -44,18 +43,11 @@ export default function MyRequestsPage() {
   return (
     <div className="page-wrap">
       <div className="app-container">
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">My requests</div>
-            </div>
-          </div>
-          <ProfileMenu />
-        </div>
+        <PageHeader title="My requests" subtitle="Blocks you've asked for and where they stand.">
+          <button className="btn" onClick={() => router.push("/requests")}>
+            <i className="fas fa-plus"></i> Request a block
+          </button>
+        </PageHeader>
 
         {loading && <SkeletonList rows={3} />}
         {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}
@@ -99,7 +91,7 @@ export default function MyRequestsPage() {
                       background: "var(--bg-success)",
                       color: "var(--text-success)",
                       padding: "0.25rem 0.9rem",
-                      borderRadius: "10px",
+                      borderRadius: "8px",
                       fontSize: "0.8rem",
                       fontWeight: 600,
                       marginBottom: "0.5rem",
@@ -128,7 +120,7 @@ export default function MyRequestsPage() {
                     background: "var(--bg-warning)",
                     color: "var(--text-warning)",
                     padding: "0.25rem 0.9rem",
-                    borderRadius: "10px",
+                    borderRadius: "8px",
                     fontSize: "0.8rem",
                     fontWeight: 600,
                   }}

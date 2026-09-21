@@ -30,7 +30,8 @@ export default function CouponConfirmDialog({ itemLabel, price, creditBalance, c
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(11,30,51,0.45)",
+        background: "var(--overlay)",
+        backdropFilter: "blur(4px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -41,7 +42,9 @@ export default function CouponConfirmDialog({ itemLabel, price, creditBalance, c
       <div
         style={{
           background: "var(--surface)",
-          borderRadius: "12px",
+          borderRadius: "1rem",
+          border: "1px solid var(--border)",
+          boxShadow: "var(--menu-shadow)",
           padding: "1.5rem",
           width: "min(380px, 90vw)",
         }}

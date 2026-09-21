@@ -3,8 +3,7 @@
 import { useEffect, useState, FormEvent, Suspense } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import Logo from "@/app/components/Logo";
-import ProfileMenu from "@/app/components/ProfileMenu";
+import PageHeader from "@/app/components/PageHeader";
 import Avatar from "@/app/components/Avatar";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
@@ -203,23 +202,11 @@ function BlockDetailInner() {
   return (
     <div className="page-wrap">
       <div className="app-container" style={{ maxWidth: 640 }}>
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">Block details</div>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: "0.6rem" }}>
-            <button className="btn" onClick={() => router.push("/dashboard")}>
-              <i className="fas fa-arrow-left"></i> Dashboard
+        <PageHeader title="Block details" subtitle="Compare versions, read reviews and unlock notes.">
+          <button className="btn" onClick={() => router.push("/dashboard")}>
+              <i className="fas fa-arrow-left"></i> Catalog
             </button>
-            <ProfileMenu />
-          </div>
-        </div>
+        </PageHeader>
 
         {loading && <SkeletonList rows={3} />}
         {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}
@@ -230,7 +217,7 @@ function BlockDetailInner() {
               style={{
                 background: "var(--ink)",
                 color: "white",
-                borderRadius: "14px",
+                borderRadius: "12px",
                 padding: "1.5rem 1.7rem",
                 display: "flex",
                 justifyContent: "space-between",

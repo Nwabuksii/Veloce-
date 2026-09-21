@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Logo from "@/app/components/Logo";
+import PageHeader from "@/app/components/PageHeader";
 
 export const metadata = { title: "Privacy Policy — Veloce" };
 
@@ -7,17 +7,9 @@ export default function PrivacyPolicyPage() {
   return (
     <div className="page-wrap">
       <div className="app-container" style={{ maxWidth: 760 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "1.5rem" }}>
-          <Logo size={34} />
-          <h1>
-            Veloce
-          </h1>
-        </div>
+        <PageHeader title="Privacy Policy" subtitle="Last updated: September 2026" />
 
-        <div style={{ lineHeight: 1.7 }}>
-          <h2>Privacy Policy</h2>
-          <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>Last updated: September 2026</p>
-
+        <div className="legal-prose" style={{ marginTop: "2rem" }}>
           <p>
             Veloce ("we", "us") is operated by Nwabuks, an individual, not a registered company. This policy explains
             what personal data Veloce collects from students and scribes using the platform at Babcock University,

@@ -3,8 +3,7 @@
 import { useEffect, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import Logo from "@/app/components/Logo";
-import ProfileMenu from "@/app/components/ProfileMenu";
+import PageHeader from "@/app/components/PageHeader";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
@@ -28,7 +27,7 @@ const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: "0.6rem",
   marginTop: "0.4rem",
-  borderRadius: "10px",
+  borderRadius: "8px",
   border: "1px solid var(--border-blue)",
 };
 
@@ -170,18 +169,11 @@ export default function RequestsPage() {
   return (
     <div className="page-wrap">
       <div className="app-container">
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">Request a block</div>
-            </div>
-          </div>
-          <ProfileMenu />
-        </div>
+        <PageHeader title="Request a block" subtitle="Ask scribes to cover something that isn't in the catalog.">
+          <button className="btn" onClick={() => router.push("/requests/mine")}>
+            <i className="fas fa-list"></i> My requests
+          </button>
+        </PageHeader>
 
         <div style={{ marginTop: "1.5rem", maxWidth: 480 }}>
           <h2>

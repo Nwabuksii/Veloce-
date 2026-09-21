@@ -1,36 +1,34 @@
 "use client";
 
-// Single source of truth for the mark's two colors — change either one
-// here and it updates everywhere Logo renders, instead of hunting through
-// the SVG path attributes below. Kept as their own constants rather than
-// pulling from globals.css's --ink/--accent because a raw SVG attribute
-// (as opposed to a style="..." property) doesn't reliably resolve CSS
-// custom properties in every browser — these are intentionally kept in
-// sync with --ink and --accent by hand instead. If you change the site's
-// accent color in globals.css, update LOGO_ACCENT to match here too.
-export const LOGO_COLORS = {
-  diamond: "#17342F", // matches --ink in app/globals.css
-  wave: "#DD6B33", // matches --accent in app/globals.css
-};
+// Same emblem as the reference design: a diamond with an amber wave through
+// it. `tile` wraps it in the rounded square used in the site header — the
+// square's colors come from CSS (see .logo-tile in globals.css) so it flips
+// with the light/dark theme; without `tile` it's the bare mark, used on the
+// dark side panel of the auth screens.
+export default function Logo({ size = 100, tile = false }: { size?: number; tile?: boolean }) {
+  const strokeWidth = tile || size < 48 ? 2.5 : 1.75;
 
-export default function Logo({ size = 100 }: { size?: number }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width={size} height={size}>
-      <path
-        d="M 50 15 L 75 50 L 50 85 L 25 50 Z"
-        fill="none"
-        stroke={LOGO_COLORS.diamond}
-        strokeWidth="5"
-        strokeLinejoin="miter"
-      />
-      <path d="M 50 15 L 75 50 L 50 85 Z" fill={LOGO_COLORS.diamond} opacity="0.15" />
-      <path
-        d="M 15 52 C 30 40, 45 62, 50 50 C 55 38, 70 60, 85 48"
-        fill="none"
-        stroke={LOGO_COLORS.wave}
-        strokeWidth="4.5"
-        strokeLinecap="round"
-      />
+  const mark = (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width={tile ? size / 2 : size}
+      height={tile ? size / 2 : size}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      style={tile ? undefined : { color: "#60A5FA" }}
+    >
+      <path d="M12 3L20 12L12 21L4 12Z" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 12C8 14 16 10 20 12" stroke="#F59E0B" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
+  );
+
+  if (!tile) return mark;
+
+  return (
+    <span className="logo-tile" style={{ width: size, height: size }}>
+      {mark}
+    </span>
   );
 }

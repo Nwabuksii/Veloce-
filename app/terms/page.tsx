@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Logo from "@/app/components/Logo";
+import PageHeader from "@/app/components/PageHeader";
 
 export const metadata = { title: "Terms of Service — Veloce" };
 
@@ -7,17 +7,9 @@ export default function TermsPage() {
   return (
     <div className="page-wrap">
       <div className="app-container" style={{ maxWidth: 760 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "1.5rem" }}>
-          <Logo size={34} />
-          <h1>
-            Veloce
-          </h1>
-        </div>
+        <PageHeader title="Terms of Service" subtitle="Last updated: September 2026" />
 
-        <div style={{ lineHeight: 1.7 }}>
-          <h2>Terms of Service</h2>
-          <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>Last updated: September 2026</p>
-
+        <div className="legal-prose" style={{ marginTop: "2rem" }}>
           <p>
             Veloce is operated by Nwabuks, an individual, not a registered company. By creating an account, you agree
             to these terms. If you don't agree, don't use Veloce.

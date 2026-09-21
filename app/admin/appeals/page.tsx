@@ -3,9 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import ProfileMenu from "@/app/components/ProfileMenu";
+import PageHeader from "@/app/components/PageHeader";
 import { SkeletonList } from "@/app/components/Skeleton";
-import Logo from "@/app/components/Logo";
 import { friendlyErrorMessage } from "@/lib/api-client";
 
 interface Appeal {
@@ -67,26 +66,14 @@ export default function AdminAppealsPage() {
   return (
     <div className="page-wrap">
       <div className="app-container">
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">Admin control hub</div>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: "0.6rem" }}>
-            <button className="btn" onClick={() => router.push("/admin")}>
-              <i className="fas fa-arrow-left"></i> Applications
+        <PageHeader title="Reinstatement appeals" subtitle="Review scribes asking to be reinstated.">
+          <button className="btn" onClick={() => router.push("/admin")}>
+              <i className="fas fa-arrow-left"></i> Admin
             </button>
-            <button className="btn" onClick={() => router.push("/admin/reports")}>
-              <i className="fas fa-exclamation-triangle"></i> Reports
-            </button>
-            <ProfileMenu />
-          </div>
-        </div>
+          <button className="btn" onClick={() => router.push("/admin/reports")}>
+                <i className="fas fa-exclamation-triangle"></i> Reports
+              </button>
+        </PageHeader>
 
         <div style={{ marginTop: "1.5rem" }}>
           <h2>

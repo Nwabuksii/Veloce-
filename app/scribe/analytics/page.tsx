@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import Logo from "@/app/components/Logo";
-import ProfileMenu from "@/app/components/ProfileMenu";
+import PageHeader from "@/app/components/PageHeader";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 
@@ -66,23 +65,11 @@ export default function ScribeAnalyticsPage() {
   return (
     <div className="page-wrap">
       <div className="app-container">
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">Your analytics</div>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: "0.6rem" }}>
-            <button className="btn" onClick={() => router.push("/scribe")}>
-              <i className="fas fa-arrow-left"></i> Scribe hub
+        <PageHeader title="Your analytics" subtitle="How your notes are performing.">
+          <button className="btn" onClick={() => router.push("/scribe")}>
+              <i className="fas fa-arrow-left"></i> Scribe Studio
             </button>
-            <ProfileMenu />
-          </div>
-        </div>
+        </PageHeader>
 
         {loading && <SkeletonList rows={4} />}
         {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}
@@ -111,7 +98,7 @@ export default function ScribeAnalyticsPage() {
                 )}
               </div>
               {data.hasRejectedNote && (
-                <div className="stat-sub" style={{ color: "#F0B8AE" }}>
+                <div className="stat-sub" style={{ color: "var(--text-warning)" }}>
                   <i className="fas fa-triangle-exclamation"></i> A rejected note is capping you below Trusted/Elite right now
                 </div>
               )}

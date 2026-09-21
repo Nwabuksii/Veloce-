@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import Logo from "@/app/components/Logo";
-import ProfileMenu from "@/app/components/ProfileMenu";
+import PageHeader from "@/app/components/PageHeader";
 import Avatar from "@/app/components/Avatar";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { formatDateDDMMYYYY } from "@/lib/date-format";
@@ -104,23 +103,11 @@ export default function AdminUsersPage() {
   return (
     <div className="page-wrap">
       <div className="app-container">
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">Manage users</div>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: "0.6rem" }}>
-            <button className="btn" onClick={() => router.push("/admin")}>
-              <i className="fas fa-arrow-left"></i> Applications
+        <PageHeader title="Manage users" subtitle="Every account on the platform.">
+          <button className="btn" onClick={() => router.push("/admin")}>
+              <i className="fas fa-arrow-left"></i> Admin
             </button>
-            <ProfileMenu />
-          </div>
-        </div>
+        </PageHeader>
 
         <p style={{ color: "var(--text-secondary)", marginTop: "1rem", fontSize: "0.9rem" }}>
           Search any student, scribe, or admin at your university to ban or unban their account. Banning never
@@ -133,7 +120,7 @@ export default function AdminUsersPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by name or email..."
-          style={{ width: "100%", maxWidth: 420, padding: "0.7rem", borderRadius: "10px", border: "1px solid var(--border-blue)", marginTop: "1rem" }}
+          style={{ width: "100%", maxWidth: 420, padding: "0.7rem", borderRadius: "8px", border: "1px solid var(--border-blue)", marginTop: "1rem" }}
         />
         {searching && <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: "0.5rem" }}>Searching...</p>}
         {actionMessage && <p style={{ color: "var(--text-success)", marginTop: "0.6rem" }}>{actionMessage}</p>}
@@ -185,7 +172,7 @@ export default function AdminUsersPage() {
                       onChange={(e) => setBanReason(e.target.value)}
                       rows={2}
                       placeholder="Reason (optional) — included in their email"
-                      style={{ padding: "0.5rem", borderRadius: "10px", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem" }}
+                      style={{ padding: "0.5rem", borderRadius: "8px", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem" }}
                     />
                     <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
                       Duration in days (leave blank for indefinite / until further notice)
@@ -196,7 +183,7 @@ export default function AdminUsersPage() {
                       value={banDurationDays}
                       onChange={(e) => setBanDurationDays(e.target.value)}
                       placeholder="e.g. 90"
-                      style={{ padding: "0.5rem", borderRadius: "10px", border: "1px solid var(--border-blue)", fontSize: "0.85rem" }}
+                      style={{ padding: "0.5rem", borderRadius: "8px", border: "1px solid var(--border-blue)", fontSize: "0.85rem" }}
                     />
                     <div style={{ display: "flex", gap: "0.6rem" }}>
                       <button

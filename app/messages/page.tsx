@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import Logo from "@/app/components/Logo";
-import ProfileMenu from "@/app/components/ProfileMenu";
+import PageHeader from "@/app/components/PageHeader";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { friendlyErrorMessage } from "@/lib/api-client";
 
@@ -57,18 +56,7 @@ export default function MessagesPage() {
   return (
     <div className="page-wrap">
       <div className="app-container">
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">Messages</div>
-            </div>
-          </div>
-          <ProfileMenu />
-        </div>
+        <PageHeader title="Messages" subtitle="Your inbox." />
 
         {loading && <SkeletonList rows={3} />}
         {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}

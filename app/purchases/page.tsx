@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import Logo from "@/app/components/Logo";
-import ProfileMenu from "@/app/components/ProfileMenu";
+import PageHeader from "@/app/components/PageHeader";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
@@ -25,6 +24,7 @@ interface PurchaseView {
   creditApplied: number;
   redeemedWithCoupon: boolean;
   refundRequestStatus: "PENDING" | "DISMISSED" | "ACTIONED" | null;
+  unopened: boolean;
 }
 
 export default function PurchasesPage() {
@@ -149,23 +149,11 @@ export default function PurchasesPage() {
   return (
     <div className="page-wrap">
       <div className="app-container">
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">My purchases</div>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: "0.6rem" }}>
-            <button className="btn" onClick={() => router.push("/following")}>
+        <PageHeader title="My Library" subtitle="Notes you've unlocked.">
+          <button className="btn" onClick={() => router.push("/following")}>
               <i className="fas fa-user-check"></i> Following
             </button>
-            <ProfileMenu />
-          </div>
-        </div>
+        </PageHeader>
 
         <div style={{ display: "flex", gap: "0.8rem", margin: "1.2rem 0", flexWrap: "wrap" }}>
           <div style={{ position: "relative", flex: "1 1 260px" }}>
@@ -180,7 +168,7 @@ export default function PurchasesPage() {
               style={{
                 width: "100%",
                 padding: "0.55rem 0.9rem 0.55rem 2.2rem",
-                borderRadius: "40px",
+                borderRadius: "8px",
                 border: "1px solid var(--border-blue)",
                 fontSize: "0.85rem",
               }}
@@ -191,7 +179,7 @@ export default function PurchasesPage() {
             onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
             style={{
               padding: "0.55rem 1rem",
-              borderRadius: "40px",
+              borderRadius: "8px",
               border: "1px solid var(--border-blue)",
               fontSize: "0.85rem",
               background: "var(--surface)",
@@ -233,18 +221,26 @@ export default function PurchasesPage() {
 
                 {p.refunded ? (
                   <div
-                    style={{ marginTop: "0.6rem", padding: "0.5rem 0.8rem", borderRadius: "10px", background: "var(--bg-danger)", color: "var(--text-danger)", fontSize: "0.85rem", width: "fit-content" }}
+                    style={{ marginTop: "0.6rem", padding: "0.5rem 0.8rem", borderRadius: "8px", background: "var(--bg-danger)", color: "var(--text-danger)", fontSize: "0.85rem", width: "fit-content" }}
                   >
                     <i className="fas fa-ban"></i> Refunded — access removed
                   </div>
                 ) : (
-                  <button
-                    onClick={() => router.push(`/notes/${p.noteId}/read`)}
-                    className="btn btn-primary"
-                    style={{ marginTop: "0.6rem", width: "fit-content" }}
-                  >
-                    <i className="fas fa-file-pdf"></i> Read note
-                  </button>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap", marginTop: "0.6rem" }}>
+                    <button
+                      onClick={() => router.push(`/notes/${p.noteId}/read`)}
+                      className="btn btn-primary"
+                      style={{ width: "fit-content" }}
+                    >
+                      <i className="fas fa-file-pdf"></i> Read note
+                    </button>
+                    {p.unopened && (
+                      <span className="pill pill-info">
+                        <i className="fas fa-circle-info" style={{ marginRight: "0.3rem" }}></i>
+                        Haven't started reading this yet
+                      </span>
+                    )}
+                  </div>
                 )}
                 {p.creditApplied > 0 && (
                   <div style={{ fontSize: "0.75rem", color: "var(--text-pro)", marginTop: "0.3rem" }}>
@@ -293,7 +289,7 @@ export default function PurchasesPage() {
                       style={{
                         width: "100%",
                         padding: "0.5rem",
-                        borderRadius: "10px",
+                        borderRadius: "8px",
                         border: "1px solid var(--border-blue)",
                         fontFamily: "inherit",
                       }}
@@ -334,7 +330,7 @@ export default function PurchasesPage() {
                             onChange={(e) => setRefundReason(e.target.value)}
                             rows={2}
                             placeholder="Explain what went wrong..."
-                            style={{ padding: "0.5rem", borderRadius: "10px", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem", background: "var(--surface)", color: "var(--text-primary)" }}
+                            style={{ padding: "0.5rem", borderRadius: "8px", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem", background: "var(--surface)", color: "var(--text-primary)" }}
                           />
                           <div style={{ display: "flex", gap: "0.6rem" }}>
                             <button

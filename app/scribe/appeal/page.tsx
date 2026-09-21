@@ -3,9 +3,8 @@
 import { useEffect, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import ProfileMenu from "@/app/components/ProfileMenu";
+import PageHeader from "@/app/components/PageHeader";
 import { SkeletonCard } from "@/app/components/Skeleton";
-import Logo from "@/app/components/Logo";
 import { friendlyErrorMessage } from "@/lib/api-client";
 
 interface Appeal {
@@ -95,18 +94,7 @@ export default function ScribeAppealPage() {
   return (
     <div className="page-wrap">
       <div className="app-container" style={{ maxWidth: 560 }}>
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">Appeal reinstatement</div>
-            </div>
-          </div>
-          <ProfileMenu />
-        </div>
+        <PageHeader title="Appeal reinstatement" subtitle="Ask an admin to review your removal." />
 
         {loading && <div style={{ marginTop: "1rem" }}><SkeletonCard height="4.5rem" /></div>}
         {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}
@@ -135,7 +123,7 @@ export default function ScribeAppealPage() {
                 background: STATUS_STYLES[appeal.status].bg,
                 color: STATUS_STYLES[appeal.status].color,
                 padding: "0.4rem 1rem",
-                borderRadius: "10px",
+                borderRadius: "8px",
                 fontSize: "0.85rem",
                 fontWeight: 600,
               }}
@@ -190,7 +178,7 @@ export default function ScribeAppealPage() {
                 placeholder="Explain what happened, what you've done differently since, and why you should get another chance..."
                 style={{
                   padding: "0.7rem",
-                  borderRadius: "10px",
+                  borderRadius: "8px",
                   border: "1px solid var(--border-blue)",
                   fontFamily: "inherit",
                   fontSize: "0.9rem",

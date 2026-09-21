@@ -3,9 +3,9 @@
 import { useEffect, useState, FormEvent, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import Logo from "@/app/components/Logo";
 import { friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
+import PageHeader from "@/app/components/PageHeader";
 
 interface CourseOption {
   id: string;
@@ -281,20 +281,11 @@ function ScribeUploadForm() {
   return (
     <div className="page-wrap">
       <div className="app-container" style={{ maxWidth: 620 }}>
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">Upload notes · step {step} of 3</div>
-            </div>
-          </div>
+        <PageHeader title="Upload notes" subtitle={`Step ${step} of 3`}>
           <button className="btn" onClick={() => router.push("/scribe/workspace")}>
             <i className="fas fa-arrow-left"></i> Workspace
           </button>
-        </div>
+        </PageHeader>
 
         {error && (
           <div className="auth-error" style={{ marginTop: "1rem" }}>

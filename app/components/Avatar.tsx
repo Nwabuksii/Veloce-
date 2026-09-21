@@ -17,9 +17,13 @@ export default function Avatar({
   name,
   size = "md",
   imageUrl,
+  tone,
 }: {
   name: string;
   size?: "sm" | "md";
+  // "ink" = the plain dark circle used in the site header, instead of the
+  // per-name color used everywhere else.
+  tone?: "ink";
   // The person's uploaded profile icon — only passed when they've chosen
   // to display it (avatarDisplay === "custom"). Omit/leave undefined to
   // always fall back to the initials-on-color-background look.
@@ -40,7 +44,7 @@ export default function Avatar({
   return (
     <span
       className={`avatar${size === "sm" ? " avatar-sm" : ""}`}
-      style={{ background: colorFor(name || "?") }}
+      style={tone === "ink" ? undefined : { background: colorFor(name || "?") }}
       aria-hidden="true"
     >
       {initials(name || "?")}

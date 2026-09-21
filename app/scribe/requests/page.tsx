@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import Logo from "@/app/components/Logo";
-import ProfileMenu from "@/app/components/ProfileMenu";
+import PageHeader from "@/app/components/PageHeader";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { friendlyErrorMessage } from "@/lib/api-client";
 
@@ -48,23 +47,11 @@ export default function ScribeRequestsFeedPage() {
   return (
     <div className="page-wrap">
       <div className="app-container">
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">Discovery feed — what students want</div>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: "0.6rem" }}>
-            <button className="btn" onClick={() => router.push("/scribe/workspace")}>
+        <PageHeader title="Discovery feed" subtitle="What students are asking for.">
+          <button className="btn" onClick={() => router.push("/scribe/workspace")}>
               <i className="fas fa-arrow-left"></i> Workspace
             </button>
-            <ProfileMenu />
-          </div>
-        </div>
+        </PageHeader>
 
         <p style={{ color: "var(--text-secondary)", marginTop: "1rem", fontSize: "0.9rem" }}>
           Ranked by demand. Tap "Fulfill this" to jump straight into upload with the course and title

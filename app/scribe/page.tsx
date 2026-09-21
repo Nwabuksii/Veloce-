@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import ProfileMenu from "@/app/components/ProfileMenu";
-import Logo from "@/app/components/Logo";
+import PageHeader from "@/app/components/PageHeader";
 
 interface HubLink {
   icon: string;
@@ -43,18 +42,7 @@ export default function ScribeHubPage() {
   return (
     <div className="page-wrap">
       <div className="app-container">
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">Scribe</div>
-            </div>
-          </div>
-          <ProfileMenu />
-        </div>
+        <PageHeader title="Scribe Studio" subtitle="Everything for publishing and managing your notes." />
 
         <div style={{ marginTop: "1.5rem" }}>
           <div className="ledger-list">

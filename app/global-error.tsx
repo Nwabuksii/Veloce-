@@ -17,20 +17,24 @@ export default function GlobalError({ error }: { error: Error & { digest?: strin
 
   return (
     <html lang="en">
-      <body style={{ margin: 0, fontFamily: "sans-serif", background: "#F6F1E7", color: "#16213A" }}>
+      {/* Hardcoded, not var(...) — this replaces the entire root layout on
+          a fatal error, so it can't rely on globals.css having loaded.
+          Values below are kept in sync with the palette in globals.css by
+          hand for consistency, not by reference. */}
+      <body style={{ margin: 0, fontFamily: "sans-serif", background: "#F8FAFC", color: "#0F172A" }}>
         <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}>
           <div style={{ textAlign: "center", maxWidth: 420 }}>
             <h1 style={{ fontSize: "1.4rem", marginBottom: "0.6rem" }}>Something went wrong</h1>
-            <p style={{ color: "#6B6252", marginBottom: "1.2rem" }}>
+            <p style={{ color: "#64748B", marginBottom: "1.2rem" }}>
               This has been reported automatically. Try reloading the page.
             </p>
             <button
               onClick={() => window.location.reload()}
               style={{
-                background: "#16213A",
+                background: "#2563EB",
                 color: "white",
                 border: "none",
-                borderRadius: "10px",
+                borderRadius: "8px",
                 padding: "0.6rem 1.4rem",
                 cursor: "pointer",
                 fontSize: "0.9rem",

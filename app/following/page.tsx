@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import Logo from "@/app/components/Logo";
-import ProfileMenu from "@/app/components/ProfileMenu";
+import PageHeader from "@/app/components/PageHeader";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
@@ -32,7 +31,7 @@ function TrustBadge({ level, label }: { level: string; label: string }) {
         background: style.bg,
         color: style.color,
         padding: "0.15rem 0.7rem",
-        borderRadius: "10px",
+        borderRadius: "8px",
         fontSize: "0.75rem",
         fontWeight: 600,
       }}
@@ -104,23 +103,11 @@ export default function FollowingPage() {
   return (
     <div className="page-wrap">
       <div className="app-container" style={{ maxWidth: 560 }}>
-        <div className="top-bar">
-          <div className="logo" style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-            <Logo size={34} />
-            <div>
-              <h1>
-                Veloce
-              </h1>
-              <div className="logo-sub">Following</div>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: "0.6rem" }}>
-            <button className="btn" onClick={() => router.push("/purchases")}>
-              <i className="fas fa-arrow-left"></i> Purchases
+        <PageHeader title="Following" subtitle="Scribes you follow.">
+          <button className="btn" onClick={() => router.push("/purchases")}>
+              <i className="fas fa-arrow-left"></i> My Library
             </button>
-            <ProfileMenu />
-          </div>
-        </div>
+        </PageHeader>
 
         {/* Search to follow */}
         <h3 style={{ marginTop: "1.5rem", fontSize: "1.05rem" }}>
@@ -131,7 +118,7 @@ export default function FollowingPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by name..."
-          style={{ width: "100%", padding: "0.7rem", borderRadius: "10px", border: "1px solid var(--border-blue)", marginTop: "0.6rem" }}
+          style={{ width: "100%", padding: "0.7rem", borderRadius: "8px", border: "1px solid var(--border-blue)", marginTop: "0.6rem" }}
         />
 
         {searching && <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: "0.5rem" }}>Searching...</p>}
