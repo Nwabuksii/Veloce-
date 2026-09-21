@@ -10,7 +10,7 @@ if (typeof (Promise as any).withResolvers !== "function") {
   };
 }
 
-import { createCanvas, loadImage, type SKRSContext2D } from "@napi-rs/canvas";
+import { createCanvas, loadImage, GlobalFonts, type SKRSContext2D } from "@napi-rs/canvas";
 // @ts-ignore
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 
@@ -69,7 +69,6 @@ export async function stampWatermark(baseImageBuffer: Buffer, lines: string[]): 
   const canvas = createCanvas(img.width, img.height);
   const ctx = canvas.getContext("2d") as unknown as SKRSContext2D;
 
-  // 1. Draw original background image
   ctx.drawImage(img as any, 0, 0, img.width, img.height);
 
   const text = lines.filter(Boolean).join("  ·  ");
@@ -77,15 +76,25 @@ export async function stampWatermark(baseImageBuffer: Buffer, lines: string[]): 
     return await canvas.encode("jpeg", JPEG_QUALITY);
   }
 
+  // Fetch and register font dynamically for Vercel
+  if (!GlobalFonts.has("WatermarkFont")) {
+    try {
+      const fontRes = await fetch("https://github.com/google/fonts/raw/main/ofl/roboto/Roboto-Bold.ttf");
+      const fontBuffer = await fontRes.arrayBuffer();
+      GlobalFonts.register(Buffer.from(fontBuffer), "WatermarkFont");
+    } catch (e) {
+      console.error("Failed to load font dynamically:", e);
+    }
+  }
+
   ctx.save();
 
-  // 2. Dynamic font size based on page dimensions
+  // Apply the dynamically loaded font
   const fontSize = Math.max(20, Math.round(img.width / 25));
-  ctx.font = `bold ${fontSize}px sans-serif, Arial`;
+  ctx.font = `${fontSize}px "WatermarkFont", sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  // 3. High contrast colors: Dark fill with solid white outline
   ctx.lineWidth = Math.max(4, Math.round(img.width / 250));
   ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
   ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
@@ -94,7 +103,6 @@ export async function stampWatermark(baseImageBuffer: Buffer, lines: string[]): 
   const stepY = img.height / 4;
   const angle = (-28 * Math.PI) / 180;
 
-  // 4. Repeat grid across the entire canvas
   for (let row = -1; row < 6; row++) {
     for (let col = -1; col < 4; col++) {
       const x = col * stepX + (row % 2 === 0 ? 0 : stepX / 2);
