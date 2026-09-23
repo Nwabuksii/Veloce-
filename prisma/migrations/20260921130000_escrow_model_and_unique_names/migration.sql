@@ -4,10 +4,10 @@
 -- anything to claw back from anyone — the whole price just returns to
 -- credit, dollar for dollar. That makes credit always 100% real cash, so
 -- the previous migration's partial "backing" tracking is no longer needed.
-ALTER TABLE "User" DROP COLUMN "creditBacking";
-ALTER TABLE "Purchase" DROP COLUMN "creditBackingUsed";
-ALTER TABLE "Purchase" DROP COLUMN "scribeCutOverride";
-ALTER TABLE "ConvertedPayment" DROP COLUMN "backing";
+ALTER TABLE "User" DROP COLUMN IF EXISTS "creditBacking";
+ALTER TABLE "Purchase" DROP COLUMN IF EXISTS "creditBackingUsed";
+ALTER TABLE "Purchase" DROP COLUMN IF EXISTS "scribeCutOverride";
+ALTER TABLE "ConvertedPayment" DROP COLUMN IF EXISTS "backing";
 
 -- Case-insensitive unique display names, plus five reserved names blocked
 -- at signup — VELOCE, ADMIN, CEO, SCRIBE, STUDENT (see
@@ -15,7 +15,7 @@ ALTER TABLE "ConvertedPayment" DROP COLUMN "backing";
 -- lowercased/trimmed copy of fullName, kept in sync at signup only
 -- (fullName is never editable afterward) — Prisma's schema can't express a
 -- unique index on lower(fullName) directly, so this is the equivalent.
-ALTER TABLE "User" ADD COLUMN "fullNameNormalized" TEXT;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "fullNameNormalized" TEXT;
 
 -- Backfill from existing names. This app never enforced uniqueness before
 -- now, so two users may already share a name case-insensitively — every
@@ -33,4 +33,4 @@ FROM ranked
 WHERE u."id" = ranked."id";
 
 ALTER TABLE "User" ALTER COLUMN "fullNameNormalized" SET NOT NULL;
-CREATE UNIQUE INDEX "User_fullNameNormalized_key" ON "User"("fullNameNormalized");
+CREATE UNIQUE INDEX IF NOT EXISTS "User_fullNameNormalized_key" ON "User"("fullNameNormalized");
