@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { computeTrustLevel } from "@/lib/trust-level";
-import { computeScribeCut, REFUND_WINDOW_MINUTES } from "@/lib/pricing";
+import { computeScribeCut, effectivePrice, EARNINGS_HOLD_MINUTES } from "@/lib/pricing";
+import { saleStatus } from "@/lib/withdrawal";
 
 // Next-tier thresholds mirrored from lib/trust-level.ts — kept here only for
 // showing "X more sales" progress messaging, never for deciding the actual
@@ -15,7 +16,7 @@ const TIER_THRESHOLDS = {
 } as const;
 
 export const GET = requireRole("SCRIBE", async (req: NextRequest, user) => {
-  const holdCutoff = new Date(Date.now() - REFUND_WINDOW_MINUTES * 60 * 1000);
+  const holdCutoff = new Date(Date.now() - EARNINGS_HOLD_MINUTES * 60 * 1000);
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
 
@@ -26,7 +27,12 @@ export const GET = requireRole("SCRIBE", async (req: NextRequest, user) => {
       reviews: { select: { rating: true } },
       purchases: {
         where: { refundedAt: null },
-        select: { amountPaid: true, redeemedWithCoupon: true, scribeCutOverride: true, purchasedAt: true },
+        select: {
+          amountPaid: true,
+          creditApplied: true,
+          purchasedAt: true,
+          reports: { where: { type: "REFUND" }, select: { status: true } },
+        },
       },
     },
   });
@@ -68,8 +74,8 @@ export const GET = requireRole("SCRIBE", async (req: NextRequest, user) => {
   let salesLast30 = 0;
   let salesPrev30 = 0;
 
-  const cutFor = (p: { amountPaid: number; redeemedWithCoupon: boolean; scribeCutOverride: number | null }, isFulfillment: boolean) =>
-    p.redeemedWithCoupon ? p.scribeCutOverride ?? 0 : computeScribeCut(p.amountPaid, isFulfillment);
+  const cutFor = (p: { amountPaid: number; creditApplied: number }, isFulfillment: boolean) =>
+    computeScribeCut(effectivePrice(p), isFulfillment);
 
   const byBlock = notes
     .map((n) => {
@@ -82,7 +88,9 @@ export const GET = requireRole("SCRIBE", async (req: NextRequest, user) => {
       for (const p of n.purchases) {
         totalSales += 1;
         const cut = cutFor(p, isFulfillment);
-        if (p.purchasedAt <= holdCutoff) {
+        // Confirmed only once the hold has passed AND no refund request is
+        // waiting on an admin — otherwise it's still pending here too.
+        if (saleStatus(p, holdCutoff) === "confirmed") {
           totalEarnings += cut;
           earnings += cut;
         } else {

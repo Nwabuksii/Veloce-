@@ -129,8 +129,17 @@ model User {
   // partial-payment credit on the buyer's next purchase(s) — never more
   // than that purchase's real price, with any leftover carried forward.
   // See app/api/payments/initialize/route.ts.
+  // Real, unencumbered cash — always spendable 1:1, never expires, no
+  // limit. Granted in full on an approved refund or a converted duplicate
+  // payment; never partially "backed" (see the escrow model in
+  // lib/pricing.ts, which is what makes that always safe).
   creditBalance Int     @default(0)
   role         UserRole @default(STUDENT)
+
+  // Case-insensitive uniqueness for fullName (kept as a plain lowercased
+  // copy since Prisma can't express a functional unique index directly).
+  // Set once at signup and never changed — see app/api/auth/signup.
+  fullNameNormalized String @unique
 
   universityId String
   university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
@@ -184,6 +193,7 @@ model User {
   sentMessages       AdminMessage[]       @relation("MessageSender")
   feedback           Feedback[]
   adminSectionViews  AdminSectionView[]   @relation("AdminSectionViews")
+  convertedPayments  ConvertedPayment[]
 }
 
 // One-way messages from an Admin to a specific user — e.g. explaining a
@@ -371,11 +381,11 @@ model Purchase {
   // Credit redemptions: creditApplied is how much of the buyer's credit
   // balance (see User.creditBalance) went toward this purchase — can be
   // partial (amountPaid > 0) or the full price (amountPaid is 0).
-  // redeemedWithCoupon is true whenever creditApplied > 0, in either case,
-  // and scribeCutOverride holds exactly what the scribe is owed, computed
-  // once at purchase time from the note's real price — never from
-  // amountPaid alone, since that would shortchange the scribe whenever
-  // credit covered part of the price.
+  // redeemedWithCoupon is true whenever creditApplied > 0. The scribe's cut
+  // is always computed from amountPaid + creditApplied together (see
+  // effectivePrice in lib/pricing.ts), never from amountPaid alone, since
+  // that would shortchange the scribe whenever credit covered part of the
+  // price.
   // Set alongside refundedAt specifically when a Paystack chargeback/dispute
   // triggers the reversal (see app/api/webhooks/paystack/route.ts), so the
   // admin finance page can tell "I approved this refund" apart from "the
@@ -384,7 +394,6 @@ model Purchase {
   disputedAt         DateTime?
   redeemedWithCoupon Boolean @default(false)
   creditApplied      Int     @default(0)
-  scribeCutOverride  Int?
 
   // Set the first time the BUYER (never an admin or the scribe just
   // previewing their own note) actually opens a page of this purchase —
@@ -393,6 +402,25 @@ model Purchase {
   // start reading this?" Powers the "you haven't opened this yet" nudge
   // on the purchases page — nothing else reads it.
   firstOpenedAt DateTime?
+}
+
+// A Paystack charge that could NOT become a purchase and was turned into
+// spendable credit instead — either the buyer already owned the note
+// (duplicate payment) or the credit the checkout had reserved was spent
+// elsewhere before it finished. It was never a sale, so the whole amount
+// becomes credit; nothing is split. The unique paystackRef is the
+// idempotency guard: the browser's verify call and Paystack's webhook both
+// report the same charge, and only the first one may ever grant the credit.
+model ConvertedPayment {
+  id          String   @id @default(uuid())
+  paystackRef String   @unique
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount      Int // cash actually charged — becomes credit in full, dollar for dollar (see lib/pricing.ts)
+  reason      String // "DUPLICATE" | "CREDIT_CHANGED"
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Review {

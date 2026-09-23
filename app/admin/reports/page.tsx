@@ -134,7 +134,7 @@ export default function AdminReportsPage() {
     setRefunding(purchaseId);
     try {
       const data = await apiFetch(`/api/admin/purchases/${purchaseId}/refund`, { method: "POST" });
-      toast.success(`Refunded. ₦${data.scribeCutReversed.toLocaleString()} reversed from the scribe, buyer got 1 coupon.`);
+      toast.success(`Refunded. ₦${data.creditGranted.toLocaleString()} added to the buyer's credit — this sale never reached the scribe or the platform.`);
       load();
     } catch (err) {
       toast.error(friendlyErrorMessage(err));

@@ -17,59 +17,91 @@ export const REQUEST_FULFILLED_SCRIBE_CUT = 600;
 export const REQUEST_FULFILLED_PLATFORM_CUT = REQUEST_FULFILLED_PRICE - REQUEST_FULFILLED_SCRIBE_CUT;
 
 /**
- * The scribe's cut of one purchase. Fixed ₦600 if the note fulfilled a
- * request, otherwise the normal 60% share of whatever was actually paid.
+ * The scribe's cut of one purchase, given the FULL price actually paid for
+ * it — cash and credit combined (see effectivePrice below). Fixed ₦600 if
+ * the note fulfilled a request, otherwise the normal 60% share.
+ *
+ * Pass the price, never `amountPaid` alone — a purchase paid wholly or
+ * partly with credit has `amountPaid` less than its real price (0 for a
+ * fully-credit purchase), and computing the scribe's cut off that alone
+ * would shortchange them. Using the combined price instead means this one
+ * formula is correct for every purchase, cash, credit, or a mix of both,
+ * with no special case needed for credit — a ₦1,000 fulfillment-tier sale
+ * and a ₦900 one both land on exactly ₦600 either way, since the
+ * fulfillment tier is a fixed cut, not a percentage.
+ *
  * Always compute per-purchase (never as one aggregate `gross * SCRIBE_SHARE`
  * across many purchases) — mixing fixed-price and percentage-price sales
  * into a single aggregate multiply would misallocate money on both sides.
  */
-export function computeScribeCut(amountPaid: number, isRequestFulfillment: boolean): number {
-  return isRequestFulfillment ? REQUEST_FULFILLED_SCRIBE_CUT : Math.round(amountPaid * SCRIBE_SHARE);
+export function computeScribeCut(price: number, isRequestFulfillment: boolean): number {
+  return isRequestFulfillment ? REQUEST_FULFILLED_SCRIBE_CUT : Math.round(price * SCRIBE_SHARE);
 }
 
-/** The platform's cut is always the remainder, so the two always sum exactly to amountPaid. */
-export function computePlatformCut(amountPaid: number, isRequestFulfillment: boolean): number {
-  return amountPaid - computeScribeCut(amountPaid, isRequestFulfillment);
+/** The platform's cut is always the remainder, so the two always sum exactly to price. */
+export function computePlatformCut(price: number, isRequestFulfillment: boolean): number {
+  return price - computeScribeCut(price, isRequestFulfillment);
+}
+
+/** The real price of a purchase — cash actually charged plus whatever credit was applied toward it. */
+export function effectivePrice(p: { amountPaid: number; creditApplied: number }): number {
+  return p.amountPaid + p.creditApplied;
 }
 
 // ─────────────────────────────────────────────
-// Credit redemption (refund coupons)
+// Escrow: when a sale's money actually becomes the scribe's / the
+// platform's, and what a refund means under that.
 // ─────────────────────────────────────────────
 //
-// When a purchase is refunded, the platform's cut on that original sale is
-// NEVER touched — it stays banked, permanently. Only the scribe's cut
-// (always ₦600, whether the original sale was the flat 1000 tier or the
-// 900 request-fulfilled tier) is reversible, and it's granted back to the
-// buyer as spendable credit. The credit's FACE VALUE the buyer sees and
-// spends against (₦900 or ₦1,000 — see app/api/admin/purchases/[id]/refund)
-// is bigger than that ₦600 on purpose: it's what determines how much extra
-// cash, if any, they need to add when redeeming it. But only ₦600 of it
-// ever actually MOVES anywhere — to whichever new scribe they buy from.
+// A purchase's price is NOT split between the scribe and the platform the
+// moment it's paid for. It sits in escrow — recognized as nobody's money
+// yet — until it's RESOLVED, one of two ways:
 //
-// So any time a purchase is paid for using credit (fully or partially):
-//   - the scribe gets this fixed cut, never a price/discount-based one
-//   - the platform's cut is exactly whatever fresh cash the buyer pays on
-//     top of their credit — 100% of it, never split 60/40 — because that
-//     cash is the ONLY new money involved. The ₦600 to the scribe is a
-//     reassignment of money already collected (and reversed) on the
-//     original sale, not a new expense the platform is absorbing.
-// This is what keeps "refunds never touch the platform's cut" true even
-// after the credit gets spent somewhere else.
-export const CREDIT_REDEMPTION_SCRIBE_CUT = REQUEST_FULFILLED_SCRIBE_CUT; // ₦600, fixed
+//   1. EARNINGS_HOLD_MINUTES pass with no refund request from the buyer.
+//      The full price splits normally: the scribe's cut per computeScribeCut
+//      above, the rest to the platform. This is the "clearing" state while
+//      it waits (see SaleStatus in lib/withdrawal.ts) — the money isn't
+//      anybody's until it clears.
+//   2. The buyer requests a refund inside that window (see
+//      app/api/purchases/[id]/refund-request). The sale moves to
+//      "refund_review" and stops the clock completely — it stays held,
+//      however long the admin takes, until they decide:
+//        - Approved: the ENTIRE price (cash + credit, dollar for dollar)
+//          is handed back to the buyer as credit. Nothing is split, because
+//          nothing was ever earned by anyone on this sale — it was in
+//          escrow the whole time, never disbursed. This is exactly why a
+//          refund never has to be clawed back from a scribe or reversed
+//          out of platform revenue: by construction, an approved refund is
+//          only ever possible before that money became anyone's.
+//        - Declined: resolves immediately (not after any further wait) —
+//          the price splits normally right away, same as case 1.
+//
+// The consequence: credit is ALWAYS real, unencumbered cash — every naira a
+// buyer sees in their credit balance is a naira Veloce is actually holding,
+// never yet paid to a scribe or booked as platform revenue. Spending it is
+// just paying with cash that happens to already be on account: the new
+// purchase goes through the exact same escrow → clearing/refund-review →
+// resolved pipeline as any other, and only ONE thing is capped when
+// applying it — you can never apply more than the price itself, so a
+// leftover credit larger than what you're buying just carries the rest
+// forward (see planCreditRedemption below).
 
-/** Scribe's cut on any purchase paid for (wholly or partly) with credit — always fixed, never price-based. */
-export function computeScribeCutForCreditRedemption(): number {
-  return CREDIT_REDEMPTION_SCRIBE_CUT;
+export interface CreditRedemptionPlan {
+  /** How much of the buyer's credit is applied toward this purchase (₦). */
+  creditUsed: number;
+  /** Fresh cash the buyer must pay on top (₦) — 0 means fully covered by credit. */
+  cash: number;
 }
 
 /**
- * Platform's cut on a credit-redeemed purchase — 100% of the actual cash
- * charged (`amountPaid`), since the credit portion isn't fresh revenue.
- * Named separately from computePlatformCut so it's never confused with the
- * proportional-split version used for normal (non-credit) sales.
+ * How a purchase of `price` is paid for, given the buyer's credit balance.
+ * Credit is unlimited and never expires — this only ever caps at two
+ * things: you can't apply more credit than you have, and you can't apply
+ * more than the price (the remainder carries forward as credit, unspent).
  */
-export function computePlatformCutForCreditRedemption(amountPaid: number): number {
-  return amountPaid;
+export function planCreditRedemption(price: number, creditBalance: number): CreditRedemptionPlan {
+  const creditUsed = Math.max(0, Math.min(creditBalance, price));
+  return { creditUsed, cash: price - creditUsed };
 }
 
 // Withdrawals — a scribe can request one withdrawal per calendar month,
@@ -78,8 +110,18 @@ export function computePlatformCutForCreditRedemption(amountPaid: number): numbe
 export const MIN_WITHDRAWAL_AMOUNT = 2000;
 export const WITHDRAWAL_WINDOW_DAY_END = 7; // requests only allowed on day-of-month 1 through this
 
-// How long a buyer has to request a refund after purchasing, and — the
-// flip side of the same window — how long a sale sits as "pending" before
-// a scribe can actually count it as earned/withdrawable. Both read from
-// this single constant so they can never drift out of sync with each other.
+// How long a buyer has to request a refund after purchasing. Once
+// requested, the sale is held indefinitely (see saleStatus in
+// lib/withdrawal.ts) regardless of this window — it's purely the deadline
+// for FILING the request, not for how long a filed one can be reviewed.
 export const REFUND_WINDOW_MINUTES = 30;
+
+// The scribe's/platform's money is released a moment AFTER the buyer's
+// refund window closes, not at the same instant. A buyer whose request
+// lands at 29:59.9 is allowed, but the request takes a few milliseconds to
+// actually save — released at exactly 30:00, a resolution calculated in
+// that gap would clear the sale just before the refund request appears. A
+// one-minute margin removes that gap completely (a simulation of thousands
+// of random refund/credit sequences lost money only in that gap).
+export const EARNINGS_RELEASE_GRACE_MINUTES = 1;
+export const EARNINGS_HOLD_MINUTES = REFUND_WINDOW_MINUTES + EARNINGS_RELEASE_GRACE_MINUTES;

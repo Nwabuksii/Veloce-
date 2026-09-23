@@ -44,7 +44,11 @@ const roleEnum = z.enum(["STUDENT", "SCRIBE", "ADMIN"]);
 
 const sendSchema = z.object({
   audience: z.enum(["individual", "group"]),
+  // Kept for compatibility with any existing caller sending one id; the
+  // picker UI now always sends recipientIds (one or more). Either is
+  // accepted and merged below.
   recipientId: z.string().optional(),
+  recipientIds: z.array(z.string()).optional(),
   roles: z.array(roleEnum).optional(),
   subject: z.string().min(2).max(150),
   body: z.string().min(2).max(2000),
@@ -60,23 +64,37 @@ export const POST = requireRole("ADMIN", async (req: NextRequest, adminUser) => 
   const { audience, subject, body } = parsed.data;
 
   if (audience === "individual") {
-    if (!parsed.data.recipientId) {
-      return NextResponse.json({ error: "Pick a recipient" }, { status: 400 });
+    // De-duplicated union of the singular and plural fields, so a picker
+    // with two, three, or a dozen people selected all go through one path.
+    const ids = Array.from(new Set([...(parsed.data.recipientId ? [parsed.data.recipientId] : []), ...(parsed.data.recipientIds ?? [])]));
+
+    if (ids.length === 0) {
+      return NextResponse.json({ error: "Pick at least one recipient" }, { status: 400 });
     }
 
-    const recipient = await prisma.user.findUnique({ where: { id: parsed.data.recipientId } });
-    if (!recipient) {
-      return NextResponse.json({ error: "Recipient not found" }, { status: 404 });
+    const recipients = await prisma.user.findMany({ where: { id: { in: ids } } });
+    if (recipients.length !== ids.length) {
+      return NextResponse.json({ error: "One of those recipients no longer exists" }, { status: 404 });
     }
-    if (recipient.universityId !== adminUser.universityId) {
+    if (recipients.some((r) => r.universityId !== adminUser.universityId)) {
       return NextResponse.json({ error: "Cannot message users outside your university" }, { status: 403 });
     }
 
-    const message = await prisma.adminMessage.create({
-      data: { recipientId: recipient.id, senderId: adminUser.sub, subject, body },
-    });
+    // Single recipient: return the created row, same shape callers already
+    // expect. Multiple: share one createdAt so they group into one entry
+    // in the "recently sent" list above, exactly like a role broadcast.
+    if (recipients.length === 1) {
+      const message = await prisma.adminMessage.create({
+        data: { recipientId: recipients[0].id, senderId: adminUser.sub, subject, body },
+      });
+      return NextResponse.json({ sentCount: 1, message });
+    }
 
-    return NextResponse.json({ sentCount: 1, message });
+    const sentAt = new Date();
+    await prisma.adminMessage.createMany({
+      data: recipients.map((r) => ({ recipientId: r.id, senderId: adminUser.sub, subject, body, createdAt: sentAt })),
+    });
+    return NextResponse.json({ sentCount: recipients.length });
   }
 
   // audience === "group" — fan out to everyone matching any checked role.

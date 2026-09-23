@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { initializeTransaction } from "@/lib/paystack";
-import { REQUEST_FULFILLED_PRICE, computeScribeCutForCreditRedemption } from "@/lib/pricing";
+import { REQUEST_FULFILLED_PRICE, computeScribeCut, planCreditRedemption } from "@/lib/pricing";
 
 export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
   try {
@@ -68,27 +68,28 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
       }
     }
 
-    // Refund credit (granted per-refund, a ₦ balance — see lib schema
-    // comments) is applied as a partial payment on the buyer's very next
-    // purchase, up to whatever it covers — not optional, not something
-    // they choose to apply. The scribe is paid a fixed ₦600, never a
-    // price/discount-based cut, because that ₦600 is a reassignment of
-    // the cut already reclaimed from the originally-refunded sale — not
-    // new revenue. The platform's cut is whatever fresh cash the buyer
-    // pays beyond their credit (0 if credit fully covers it), and its
-    // cut on the ORIGINAL sale was never touched in the first place.
-    // See lib/pricing.ts.
+    // Refund credit is real cash Veloce already holds (see lib/pricing.ts)
+    // — unlimited, never expires, leftovers carry forward — applied as a
+    // partial payment on the buyer's very next purchase up to whatever it
+    // covers. It is not optional and not something they choose to apply.
     const buyer = await prisma.user.findUnique({
       where: { id: user.sub },
       select: { creditBalance: true },
     });
 
     const creditAvailable = buyer?.creditBalance ?? 0;
-    const creditToApply = Math.min(creditAvailable, amountToCharge);
-    const remainingToCharge = amountToCharge - creditToApply;
+    const plan = planCreditRedemption(amountToCharge, creditAvailable);
+    const creditToApply = plan.creditUsed;
+    const remainingToCharge = plan.cash;
 
     if (creditToApply > 0 && remainingToCharge === 0) {
-      const scribeCut = computeScribeCutForCreditRedemption();
+      // This purchase's price is fully covered by credit already on
+      // account — no Paystack charge needed. It still goes into escrow
+      // like any other purchase (see lib/pricing.ts / lib/withdrawal.ts):
+      // the scribe and platform only see this money once it clears or an
+      // admin declines a refund request on it, exactly the same as a cash
+      // sale. Nothing is disbursed here.
+      const scribeCut = computeScribeCut(amountToCharge, discountApplied);
 
       // Guarded decrement, not a blind one: two near-simultaneous requests
       // (e.g. a double-click, or someone scripting this deliberately) can
@@ -126,10 +127,9 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
             noteId: note.id,
             blockId,
             amountPaid: 0,
-            discountApplied: false,
+            discountApplied,
             redeemedWithCoupon: true,
             creditApplied: creditToApply,
-            scribeCutOverride: scribeCut,
             paystackRef: `credit_${randomUUID()}`,
           },
         });
@@ -164,7 +164,7 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
                   recipientId: scribe.id,
                   senderId: null,
                   subject: `Your version of "${block.title}" was claimed with credit`,
-                  body: `${buyerRecord?.fullName ?? "A student"} unlocked your version of "${block.title}" using refund credit. You're still credited the full ₦${scribeCut.toLocaleString()} for it — reassigned from an earlier refund, not deducted from you or the platform.`,
+                  body: `${buyerRecord?.fullName ?? "A student"} unlocked your version of "${block.title}" using refund credit. Once the usual refund window passes with no issue, you'll be credited the full ₦${scribeCut.toLocaleString()} for it, same as any other sale.`,
                 },
               ]
             : []),
