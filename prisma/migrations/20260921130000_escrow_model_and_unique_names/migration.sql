@@ -22,13 +22,22 @@ ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "fullNameNormalized" TEXT;
 -- row but the oldest for a given name gets a numeric suffix so the
 -- backfill can't fail on the new unique constraint below. An admin should
 -- follow up with anyone who got a suffixed name.
+-- Uses COALESCE/NULLIF to generate fallbacks if any existing fullName is NULL or empty.
 WITH ranked AS (
-  SELECT "id", LOWER(TRIM("fullName")) AS base,
-         ROW_NUMBER() OVER (PARTITION BY LOWER(TRIM("fullName")) ORDER BY "createdAt") AS rn
+  SELECT 
+    "id", 
+    COALESCE(NULLIF(LOWER(TRIM("fullName")), ''), 'user-' || SUBSTRING("id"::text FROM 1 FOR 8)) AS base,
+    ROW_NUMBER() OVER (
+      PARTITION BY COALESCE(NULLIF(LOWER(TRIM("fullName")), ''), 'user-' || SUBSTRING("id"::text FROM 1 FOR 8)) 
+      ORDER BY "createdAt"
+    ) AS rn
   FROM "User"
 )
 UPDATE "User" u
-SET "fullNameNormalized" = CASE WHEN ranked.rn = 1 THEN ranked.base ELSE ranked.base || '-' || ranked.rn END
+SET "fullNameNormalized" = CASE 
+  WHEN ranked.rn = 1 THEN ranked.base 
+  ELSE ranked.base || '-' || ranked.rn 
+END
 FROM ranked
 WHERE u."id" = ranked."id";
 
