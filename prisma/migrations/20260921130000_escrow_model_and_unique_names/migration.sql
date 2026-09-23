@@ -1,3 +1,22 @@
+-- Create ConvertedPayment table if it doesn't exist
+CREATE TABLE IF NOT EXISTS "ConvertedPayment" (
+    "id" TEXT NOT NULL,
+    "paystackRef" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "amount" INTEGER NOT NULL,
+    "reason" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ConvertedPayment_pkey" PRIMARY KEY ("id")
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS "ConvertedPayment_paystackRef_key" ON "ConvertedPayment"("paystackRef");
+CREATE INDEX IF NOT EXISTS "ConvertedPayment_userId_idx" ON "ConvertedPayment"("userId");
+
+ALTER TABLE "ConvertedPayment" DROP CONSTRAINT IF EXISTS "ConvertedPayment_userId_fkey";
+ALTER TABLE "ConvertedPayment" ADD CONSTRAINT "ConvertedPayment_userId_fkey" 
+  FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
 -- Simplify the credit model to a pure escrow design
 ALTER TABLE IF EXISTS "User" DROP COLUMN IF EXISTS "creditBacking";
 ALTER TABLE IF EXISTS "Purchase" DROP COLUMN IF EXISTS "creditBackingUsed";
