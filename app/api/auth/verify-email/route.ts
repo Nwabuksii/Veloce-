@@ -71,7 +71,16 @@ export async function POST(req: NextRequest) {
     await sendWelcomeMessage(user.id, "student");
 
     const jwt = signToken({ sub: user.id, email: user.email, role: user.role, universityId: user.universityId });
-    const res = NextResponse.json({ user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role } });
+    const res = NextResponse.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        role: user.role,
+        departmentId: user.departmentId ?? null,
+        level: user.level ?? null,
+      },
+    });
     res.cookies.set(SESSION_COOKIE, jwt, sessionCookieOptions());
     return res;
   }
@@ -108,7 +117,14 @@ export async function POST(req: NextRequest) {
   });
 
   const res = NextResponse.json({
-    user: { id: user.id, email: user.email, fullName: user.fullName, role: user.role },
+    user: {
+      id: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role,
+      departmentId: user.departmentId ?? null,
+      level: user.level ?? null,
+    },
   });
   res.cookies.set(SESSION_COOKIE, token2, sessionCookieOptions());
   return res;

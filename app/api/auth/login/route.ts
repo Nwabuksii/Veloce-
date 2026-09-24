@@ -91,8 +91,6 @@ export async function POST(req: NextRequest) {
     data: { failedLoginAttempts: 0, lockedUntil: null, lastLoginAt: new Date(), lastSeenAt: new Date() },
   });
 
-  const needsAcademicProfile = user.role !== "ADMIN" && (!user.departmentId || !user.level);
-
   // This is where role changes take effect: the token always reflects
   // the user's CURRENT role in the database, not a cached one.
   const token = signToken({
@@ -114,7 +112,6 @@ export async function POST(req: NextRequest) {
       departmentId: user.departmentId ?? null,
       level: user.level ?? null,
     },
-    needsAcademicProfile,
   });
   res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions());
   return res;
