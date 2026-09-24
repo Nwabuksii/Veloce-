@@ -46,7 +46,10 @@ const GROUPS: HubGroup[] = [
   },
   {
     title: "Feedback",
-    links: [{ icon: "fa-comment-dots", label: "Feedback inbox", description: "What people are saying about the site", href: "/admin/feedback", countKey: "feedback" }],
+    links: [
+      { icon: "fa-comment-dots", label: "Feedback inbox", description: "What people are saying about the site", href: "/admin/feedback", countKey: "feedback" },
+      { icon: "fa-chart-pie", label: "Advanced analytics", description: "See poll responses grouped by vote, department, and result trends", href: "/admin/advanced-analytics" },
+    ],
   },
 ];
 

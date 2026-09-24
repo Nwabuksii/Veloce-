@@ -9,7 +9,7 @@ import "./globals.css";
 import "@fortawesome/fontawesome-free/css/fontawesome.min.css";
 import "@fortawesome/fontawesome-free/css/solid.min.css";
 import { Archivo, JetBrains_Mono } from "next/font/google";
-import ToastViewport from "./components/ToastViewport";
+import ToastViewport from "./app/components/ToastViewport";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 
 const archivo = Archivo({

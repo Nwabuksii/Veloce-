@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { clearSession, StoredUser } from "@/lib/client-session";
+import { clearSession, getStoredUser, StoredUser } from "@/lib/client-session";
 import Avatar from "@/app/components/Avatar";
 
 const ROLE_LABEL: Record<StoredUser["role"], string> = {
@@ -15,10 +15,13 @@ const ROLE_LABEL: Record<StoredUser["role"], string> = {
 // live in this dropdown and is part of everyday navigation (catalog,
 // requests, library, scribe tools, messages, admin) now sits directly in
 // the header — what's left here is account-level only.
-export default function ProfileMenu({ user }: { user: StoredUser }) {
+export default function ProfileMenu({ user: userProp }: { user?: StoredUser }) {
+  const currentUser = userProp ?? getStoredUser();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  if (!currentUser) return null;
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -42,7 +45,7 @@ export default function ProfileMenu({ user }: { user: StoredUser }) {
 
   // The person's own choice (Settings > Display) of whether this shows
   // their uploaded photo or the initials — uploading one doesn't force it on.
-  const imageUrl = user.avatarDisplay === "custom" ? user.avatarUrl : null;
+  const imageUrl = currentUser.avatarDisplay === "custom" ? currentUser.avatarUrl : null;
 
   return (
     <div ref={menuRef} style={{ position: "relative" }}>
@@ -53,15 +56,15 @@ export default function ProfileMenu({ user }: { user: StoredUser }) {
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
       >
-        <Avatar name={user.fullName} imageUrl={imageUrl} size="sm" tone="ink" />
+        <Avatar name={currentUser.fullName} imageUrl={imageUrl} size="sm" tone="ink" />
       </button>
 
       {open && (
         <div className="menu" role="menu">
           <div className="menu-head">
-            <strong>{user.fullName}</strong>
+            <strong>{currentUser.fullName}</strong>
             <span>
-              {ROLE_LABEL[user.role]} · {user.email}
+              {ROLE_LABEL[currentUser.role]} · {currentUser.email}
             </span>
           </div>
           <div className="menu-divider" />
@@ -71,7 +74,7 @@ export default function ProfileMenu({ user }: { user: StoredUser }) {
           <button className="menu-item" role="menuitem" onClick={() => go("/feedback")}>
             <i className="fas fa-comment-dots"></i> Feedback
           </button>
-          {user.role === "STUDENT" && (
+          {currentUser.role === "STUDENT" && (
             <button className="menu-item" role="menuitem" onClick={() => go("/scribe/appeal")}>
               <i className="fas fa-undo"></i> Appeal reinstatement
             </button>
