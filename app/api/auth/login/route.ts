@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
   // used the platform.
   await prisma.user.update({
     where: { id: user.id },
-    data: { failedLoginAttempts: 0, lockedUntil: null, lastLoginAt: new Date() },
+    data: { failedLoginAttempts: 0, lockedUntil: null, lastLoginAt: new Date(), lastSeenAt: new Date() },
   });
 
   // This is where role changes take effect: the token always reflects

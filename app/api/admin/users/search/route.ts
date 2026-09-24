@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
+import { isUserOnline } from "@/lib/online";
 
 export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
   const q = new URL(req.url).searchParams.get("q")?.trim() || "";
@@ -32,6 +33,7 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
         department: { select: { name: true } },
         level: true,
         lastLoginAt: true,
+        lastSeenAt: true,
         createdAt: true,
         notes: { select: { id: true } },
         purchases: { select: { id: true } },
@@ -59,6 +61,7 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
     },
     users: users.map((u) => ({
       ...u,
+      isOnline: isUserOnline(u.lastSeenAt),
       departmentName: u.department?.name ?? null,
       noteCount: u.notes.length,
       purchaseCount: u.purchases.length,

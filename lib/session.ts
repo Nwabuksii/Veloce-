@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken, hasRole, UserRole, TokenPayload, SESSION_COOKIE } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { checkAndResolveBan } from "@/lib/ban";
 import { formatDateDDMMYYYY } from "@/lib/date-format";
 
@@ -47,6 +48,14 @@ export function requireRole<Ctx = unknown>(
     if (!user) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
+
+    // Mark the user as recently active on every authenticated request so the
+    // admin dashboard can distinguish a live user from one who simply logged in
+    // days ago but is no longer actively using the app.
+    await prisma.user.update({
+      where: { id: user.sub },
+      data: { lastSeenAt: new Date() },
+    }).catch(() => undefined);
 
     // Checked on every authenticated request, not just at login — a ban
     // needs to cut off an already-issued session immediately, not merely

@@ -7,6 +7,7 @@ import PageHeader from "@/app/components/PageHeader";
 import Avatar from "@/app/components/Avatar";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { formatDateDDMMYYYY } from "@/lib/date-format";
+import { isUserOnline } from "@/lib/online";
 
 interface UserResult {
   id: string;
@@ -21,11 +22,38 @@ interface UserResult {
   level: string | null;
   createdAt: string | null;
   lastLoginAt: string | null;
+  lastSeenAt: string | null;
+  isOnline: boolean;
   noteCount: number;
   purchaseCount: number;
   requestCount: number;
   followingCount: number;
   reportCount: number;
+}
+
+interface UserDetail {
+  id: string;
+  fullName: string;
+  email: string;
+  role: string;
+  departmentName: string | null;
+  level: string | null;
+  createdAt: string | null;
+  lastLoginAt: string | null;
+  lastSeenAt: string | null;
+  isOnline: boolean;
+  bannedAt: string | null;
+  banReason: string | null;
+  banExpiresAt: string | null;
+  noteCount: number;
+  purchaseCount: number;
+  requestCount: number;
+  followingCount: number;
+  reportCount: number;
+  purchases: Array<{ id: string; title: string; courseCode: string; courseName: string; amountPaid: number; purchasedAt: string; refundedAt: string | null; reviewRating: number | null; noteId: string }>
+  requests: Array<{ id: string; requestedTitle: string; createdAt: string; status: string; voteCount: number; blockTitle: string | null }>
+  notes: Array<{ id: string; title: string; status: string; createdAt: string; blockTitle: string | null; courseCode: string | null }>
+  following: Array<{ id: string; fullName: string; role: string }>
 }
 
 interface UserStats {
@@ -44,6 +72,9 @@ export default function AdminUsersPage() {
   const [searching, setSearching] = useState(false);
   const [actionMessage, setActionMessage] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
 
   const [banningId, setBanningId] = useState<string | null>(null);
   const [banReason, setBanReason] = useState("");
@@ -123,6 +154,20 @@ export default function AdminUsersPage() {
     }
   }
 
+  async function openUserDetails(id: string) {
+    setSelectedUserId(id);
+    setDetailsLoading(true);
+    try {
+      const data = await apiFetch(`/api/admin/users/${id}`);
+      setSelectedUser(data.user || null);
+    } catch (err) {
+      setActionMessage(friendlyErrorMessage(err));
+      setSelectedUser(null);
+    } finally {
+      setDetailsLoading(false);
+    }
+  }
+
   return (
     <div className="page-wrap">
       <div className="app-container">
@@ -164,12 +209,14 @@ export default function AdminUsersPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem", marginTop: "1rem" }}>
           {results.map((u) => {
             const isBanned = Boolean(u.bannedAt);
+            const online = isUserOnline(u.lastSeenAt);
             return (
               <div
                 key={u.id}
                 style={{
                   background: "var(--surface)",
-                  border: isBanned ? "2px solid var(--text-danger)" : "1px solid var(--border-blue)",
+                  border: isBanned ? "2px solid var(--text-danger)" : online ? "1px solid #22c55e" : "1px solid var(--border-blue)",
+                  boxShadow: online ? "0 0 0 1px rgba(34,197,94,0.35), 0 0 12px rgba(34,197,94,0.22)" : "none",
                   borderRadius: "12px",
                   padding: "1rem",
                 }}
@@ -178,8 +225,23 @@ export default function AdminUsersPage() {
                   <div style={{ display: "flex", gap: "0.6rem", alignItems: "flex-start" }}>
                   <Avatar name={u.fullName} imageUrl={u.avatarUrl} size="sm" />
                   <div>
-                    <strong>{u.fullName}</strong>{" "}
-                    <span style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>({u.role})</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", flexWrap: "wrap" }}>
+                      <strong>{u.fullName}</strong>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "0.35rem",
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          color: online ? "#16a34a" : "var(--text-secondary)",
+                        }}
+                      >
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: online ? "#22c55e" : "#94a3b8", boxShadow: online ? "0 0 8px rgba(34,197,94,0.8)" : "none" }}></span>
+                        {online ? "Online" : "Offline"}
+                      </span>
+                      <span style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>({u.role})</span>
+                    </div>
                     <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>{u.email}</div>
                     <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
                       {u.departmentName ? `${u.departmentName}` : "Department not set"}
@@ -188,6 +250,7 @@ export default function AdminUsersPage() {
                     <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
                       Joined {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}
                       {u.lastLoginAt ? ` • Last login ${new Date(u.lastLoginAt).toLocaleDateString()}` : " • Never logged in"}
+                      {u.lastSeenAt ? ` • Last seen ${new Date(u.lastSeenAt).toLocaleDateString()}` : ""}
                     </div>
                     <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", marginTop: "0.5rem", fontSize: "0.78rem", color: "var(--text-secondary)" }}>
                       <span>Library: {u.noteCount}</span>
@@ -205,19 +268,24 @@ export default function AdminUsersPage() {
                   </div>
                   </div>
 
-                  {u.role === "ADMIN" ? (
-                    <span className="btn" style={{ opacity: 0.7, cursor: "not-allowed" }}>
-                      Admin protected
-                    </span>
-                  ) : isBanned ? (
-                    <button className="btn" style={{ background: "var(--text-success)", borderColor: "var(--text-success)", color: "white" }} onClick={() => handleUnban(u.id)} disabled={busyId === u.id}>
-                      <i className="fas fa-unlock"></i> Unban
+                  <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+                    <button className="btn" onClick={() => openUserDetails(u.id)}>
+                      <i className="fas fa-info-circle"></i> Details
                     </button>
-                  ) : banningId === u.id ? null : (
-                    <button className="btn" style={{ background: "var(--text-danger)", borderColor: "var(--text-danger)", color: "white" }} onClick={() => setBanningId(u.id)}>
-                      <i className="fas fa-ban"></i> Ban
-                    </button>
-                  )}
+                    {u.role === "ADMIN" ? (
+                      <span className="btn" style={{ opacity: 0.7, cursor: "not-allowed" }}>
+                        Admin protected
+                      </span>
+                    ) : isBanned ? (
+                      <button className="btn" style={{ background: "var(--text-success)", borderColor: "var(--text-success)", color: "white" }} onClick={() => handleUnban(u.id)} disabled={busyId === u.id}>
+                        <i className="fas fa-unlock"></i> Unban
+                      </button>
+                    ) : banningId === u.id ? null : (
+                      <button className="btn" style={{ background: "var(--text-danger)", borderColor: "var(--text-danger)", color: "white" }} onClick={() => setBanningId(u.id)}>
+                        <i className="fas fa-ban"></i> Ban
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {banningId === u.id && (
@@ -259,6 +327,105 @@ export default function AdminUsersPage() {
             );
           })}
         </div>
+
+        {selectedUser && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(3,7,18,0.56)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem", zIndex: 30 }} onClick={() => setSelectedUser(null)}>
+            <div style={{ width: "min(980px, 100%)", maxHeight: "85vh", overflowY: "auto", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "18px", padding: "1.25rem", boxShadow: "0 16px 50px rgba(0,0,0,0.24)" }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.8rem", marginBottom: "1rem" }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+                    <h3 style={{ margin: 0 }}>{selectedUser.fullName}</h3>
+                    <span style={{ fontSize: "0.72rem", color: "var(--text-secondary)" }}>({selectedUser.role})</span>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", fontSize: "0.72rem", color: selectedUser.isOnline ? "#16a34a" : "var(--text-secondary)", fontWeight: 700 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: selectedUser.isOnline ? "#22c55e" : "#94a3b8" }}></span>
+                      {selectedUser.isOnline ? "Online now" : "Offline"}
+                    </span>
+                  </div>
+                  <div style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>{selectedUser.email}</div>
+                </div>
+                <button className="btn" onClick={() => setSelectedUser(null)}>Close</button>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "0.75rem", marginBottom: "1rem" }}>
+                {[
+                  { label: "Department", value: selectedUser.departmentName || "Not set" },
+                  { label: "Level", value: selectedUser.level || "Pending" },
+                  { label: "Joined", value: selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleDateString() : "—" },
+                  { label: "Last login", value: selectedUser.lastLoginAt ? new Date(selectedUser.lastLoginAt).toLocaleDateString() : "Never" },
+                  { label: "Last seen", value: selectedUser.lastSeenAt ? new Date(selectedUser.lastSeenAt).toLocaleDateString() : "Never" },
+                  { label: "Status", value: selectedUser.bannedAt ? "Banned" : "Active" },
+                ].map((item) => (
+                  <div key={item.label} style={{ background: "var(--surface-strong)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "0.75rem 0.85rem" }}>
+                    <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{item.label}</div>
+                    <div style={{ marginTop: "0.35rem", fontWeight: 700 }}>{item.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
+                <div style={{ background: "var(--surface-strong)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "0.9rem" }}>
+                  <h4 style={{ margin: "0 0 0.75rem", fontSize: "1rem" }}>Purchases</h4>
+                  {selectedUser.purchases.length === 0 ? <div style={{ color: "var(--text-secondary)" }}>No purchases yet.</div> : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+                      {selectedUser.purchases.map((p) => (
+                        <div key={p.id} style={{ borderBottom: "1px solid var(--border-blue)", paddingBottom: "0.5rem" }}>
+                          <div style={{ fontWeight: 700 }}>{p.title}</div>
+                          <div style={{ color: "var(--text-secondary)", fontSize: "0.8rem" }}>{p.courseCode} • {p.courseName}</div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>Paid ₦{p.amountPaid.toLocaleString()} • {new Date(p.purchasedAt).toLocaleDateString()}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ background: "var(--surface-strong)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "0.9rem" }}>
+                  <h4 style={{ margin: "0 0 0.75rem", fontSize: "1rem" }}>Requests</h4>
+                  {selectedUser.requests.length === 0 ? <div style={{ color: "var(--text-secondary)" }}>No requests yet.</div> : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+                      {selectedUser.requests.map((r) => (
+                        <div key={r.id} style={{ borderBottom: "1px solid var(--border-blue)", paddingBottom: "0.5rem" }}>
+                          <div style={{ fontWeight: 700 }}>{r.requestedTitle}</div>
+                          <div style={{ color: "var(--text-secondary)", fontSize: "0.75rem" }}>{r.status} • {r.voteCount} vote{r.voteCount === 1 ? "" : "s"}</div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{new Date(r.createdAt).toLocaleDateString()}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ background: "var(--surface-strong)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "0.9rem" }}>
+                  <h4 style={{ margin: "0 0 0.75rem", fontSize: "1rem" }}>Library</h4>
+                  {selectedUser.notes.length === 0 ? <div style={{ color: "var(--text-secondary)" }}>No uploaded notes.</div> : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+                      {selectedUser.notes.map((n) => (
+                        <div key={n.id} style={{ borderBottom: "1px solid var(--border-blue)", paddingBottom: "0.5rem" }}>
+                          <div style={{ fontWeight: 700 }}>{n.title}</div>
+                          <div style={{ color: "var(--text-secondary)", fontSize: "0.75rem" }}>{n.courseCode || "General"} • {n.status}</div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{new Date(n.createdAt).toLocaleDateString()}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ background: "var(--surface-strong)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "0.9rem" }}>
+                  <h4 style={{ margin: "0 0 0.75rem", fontSize: "1rem" }}>Following</h4>
+                  {selectedUser.following.length === 0 ? <div style={{ color: "var(--text-secondary)" }}>Not following anyone yet.</div> : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                      {selectedUser.following.map((person) => (
+                        <div key={person.id} style={{ fontSize: "0.85rem" }}>{person.fullName} ({person.role})</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {detailsLoading && (
+          <div style={{ marginTop: "1rem", color: "var(--text-secondary)" }}>Loading details…</div>
+        )}
       </div>
     </div>
   );
