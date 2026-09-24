@@ -3,6 +3,7 @@
 // Run with: node prisma/seed.js
 
 const { PrismaClient } = require("@prisma/client");
+const { getBabcockDepartmentNames } = require("../lib/babcock-programmes");
 const prisma = new PrismaClient();
 
 async function main() {
@@ -12,10 +13,17 @@ async function main() {
     create: { name: "Babcock University", slug: "babcock" },
   });
 
-  const department = await prisma.department.upsert({
+  const departmentNames = getBabcockDepartmentNames();
+  for (const name of departmentNames) {
+    await prisma.department.upsert({
+      where: { universityId_name: { universityId: university.id, name } },
+      update: {},
+      create: { name, universityId: university.id },
+    });
+  }
+
+  const department = await prisma.department.findUnique({
     where: { universityId_name: { universityId: university.id, name: "Computer Science" } },
-    update: {},
-    create: { name: "Computer Science", universityId: university.id },
   });
 
   const course = await prisma.course.upsert({
