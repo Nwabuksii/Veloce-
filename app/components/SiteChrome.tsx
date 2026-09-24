@@ -57,7 +57,14 @@ export default function SiteChrome({ children }: { children: ReactNode }) {
           setUser((prev) => (prev ? { ...prev, departmentId: data.user.departmentId, level: data.user.level } : prev));
         }
       })
-      .catch(() => setProfileComplete(true)); // fail open — a network hiccup shouldn't lock someone out entirely
+      .catch((err) => {
+        // Fail SAFE, not open — this gate exists specifically to be
+        // unescapable, so a network hiccup or an unexpected error must
+        // never silently wave someone through with an incomplete profile.
+        // Logged so a real bug here is visible instead of invisible.
+        console.error("Academic-profile check failed — showing the gate rather than skipping it:", err);
+        setProfileComplete(false);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, isBare]);
 
