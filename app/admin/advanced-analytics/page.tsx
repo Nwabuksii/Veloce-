@@ -87,7 +87,7 @@ export default function AdminAdvancedAnalyticsPage() {
     <div className="page-wrap">
       <div className="app-container">
         <PageHeader title="Advanced analytics" subtitle="Poll results and respondent breakdown across your audience.">
-          <button className="btn" onClick={() => router.push("/admin")}>\n            <i className="fas fa-arrow-left"></i> Admin
+          <button className="btn" onClick={() => router.push("/admin")}>          <i className="fas fa-arrow-left"></i> Admin
           </button>
         </PageHeader>
 
