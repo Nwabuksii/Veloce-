@@ -6,16 +6,25 @@ import { requireRole } from "@/lib/session";
 export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
   const courses = await prisma.course.findMany({
     where: { department: { universityId: user.universityId } },
-    select: { id: true, name: true, code: true },
+    select: { id: true, name: true, code: true, departmentId: true, department: { select: { name: true } } },
     orderBy: { code: "asc" },
   });
 
-  return NextResponse.json({ courses });
+  return NextResponse.json({
+    courses: courses.map((course) => ({
+      id: course.id,
+      name: course.name,
+      code: course.code,
+      departmentId: course.departmentId,
+      departmentName: course.department.name,
+    })),
+  });
 });
 
 const createCourseSchema = z.object({
   name: z.string().min(2),
   code: z.string().min(2),
+  departmentId: z.string().min(1),
 });
 
 export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
@@ -26,13 +35,13 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  // Department is kept invisible to scribes for now — everything lands under
-  // a single "General" department per university under the hood.
-  const department = await prisma.department.upsert({
-    where: { universityId_name: { universityId: user.universityId, name: "General" } },
-    update: {},
-    create: { name: "General", universityId: user.universityId },
+  const department = await prisma.department.findUnique({
+    where: { id: parsed.data.departmentId },
   });
+
+  if (!department || department.universityId !== user.universityId) {
+    return NextResponse.json({ error: "Pick a valid department from your campus list" }, { status: 400 });
+  }
 
   const existing = await prisma.course.findUnique({
     where: { departmentId_code: { departmentId: department.id, code: parsed.data.code } },

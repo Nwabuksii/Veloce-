@@ -11,6 +11,12 @@ interface CourseOption {
   id: string;
   name: string;
   code: string;
+  departmentId?: string;
+  departmentName?: string;
+}
+interface DepartmentOption {
+  id: string;
+  name: string;
 }
 interface BlockOption {
   id: string;
@@ -57,8 +63,10 @@ function ScribeUploadForm() {
 
   // Step 1 — course
   const [courses, setCourses] = useState<CourseOption[]>([]);
+  const [departments, setDepartments] = useState<DepartmentOption[]>([]);
   const [courseMode, setCourseMode] = useState<"existing" | "new">("existing");
   const [selectedCourseId, setSelectedCourseId] = useState("");
+  const [newCourseDepartmentId, setNewCourseDepartmentId] = useState("");
   const [newCourseName, setNewCourseName] = useState("");
   const [newCourseCode, setNewCourseCode] = useState("");
   const [resolvedCourseId, setResolvedCourseId] = useState("");
@@ -94,6 +102,10 @@ function ScribeUploadForm() {
 
     const prefillRequestId = searchParams.get("requestId");
     const prefillCourseId = searchParams.get("courseId");
+
+    fetch("/api/departments")
+      .then((res) => res.json())
+      .then((data) => setDepartments(data.departments || []));
 
     fetch("/api/scribe/courses")
       .then((res) => res.json())
@@ -161,6 +173,11 @@ function ScribeUploadForm() {
       return;
     }
 
+    if (!newCourseDepartmentId) {
+      setError("Choose the department for this course.");
+      return;
+    }
+
     if (!newCourseName.trim() || !newCourseCode.trim()) {
       setError("Enter both a course name and a course code.");
       return;
@@ -170,7 +187,7 @@ function ScribeUploadForm() {
       const res = await fetch("/api/scribe/courses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newCourseName.trim(), code: newCourseCode.trim() }),
+        body: JSON.stringify({ name: newCourseName.trim(), code: newCourseCode.trim(), departmentId: newCourseDepartmentId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not create course");
@@ -324,6 +341,17 @@ function ScribeUploadForm() {
               </select>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
+                <label style={{ fontSize: "0.85rem", fontWeight: 500 }}>
+                  Department
+                  <select value={newCourseDepartmentId} onChange={(e) => setNewCourseDepartmentId(e.target.value)} style={inputStyle}>
+                    <option value="">Select a department/course area...</option>
+                    {departments.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <label style={{ fontSize: "0.85rem", fontWeight: 500 }}>
                   Course name
                   <input

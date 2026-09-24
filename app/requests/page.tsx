@@ -12,6 +12,12 @@ interface CourseOption {
   id: string;
   name: string;
   code: string;
+  departmentId?: string;
+  departmentName?: string;
+}
+interface DepartmentOption {
+  id: string;
+  name: string;
 }
 interface RequestView {
   id: string;
@@ -34,8 +40,10 @@ const inputStyle: React.CSSProperties = {
 export default function RequestsPage() {
   const router = useRouter();
   const [courses, setCourses] = useState<CourseOption[]>([]);
+  const [departments, setDepartments] = useState<DepartmentOption[]>([]);
   const [courseMode, setCourseMode] = useState<"existing" | "new">("existing");
   const [selectedCourseId, setSelectedCourseId] = useState("");
+  const [newCourseDepartmentId, setNewCourseDepartmentId] = useState("");
   const [newCourseName, setNewCourseName] = useState("");
   const [newCourseCode, setNewCourseCode] = useState("");
   const [requestedTitle, setRequestedTitle] = useState("");
@@ -52,6 +60,10 @@ export default function RequestsPage() {
       router.push("/login");
       return;
     }
+
+    fetch("/api/departments")
+      .then((res) => res.json())
+      .then((data) => setDepartments(data.departments || []));
 
     fetch("/api/scribe/courses")
       .then((res) => res.json())
@@ -115,6 +127,11 @@ export default function RequestsPage() {
       return selectedCourseId;
     }
 
+    if (!newCourseDepartmentId) {
+      setError("Choose the department for this course.");
+      return null;
+    }
+
     if (!newCourseName.trim() || !newCourseCode.trim()) {
       setError("Enter both a course name and a course code.");
       return null;
@@ -123,7 +140,7 @@ export default function RequestsPage() {
     const res = await fetch("/api/scribe/courses", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newCourseName.trim(), code: newCourseCode.trim() }),
+      body: JSON.stringify({ name: newCourseName.trim(), code: newCourseCode.trim(), departmentId: newCourseDepartmentId }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -211,6 +228,14 @@ export default function RequestsPage() {
               </select>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
+                <select value={newCourseDepartmentId} onChange={(e) => setNewCourseDepartmentId(e.target.value)} style={inputStyle}>
+                  <option value="">Select a department/course area...</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
                 <input
                   type="text"
                   value={newCourseName}
