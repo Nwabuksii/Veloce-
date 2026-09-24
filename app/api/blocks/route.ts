@@ -14,6 +14,7 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
   const q = url.searchParams.get("q")?.trim();
   const courseId = url.searchParams.get("courseId");
   const departmentId = url.searchParams.get("departmentId");
+  const level = url.searchParams.get("level")?.trim();
 
   const [blocks, purchases, myVotes] = await Promise.all([
     prisma.block.findMany({
@@ -33,6 +34,7 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
         // those out of browse/search entirely until there's really
         // something to sell.
         notes: { some: { status: "LIVE" } },
+        ...(level ? { level: { equals: level } } : {}),
         ...(q
           ? {
               OR: [
@@ -95,6 +97,7 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
       discountedPrice: hasFulfillmentPricing ? REQUEST_FULFILLED_PRICE : null,
       courseName: b.course.name,
       courseCode: b.course.code,
+      level: b.level ?? null,
       unlocked: purchasedIds.has(b.id),
       topics: b.topics.map((t) => t.title),
       scribeId: scribe?.scribeId ?? null,

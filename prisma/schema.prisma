@@ -61,6 +61,7 @@ model Block {
   course    Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
   title     String // e.g. "Block 1: Foundations" — freely named by the scribe who creates it
   order     Int // sequence within the course (1, 2, 3...)
+  level     String? // actual academic level of the scribe who wrote it (e.g. "100L")
   price     Int            @default(1000) // Naira, kobo-free flat price
   topics    Topic[] // at least 3 required at creation — what this block actually covers
   notes     Note[]
@@ -164,6 +165,7 @@ model User {
   departmentId String? // student's own department, optional
   department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   level        String? // e.g. "200L"
+  lastLoginAt  DateTime?
 
   // Scribe-facing public reputation (only meaningful when role = SCRIBE)
   ratingAvg    Float? // rolling average, denormalized for fast profile reads

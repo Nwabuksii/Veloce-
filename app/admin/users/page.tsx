@@ -17,12 +17,30 @@ interface UserResult {
   banReason: string | null;
   banExpiresAt: string | null;
   avatarUrl: string | null;
+  departmentName: string | null;
+  level: string | null;
+  createdAt: string | null;
+  lastLoginAt: string | null;
+  noteCount: number;
+  purchaseCount: number;
+  requestCount: number;
+  followingCount: number;
+  reportCount: number;
+}
+
+interface UserStats {
+  total: number;
+  loggedIn: number;
+  students: number;
+  scribes: number;
+  admins: number;
 }
 
 export default function AdminUsersPage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<UserResult[]>([]);
+  const [stats, setStats] = useState<UserStats>({ total: 0, loggedIn: 0, students: 0, scribes: 0, admins: 0 });
   const [searching, setSearching] = useState(false);
   const [actionMessage, setActionMessage] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -44,23 +62,28 @@ export default function AdminUsersPage() {
   }, [router]);
 
   useEffect(() => {
-    if (query.trim().length < 2) {
-      setResults([]);
-      return;
-    }
     setSearching(true);
     const handle = setTimeout(() => {
-      apiFetch(`/api/admin/users/search?q=${encodeURIComponent(query.trim())}`)
-        .then((data) => setResults(data.users))
-        .catch(() => setResults([]))
+      apiFetch(`/api/admin/users/search${query.trim() ? `?q=${encodeURIComponent(query.trim())}` : ""}`)
+        .then((data) => {
+          setResults(data.users || []);
+          setStats(data.stats || { total: 0, loggedIn: 0, students: 0, scribes: 0, admins: 0 });
+        })
+        .catch(() => {
+          setResults([]);
+          setStats({ total: 0, loggedIn: 0, students: 0, scribes: 0, admins: 0 });
+        })
         .finally(() => setSearching(false));
-    }, 300);
+    }, 250);
     return () => clearTimeout(handle);
   }, [query]);
 
   function refreshOne(id: string) {
-    apiFetch(`/api/admin/users/search?q=${encodeURIComponent(query.trim())}`)
-      .then((data) => setResults(data.users))
+    apiFetch(`/api/admin/users/search${query.trim() ? `?q=${encodeURIComponent(query.trim())}` : ""}`)
+      .then((data) => {
+        setResults(data.users || []);
+        setStats(data.stats || stats);
+      })
       .catch(() => {});
   }
 
@@ -109,10 +132,23 @@ export default function AdminUsersPage() {
             </button>
         </PageHeader>
 
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "0.75rem", marginTop: "1rem" }}>
+          {[
+            { label: "Total users", value: stats.total },
+            { label: "Logged in", value: stats.loggedIn },
+            { label: "Students", value: stats.students },
+            { label: "Scribes", value: stats.scribes },
+            { label: "Admins", value: stats.admins },
+          ].map((card) => (
+            <div key={card.label} style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "0.9rem 1rem" }}>
+              <div style={{ color: "var(--text-secondary)", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>{card.label}</div>
+              <div style={{ fontSize: "1.5rem", fontWeight: 700, marginTop: "0.35rem" }}>{card.value}</div>
+            </div>
+          ))}
+        </div>
+
         <p style={{ color: "var(--text-secondary)", marginTop: "1rem", fontSize: "0.9rem" }}>
-          Search any student, scribe, or admin at your university to ban or unban their account. Banning never
-          touches a scribe's uploads, sales, or earnings — it only blocks them from logging in (and immediately
-          cuts off any session they're already using).
+          Search any student, scribe, or admin at your university to review their academic profile, login history, and activity. Admins cannot be banned or demoted here; those changes must be made directly in the database.
         </p>
 
         <input
@@ -145,6 +181,21 @@ export default function AdminUsersPage() {
                     <strong>{u.fullName}</strong>{" "}
                     <span style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>({u.role})</span>
                     <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>{u.email}</div>
+                    <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+                      {u.departmentName ? `${u.departmentName}` : "Department not set"}
+                      {u.level ? ` • ${u.level}` : " • level pending"}
+                    </div>
+                    <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+                      Joined {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}
+                      {u.lastLoginAt ? ` • Last login ${new Date(u.lastLoginAt).toLocaleDateString()}` : " • Never logged in"}
+                    </div>
+                    <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", marginTop: "0.5rem", fontSize: "0.78rem", color: "var(--text-secondary)" }}>
+                      <span>Library: {u.noteCount}</span>
+                      <span>Requests: {u.requestCount}</span>
+                      <span>Purchases: {u.purchaseCount}</span>
+                      <span>Followers: {u.followingCount}</span>
+                      <span>Reports: {u.reportCount}</span>
+                    </div>
                     {isBanned && (
                       <div style={{ fontSize: "0.8rem", color: "var(--text-danger)", marginTop: "0.4rem" }}>
                         Banned {u.banExpiresAt ? `until ${new Date(u.banExpiresAt).toLocaleDateString()}` : "until further notice"}
@@ -154,7 +205,11 @@ export default function AdminUsersPage() {
                   </div>
                   </div>
 
-                  {isBanned ? (
+                  {u.role === "ADMIN" ? (
+                    <span className="btn" style={{ opacity: 0.7, cursor: "not-allowed" }}>
+                      Admin protected
+                    </span>
+                  ) : isBanned ? (
                     <button className="btn" style={{ background: "var(--text-success)", borderColor: "var(--text-success)", color: "white" }} onClick={() => handleUnban(u.id)} disabled={busyId === u.id}>
                       <i className="fas fa-unlock"></i> Unban
                     </button>

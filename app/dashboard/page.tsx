@@ -10,7 +10,7 @@ import { toast } from "@/lib/toast";
 import { SkeletonList } from "@/app/components/Skeleton";
 import CouponConfirmDialog from "@/app/components/CouponConfirmDialog";
 import { CAMPUS } from "@/lib/campus";
-import { LEVELS } from "@/lib/academic";
+import { LEVELS, matchesLevelFilter, inferLevelFromCourseCode } from "@/lib/academic";
 
 interface BlockView {
   id: string;
@@ -51,8 +51,7 @@ function programOf(code: string): string {
 }
 
 function levelOf(code: string): string | null {
-  const m = code.match(/(\d)\d{2}/);
-  return m ? `${m[1]}00L` : null;
+  return inferLevelFromCourseCode(code);
 }
 
 function CatalogPage() {
@@ -140,9 +139,11 @@ function CatalogPage() {
   }, [programs, program]);
 
   const visible = useMemo(() => {
-    const list = blocks.filter(
-      (b) => (!program || programOf(b.courseCode) === program) && (!level || levelOf(b.courseCode) === level)
-    );
+    const list = blocks.filter((b) => {
+      const byProgram = !program || programOf(b.courseCode) === program;
+      const byLevel = matchesLevelFilter({ level: (b as BlockView & { level?: string | null }).level, courseCode: b.courseCode }, level);
+      return byProgram && byLevel;
+    });
     if (sort === "rating") {
       list.sort((a, b) => (b.ratingAvg ?? -1) - (a.ratingAvg ?? -1) || b.ratingCount - a.ratingCount);
     } else if (sort === "versions") {

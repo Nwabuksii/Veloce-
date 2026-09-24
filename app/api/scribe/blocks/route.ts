@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { inferLevelFromCourseCode } from "@/lib/academic";
 import { requireRole } from "@/lib/session";
 
 export const GET = requireRole("SCRIBE", async (req: NextRequest) => {
@@ -26,7 +27,7 @@ const createBlockSchema = z.object({
   fulfillsRequestId: z.string().optional(),
 });
 
-export const POST = requireRole("SCRIBE", async (req: NextRequest) => {
+export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
   const body = await req.json();
   const parsed = createBlockSchema.safeParse(body);
 
@@ -53,12 +54,17 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest) => {
   }
 
   const existingCount = await prisma.block.count({ where: { courseId: course.id } });
+  const scribeProfile = await prisma.user.findUnique({
+    where: { id: user.sub },
+    select: { level: true },
+  });
 
   const block = await prisma.block.create({
     data: {
       courseId: course.id,
       title: parsed.data.title,
       order: existingCount + 1,
+      level: scribeProfile?.level ?? inferLevelFromCourseCode(course.code) ?? null,
       price: 1000,
       topics: {
         create: parsed.data.topics.map((title, i) => ({ title, order: i + 1 })),

@@ -34,6 +34,9 @@ export const POST = requireRole<RouteContext>("ADMIN", async (req: NextRequest, 
   if (target.id === adminUser.sub) {
     return NextResponse.json({ error: "You can't ban your own account" }, { status: 400 });
   }
+  if (target.role === "ADMIN") {
+    return NextResponse.json({ error: "Admin accounts cannot be banned from the dashboard. Update the database directly if needed." }, { status: 403 });
+  }
   if (target.bannedAt) {
     return NextResponse.json({ error: "This user is already banned" }, { status: 409 });
   }

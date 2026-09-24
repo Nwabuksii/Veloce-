@@ -83,10 +83,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Correct password — clear any accumulated failed attempts.
-  if (user.failedLoginAttempts > 0 || user.lockedUntil) {
-    await prisma.user.update({ where: { id: user.id }, data: { failedLoginAttempts: 0, lockedUntil: null } });
-  }
+  // Correct password — clear any accumulated failed attempts and record the
+  // successful login so the admin monitoring view can show who has actually
+  // used the platform.
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { failedLoginAttempts: 0, lockedUntil: null, lastLoginAt: new Date() },
+  });
 
   // This is where role changes take effect: the token always reflects
   // the user's CURRENT role in the database, not a cached one.
