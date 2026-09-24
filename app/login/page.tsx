@@ -2,7 +2,7 @@
 
 import { useState, FormEvent, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { saveUser } from "@/lib/client-session";
+import { clearAcademicProfile, saveUser } from "@/lib/client-session";
 import { applyTheme } from "@/lib/theme";
 import Logo from "@/app/components/Logo";
 import { apiFetch, friendlyErrorMessage, ApiError } from "@/lib/api-client";
@@ -42,7 +42,12 @@ function LoginForm() {
         body: JSON.stringify({ email, password }),
       });
 
-      saveUser(data.user);
+      clearAcademicProfile();
+      saveUser({
+        ...data.user,
+        departmentId: data.user.departmentId ?? null,
+        level: data.user.level ?? null,
+      });
       applyTheme(data.user.theme === "dark" ? "dark" : "light");
       router.push(safeReturnTo(searchParams.get("returnTo")));
     } catch (err) {

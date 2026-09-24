@@ -109,6 +109,8 @@ export async function POST(req: NextRequest) {
       theme: user.theme,
       avatarUrl: user.avatarUrl,
       avatarDisplay: user.avatarDisplay,
+      departmentId: user.departmentId ?? null,
+      level: user.level ?? null,
     },
   });
   res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions());

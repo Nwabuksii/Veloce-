@@ -29,7 +29,17 @@ export interface StoredUser {
 const USER_KEY = "veloce_user";
 
 export function saveUser(user: StoredUser) {
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  localStorage.setItem(USER_KEY, JSON.stringify({
+    ...user,
+    departmentId: user.departmentId ?? null,
+    level: user.level ?? null,
+  }));
+}
+
+export function clearAcademicProfile() {
+  const current = getStoredUser();
+  if (!current) return;
+  saveUser({ ...current, departmentId: null, level: null });
 }
 
 export function getStoredUser(): StoredUser | null {
