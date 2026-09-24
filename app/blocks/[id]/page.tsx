@@ -19,6 +19,9 @@ interface NoteVersion {
   trustLabel: string;
   noteAvgRating: number | null;
   noteRatingCount: number;
+  uploadedAt: string;
+  pageCount: number | null;
+  attestedOriginal: boolean;
   owned: boolean;
   purchaseId: string | null;
   myReview: { rating: number; comment: string | null } | null;
@@ -42,6 +45,11 @@ function BlockDetailInner() {
 
   const [blockTitle, setBlockTitle] = useState("");
   const [price, setPrice] = useState(0);
+  const [courseName, setCourseName] = useState("");
+  const [courseCode, setCourseCode] = useState("");
+  const [departmentName, setDepartmentName] = useState("");
+  const [topics, setTopics] = useState<string[]>([]);
+  const [detailsOpenFor, setDetailsOpenFor] = useState<string | null>(null);
   const [notes, setNotes] = useState<NoteVersion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -81,6 +89,10 @@ function BlockDetailInner() {
       .then((data) => {
         setBlockTitle(data.blockTitle);
         setPrice(data.price);
+        setCourseName(data.courseName);
+        setCourseCode(data.courseCode);
+        setDepartmentName(data.departmentName);
+        setTopics(data.topics ?? []);
         // A shared link points at one specific scribe's version — when
         // that's the case, put it first so the person who followed the
         // link lands directly on it instead of having to find it among
@@ -227,7 +239,10 @@ function BlockDetailInner() {
               }}
             >
               <div>
-                <h2 style={{ fontSize: "1.4rem" }}>{blockTitle}</h2>
+                <span className="mono" style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.65)" }}>
+                  {courseCode} · {courseName} · {departmentName}
+                </span>
+                <h2 style={{ fontSize: "1.4rem", marginTop: "0.15rem" }}>{blockTitle}</h2>
                 <span className="price-tag mono" style={{ marginTop: "0.4rem", display: "inline-block", color: "white" }}>
                   {notes.length > 0 && new Set(notes.map((n) => n.price)).size > 1
                     ? `From ₦${Math.min(...notes.map((n) => n.price)).toLocaleString()}`
@@ -270,7 +285,17 @@ function BlockDetailInner() {
               <p style={{ color: "var(--text-success)", marginTop: "0.6rem", fontSize: "0.85rem" }}>{reportStatus}</p>
             )}
 
-            <h3 style={{ marginTop: "1.5rem", fontSize: "1.05rem" }}>
+            {topics.length > 0 && (
+          <div style={{ marginTop: "1rem", display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+            {topics.map((t) => (
+              <span key={t} className="seal" style={{ background: "var(--stone-light)", color: "var(--text-secondary)" }}>
+                {t}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <h3 style={{ marginTop: "1.5rem", fontSize: "1.05rem" }}>
               <i className="fas fa-file-alt" style={{ color: "var(--text-info)" }}></i> Available versions
             </h3>
 
@@ -324,7 +349,41 @@ function BlockDetailInner() {
                         >
                           <i className="fas fa-flag"></i> Report this version
                         </button>
+                        <button
+                          onClick={() => setDetailsOpenFor((cur) => (cur === n.noteId ? null : n.noteId))}
+                          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.8rem", color: "var(--text-secondary)" }}
+                        >
+                          <i className={`fas fa-chevron-${detailsOpenFor === n.noteId ? "up" : "down"}`}></i> Details
+                        </button>
                       </div>
+                      {detailsOpenFor === n.noteId && (
+                        <div
+                          style={{
+                            marginTop: "0.5rem",
+                            padding: "0.6rem 0.8rem",
+                            background: "var(--stone-light)",
+                            borderRadius: "0.5rem",
+                            fontSize: "0.78rem",
+                            color: "var(--text-secondary)",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "0.25rem",
+                          }}
+                        >
+                          <span>Uploaded {new Date(n.uploadedAt).toLocaleDateString()}</span>
+                          <span>{n.pageCount != null ? `${n.pageCount} page${n.pageCount === 1 ? "" : "s"}` : "Page count not yet available"}</span>
+                          <span>
+                            {n.attestedOriginal ? (
+                              <>
+                                <i className="fas fa-check" style={{ color: "var(--text-success)" }}></i> Scribe attested this is
+                                their own original work
+                              </>
+                            ) : (
+                              "No originality attestation on file"
+                            )}
+                          </span>
+                        </div>
+                      )}
                       </div>
                     </div>
 

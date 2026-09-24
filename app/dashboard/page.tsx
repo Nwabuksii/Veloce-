@@ -10,6 +10,7 @@ import { toast } from "@/lib/toast";
 import { SkeletonList } from "@/app/components/Skeleton";
 import CouponConfirmDialog from "@/app/components/CouponConfirmDialog";
 import { CAMPUS } from "@/lib/campus";
+import { LEVELS } from "@/lib/academic";
 
 interface BlockView {
   id: string;
@@ -40,7 +41,6 @@ interface NoteOption {
 
 type SortKey = "rating" | "versions" | "price";
 
-const LEVELS = ["100L", "200L", "300L", "400L", "500L"];
 const MAX_PROGRAM_TABS = 6;
 
 // Course codes are the only grouping data every course reliably has (scribes

@@ -7,16 +7,26 @@ import { sendEmail } from "@/lib/email";
 import { passwordSchema } from "@/lib/password-policy";
 import { checkRateLimit, ipKeyFrom } from "@/lib/rate-limit";
 
-const signupSchema = z.object({
-  email: z.string().email(),
-  password: passwordSchema,
-  fullName: z.string().min(2),
-  universitySlug: z.string(), // e.g. "babcock" — which campus they belong to
-  departmentId: z.string().optional(),
-  level: z.string().optional(), // e.g. "200L"
-});
+const signupSchema = z
+  .object({
+    email: z.string().email(),
+    password: passwordSchema,
+    fullName: z.string().min(2),
+    universitySlug: z.string(), // e.g. "babcock" — which campus they belong to
+    departmentId: z.string().optional(),
+    level: z.string().optional(), // e.g. "200L"
+    // Required, un-checked-by-default checkbox on the signup form.
+    termsAccepted: z.boolean(),
+  })
+  .refine((data) => data.termsAccepted === true, {
+    message: "You must accept the Terms of Service",
+    path: ["termsAccepted"],
+  });
 
-const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+// Strict, non-negotiable — see PendingRegistration.expiresAt. Resending a
+// link (see /api/auth/resend-verification) issues a fresh token but never
+// pushes this deadline out.
+const VERIFICATION_TOKEN_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 // Names reserved for the platform itself, never available to a real
 // account — checked as a case-insensitive exact match against the whole
@@ -29,23 +39,23 @@ function normalizeFullName(fullName: string): string {
   return fullName.trim().toLowerCase();
 }
 
-// Deliberately does NOT log the user in or send the welcome message here —
-// the account only becomes real once the verification link is clicked (see
-// /api/auth/verify-email). Login is blocked entirely until then.
+// Sign-up does NOT write to User at all. It writes a PendingRegistration
+// row instead, which only becomes a real account if the verification link
+// is clicked within 5 minutes (see /api/auth/verify-email) — an
+// unverified, possibly-throwaway signup never touches the real user table.
 export async function POST(req: NextRequest) {
   const allowed = await checkRateLimit(ipKeyFrom(req, "signup"), 8, 60 * 60 * 1000);
   if (!allowed) {
     return NextResponse.json({ error: "Too many signups from this network. Try again later." }, { status: 429 });
   }
 
-  const body = await req.json();
-  const parsed = signupSchema.safeParse(body);
-
+  const parsed = signupSchema.safeParse(await req.json());
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
   const { email, password, fullName, universitySlug, departmentId, level } = parsed.data;
+  const normalizedEmail = email.toLowerCase();
 
   const fullNameNormalized = normalizeFullName(fullName);
   if (RESERVED_NAMES.has(fullNameNormalized)) {
@@ -57,72 +67,87 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unknown university" }, { status: 400 });
   }
 
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
+  const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+  if (existingUser) {
     return NextResponse.json({ error: "An account with this email already exists" }, { status: 409 });
   }
+  const nameTakenByUser = await prisma.user.findUnique({ where: { fullNameNormalized } });
+  if (nameTakenByUser) {
+    return NextResponse.json({ error: "That name is already taken — try adding a middle name or initial" }, { status: 409 });
+  }
 
-  // Every display name on Veloce is unique, case-insensitively — checked
-  // here for a fast, friendly error, and enforced for real by the
-  // fullNameNormalized unique constraint below (the DB is the actual
-  // guard against two signups racing on the same name at once; this is
-  // just so the common case doesn't have to fall through to that).
-  const nameTaken = await prisma.user.findUnique({ where: { fullNameNormalized } });
-  if (nameTaken) {
+  // Clean up any stale pending row for this email/name first — a lapsed
+  // 5-minute attempt shouldn't block a fresh one, and there's no scheduled
+  // job sweeping these, so encountering one here is also how they get
+  // cleaned up in practice.
+  await prisma.pendingRegistration.deleteMany({
+    where: { OR: [{ email: normalizedEmail }, { fullNameNormalized }], expiresAt: { lt: new Date() } },
+  });
+
+  const stillPendingEmail = await prisma.pendingRegistration.findUnique({ where: { email: normalizedEmail } });
+  if (stillPendingEmail) {
+    return NextResponse.json(
+      { error: "A verification link was already sent to this email — check your inbox, or wait for it to expire and try again." },
+      { status: 409 }
+    );
+  }
+  const stillPendingName = await prisma.pendingRegistration.findUnique({ where: { fullNameNormalized } });
+  if (stillPendingName) {
     return NextResponse.json({ error: "That name is already taken — try adding a middle name or initial" }, { status: 409 });
   }
 
   const passwordHash = await hashPassword(password);
-  const emailVerificationToken = randomBytes(32).toString("hex");
+  const verificationToken = randomBytes(32).toString("hex");
+  const now = new Date();
 
-  let user;
+  let pending;
   try {
-    user = await prisma.user.create({
+    pending = await prisma.pendingRegistration.create({
       data: {
-        email,
+        email: normalizedEmail,
         passwordHash,
         fullName,
         fullNameNormalized,
         universityId: university.id,
         departmentId,
         level,
-        role: "STUDENT", // everyone starts as a Student; Scribe is an upgrade via application
-        emailVerificationToken,
-        emailVerificationExpiresAt: new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS),
-        lastVerificationEmailSentAt: new Date(),
+        termsAcceptedAt: now,
+        verificationToken,
+        createdAt: now,
+        expiresAt: new Date(now.getTime() + VERIFICATION_TOKEN_TTL_MS),
       },
     });
   } catch (err: any) {
-    // Race: two signups for the same name (or email) landed at the same
-    // moment and both passed the checks above — the DB's unique
-    // constraint is what actually decides who wins.
+    // Race: two signups for the same name/email landed at the same moment.
     if (err?.code === "P2002") {
       const target = String(err?.meta?.target ?? "");
       if (target.includes("fullNameNormalized")) {
         return NextResponse.json({ error: "That name is already taken — try adding a middle name or initial" }, { status: 409 });
       }
-      return NextResponse.json({ error: "An account with this email already exists" }, { status: 409 });
+      return NextResponse.json(
+        { error: "A verification link was already sent to this email — check your inbox." },
+        { status: 409 }
+      );
     }
     throw err;
   }
 
-  const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify-email?token=${emailVerificationToken}`;
+  const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify-email?token=${verificationToken}`;
 
   try {
     await sendEmail({
-      to: user.email,
-      subject: "Verify your Veloce account",
-      text: `Welcome to Veloce! Confirm your email to finish setting up your account: ${verifyUrl}\n\nThis link expires in 24 hours.`,
-      html: `<p>Welcome to Veloce!</p><p><a href="${verifyUrl}">Click here to verify your email</a> and finish setting up your account.</p><p>This link expires in 24 hours.</p>`,
+      to: pending.email,
+      subject: "Verify your Veloce account — link expires in 5 minutes",
+      text: `Welcome to Veloce! Confirm your email to finish setting up your account: ${verifyUrl}\n\nThis link expires in 5 minutes — if it lapses, you'll need to sign up again.`,
+      html: `<p>Welcome to Veloce!</p><p><a href="${verifyUrl}">Click here to verify your email</a> and finish setting up your account.</p><p><strong>This link expires in 5 minutes</strong> — if it lapses, you'll need to sign up again.</p>`,
     });
   } catch (err) {
-    // The account exists but no verification email went out — don't leave
-    // the person stuck with no way forward; they can use "resend" on the
-    // login page once they land there.
+    // The pending row exists but no email went out — they can use "resend"
+    // on the login page, as long as they do it within the 5-minute window.
     console.error("Failed to send verification email:", err);
   }
 
   return NextResponse.json({
-    message: "Check your email to verify your account before logging in.",
+    message: "Check your email to verify your account within the next 5 minutes.",
   });
 }

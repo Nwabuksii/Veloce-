@@ -18,6 +18,8 @@ interface UserOption {
 interface SentMessage {
   subject: string;
   body: string;
+  type: "TEXT" | "POLL";
+  priority: "NORMAL" | "SERIOUS";
   recipientCount: number;
   recipientSummary: string;
   createdAt: string;
@@ -62,6 +64,10 @@ export default function AdminMessagesPage() {
 
   const [selectedRoles, setSelectedRoles] = useState<Role[]>([]);
   const allChecked = selectedRoles.length === ROLE_OPTIONS.length;
+
+  const [msgType, setMsgType] = useState<"TEXT" | "POLL">("TEXT");
+  const [priority, setPriority] = useState<"NORMAL" | "SERIOUS">("NORMAL");
+  const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
 
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
@@ -153,14 +159,26 @@ export default function AdminMessagesPage() {
       setStatus("Fill in both a subject and a message.");
       return;
     }
+    const cleanedOptions = pollOptions.map((o) => o.trim()).filter(Boolean);
+    if (msgType === "POLL" && cleanedOptions.length < 2) {
+      setStatus("A poll needs at least 2 options.");
+      return;
+    }
 
     setSending(true);
     setStatus("");
     try {
+      const base = {
+        subject: subject.trim(),
+        body: body.trim(),
+        type: msgType,
+        priority,
+        ...(msgType === "POLL" ? { pollOptions: cleanedOptions } : {}),
+      };
       const payload =
         audience === "individual"
-          ? { audience, recipientIds: recipients.map((r) => r.id), subject: subject.trim(), body: body.trim() }
-          : { audience, roles: selectedRoles, subject: subject.trim(), body: body.trim() };
+          ? { audience, recipientIds: recipients.map((r) => r.id), ...base }
+          : { audience, roles: selectedRoles, ...base };
 
       const res = await fetch("/api/admin/messages", {
         method: "POST",
@@ -180,6 +198,9 @@ export default function AdminMessagesPage() {
       setQuery("");
       setSubject("");
       setBody("");
+      setPollOptions(["", ""]);
+      setPriority("NORMAL");
+      setMsgType("TEXT");
       loadSent();
     } catch (err) {
       setStatus(friendlyErrorMessage(err));
@@ -347,6 +368,68 @@ export default function AdminMessagesPage() {
               />
             </label>
 
+            <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
+              <div>
+                <div style={{ fontSize: "0.85rem", fontWeight: 500, marginBottom: "0.4rem" }}>Type</div>
+                <div style={{ display: "flex", gap: "0.4rem" }}>
+                  <button type="button" className={`tab${msgType === "TEXT" ? " is-active" : ""}`} onClick={() => setMsgType("TEXT")}>
+                    Message
+                  </button>
+                  <button type="button" className={`tab${msgType === "POLL" ? " is-active" : ""}`} onClick={() => setMsgType("POLL")}>
+                    <i className="fas fa-square-poll-vertical"></i> Poll
+                  </button>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: "0.85rem", fontWeight: 500, marginBottom: "0.4rem" }}>Priority</div>
+                <div style={{ display: "flex", gap: "0.4rem" }}>
+                  <button type="button" className={`tab${priority === "NORMAL" ? " is-active" : ""}`} onClick={() => setPriority("NORMAL")}>
+                    Normal
+                  </button>
+                  <button
+                    type="button"
+                    className={`tab${priority === "SERIOUS" ? " is-active" : ""}`}
+                    onClick={() => setPriority("SERIOUS")}
+                    title="Blocks the recipient from using the app until they open it"
+                  >
+                    <i className="fas fa-triangle-exclamation"></i> Serious
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {msgType === "POLL" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                <div style={{ fontSize: "0.85rem", fontWeight: 500 }}>Options</div>
+                {pollOptions.map((opt, i) => (
+                  <div key={i} style={{ display: "flex", gap: "0.4rem" }}>
+                    <input
+                      type="text"
+                      value={opt}
+                      placeholder={`Option ${i + 1}`}
+                      onChange={(e) => setPollOptions((prev) => prev.map((o, j) => (j === i ? e.target.value : o)))}
+                      style={{ ...inputStyle, marginTop: 0, flex: 1 }}
+                    />
+                    {pollOptions.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => setPollOptions((prev) => prev.filter((_, j) => j !== i))}
+                        aria-label={`Remove option ${i + 1}`}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)" }}
+                      >
+                        <i className="fas fa-xmark"></i>
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {pollOptions.length < 8 && (
+                  <button type="button" className="btn" style={{ width: "fit-content" }} onClick={() => setPollOptions((prev) => [...prev, ""])}>
+                    <i className="fas fa-plus"></i> Add option
+                  </button>
+                )}
+              </div>
+            )}
+
             {status && <p style={{ color: status.startsWith("Sent") ? "var(--text-success)" : "var(--text-danger)" }}>{status}</p>}
 
             <button className="btn btn-primary" type="submit" disabled={sending}>
@@ -371,7 +454,19 @@ export default function AdminMessagesPage() {
               style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "0.8rem 1rem" }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
-                <strong style={{ fontSize: "0.9rem" }}>{m.subject}</strong>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                  <strong style={{ fontSize: "0.9rem" }}>{m.subject}</strong>
+                  {m.type === "POLL" && (
+                    <span className="pill pill-info">
+                      <i className="fas fa-square-poll-vertical"></i> Poll
+                    </span>
+                  )}
+                  {m.priority === "SERIOUS" && (
+                    <span className="pill" style={{ background: "var(--bg-danger)", color: "var(--text-danger)" }}>
+                      Serious
+                    </span>
+                  )}
+                </div>
                 <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
                   {new Date(m.createdAt).toLocaleDateString()}
                 </span>

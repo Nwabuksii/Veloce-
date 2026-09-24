@@ -37,7 +37,19 @@ const updateSchema = z
 export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
   const dbUser = await prisma.user.findUnique({
     where: { id: user.sub },
-    select: { id: true, email: true, fullName: true, role: true, theme: true, creditBalance: true, avatarUrl: true, avatarDisplay: true },
+    select: {
+      id: true,
+      email: true,
+      fullName: true,
+      role: true,
+      theme: true,
+      creditBalance: true,
+      avatarUrl: true,
+      avatarDisplay: true,
+      departmentId: true,
+      level: true,
+      department: { select: { name: true } },
+    },
   });
 
   if (!dbUser) {

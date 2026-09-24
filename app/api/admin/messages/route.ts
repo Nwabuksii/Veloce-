@@ -15,11 +15,14 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
     take: 300,
   });
 
-  const groups = new Map<string, { subject: string; body: string; createdAt: Date; recipients: string[] }>();
+  const groups = new Map<
+    string,
+    { subject: string; body: string; type: string; priority: string; createdAt: Date; recipients: string[] }
+  >();
   for (const m of messages) {
     const key = `${m.subject}|${m.body}|${m.createdAt.getTime()}`;
     if (!groups.has(key)) {
-      groups.set(key, { subject: m.subject, body: m.body, createdAt: m.createdAt, recipients: [] });
+      groups.set(key, { subject: m.subject, body: m.body, type: m.type, priority: m.priority, createdAt: m.createdAt, recipients: [] });
     }
     groups.get(key)!.recipients.push(m.recipient.fullName);
   }
@@ -29,6 +32,8 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
     .map((g) => ({
       subject: g.subject,
       body: g.body,
+      type: g.type,
+      priority: g.priority,
       createdAt: g.createdAt,
       recipientCount: g.recipients.length,
       recipientSummary:
@@ -42,89 +47,105 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
 
 const roleEnum = z.enum(["STUDENT", "SCRIBE", "ADMIN"]);
 
-const sendSchema = z.object({
-  audience: z.enum(["individual", "group"]),
-  // Kept for compatibility with any existing caller sending one id; the
-  // picker UI now always sends recipientIds (one or more). Either is
-  // accepted and merged below.
-  recipientId: z.string().optional(),
-  recipientIds: z.array(z.string()).optional(),
-  roles: z.array(roleEnum).optional(),
-  subject: z.string().min(2).max(150),
-  body: z.string().min(2).max(2000),
-});
+const sendSchema = z
+  .object({
+    audience: z.enum(["individual", "group"]),
+    // Kept for compatibility with any existing caller sending one id; the
+    // picker UI now always sends recipientIds (one or more). Either is
+    // accepted and merged below.
+    recipientId: z.string().optional(),
+    recipientIds: z.array(z.string()).optional(),
+    roles: z.array(roleEnum).optional(),
+    subject: z.string().min(2).max(150),
+    body: z.string().min(2).max(2000),
+    type: z.enum(["TEXT", "POLL"]).default("TEXT"),
+    priority: z.enum(["NORMAL", "SERIOUS"]).default("NORMAL"),
+    // Required, at least 2, only when type === "POLL" — checked below
+    // rather than as a discriminated union so the error message can be
+    // specific ("polls need at least 2 options") instead of zod's generic
+    // union mismatch text.
+    pollOptions: z.array(z.string().min(1).max(120)).max(8).optional(),
+  })
+  .refine((data) => data.type !== "POLL" || (data.pollOptions && data.pollOptions.length >= 2), {
+    message: "A poll needs at least 2 options",
+    path: ["pollOptions"],
+  });
+
+async function resolveRecipients(
+  adminUser: { sub: string; universityId: string },
+  data: z.infer<typeof sendSchema>
+): Promise<{ ids: string[] } | { error: string; status: number }> {
+  if (data.audience === "individual") {
+    const ids = Array.from(new Set([...(data.recipientId ? [data.recipientId] : []), ...(data.recipientIds ?? [])]));
+    if (ids.length === 0) return { error: "Pick at least one recipient", status: 400 };
+
+    const recipients = await prisma.user.findMany({ where: { id: { in: ids } } });
+    if (recipients.length !== ids.length) return { error: "One of those recipients no longer exists", status: 404 };
+    if (recipients.some((r) => r.universityId !== adminUser.universityId)) {
+      return { error: "Cannot message users outside your university", status: 403 };
+    }
+    return { ids };
+  }
+
+  if (!data.roles || data.roles.length === 0) {
+    return { error: "Select at least one audience group", status: 400 };
+  }
+  const recipients = await prisma.user.findMany({
+    where: { universityId: adminUser.universityId, role: { in: data.roles }, id: { not: adminUser.sub } },
+    select: { id: true },
+  });
+  if (recipients.length === 0) return { error: "No matching users to message", status: 404 };
+  return { ids: recipients.map((r) => r.id) };
+}
 
 export const POST = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
   const parsed = sendSchema.safeParse(await req.json());
-
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
+  const { subject, body, type, priority, pollOptions } = parsed.data;
 
-  const { audience, subject, body } = parsed.data;
-
-  if (audience === "individual") {
-    // De-duplicated union of the singular and plural fields, so a picker
-    // with two, three, or a dozen people selected all go through one path.
-    const ids = Array.from(new Set([...(parsed.data.recipientId ? [parsed.data.recipientId] : []), ...(parsed.data.recipientIds ?? [])]));
-
-    if (ids.length === 0) {
-      return NextResponse.json({ error: "Pick at least one recipient" }, { status: 400 });
-    }
-
-    const recipients = await prisma.user.findMany({ where: { id: { in: ids } } });
-    if (recipients.length !== ids.length) {
-      return NextResponse.json({ error: "One of those recipients no longer exists" }, { status: 404 });
-    }
-    if (recipients.some((r) => r.universityId !== adminUser.universityId)) {
-      return NextResponse.json({ error: "Cannot message users outside your university" }, { status: 403 });
-    }
-
-    // Single recipient: return the created row, same shape callers already
-    // expect. Multiple: share one createdAt so they group into one entry
-    // in the "recently sent" list above, exactly like a role broadcast.
-    if (recipients.length === 1) {
-      const message = await prisma.adminMessage.create({
-        data: { recipientId: recipients[0].id, senderId: adminUser.sub, subject, body },
-      });
-      return NextResponse.json({ sentCount: 1, message });
-    }
-
-    const sentAt = new Date();
-    await prisma.adminMessage.createMany({
-      data: recipients.map((r) => ({ recipientId: r.id, senderId: adminUser.sub, subject, body, createdAt: sentAt })),
-    });
-    return NextResponse.json({ sentCount: recipients.length });
+  const resolved = await resolveRecipients(adminUser, parsed.data);
+  if ("error" in resolved) {
+    return NextResponse.json({ error: resolved.error }, { status: resolved.status });
   }
-
-  // audience === "group" — fan out to everyone matching any checked role.
-  if (!parsed.data.roles || parsed.data.roles.length === 0) {
-    return NextResponse.json({ error: "Select at least one audience group" }, { status: 400 });
-  }
-
-  const recipients = await prisma.user.findMany({
-    where: {
-      universityId: adminUser.universityId,
-      role: { in: parsed.data.roles },
-      id: { not: adminUser.sub },
-    },
-    select: { id: true },
-  });
-
-  if (recipients.length === 0) {
-    return NextResponse.json({ error: "No matching users to message" }, { status: 404 });
-  }
-
+  const { ids } = resolved;
   const sentAt = new Date();
-  await prisma.adminMessage.createMany({
-    data: recipients.map((r) => ({
-      recipientId: r.id,
-      senderId: adminUser.sub,
-      subject,
-      body,
-      createdAt: sentAt,
-    })),
-  });
 
-  return NextResponse.json({ sentCount: recipients.length });
+  if (type === "POLL") {
+    // A poll's options (and later, its votes) are per-message, not shared
+    // across recipients — see the schema comment on AdminMessage.pollOptions —
+    // so each recipient needs their own AdminMessage row with its own
+    // nested options, created individually rather than via createMany
+    // (which can't do nested writes).
+    await Promise.all(
+      ids.map((recipientId) =>
+        prisma.adminMessage.create({
+          data: {
+            recipientId,
+            senderId: adminUser.sub,
+            subject,
+            body,
+            type: "POLL",
+            priority,
+            createdAt: sentAt,
+            pollOptions: { create: pollOptions!.map((label, i) => ({ label, order: i })) },
+          },
+        })
+      )
+    );
+    return NextResponse.json({ sentCount: ids.length });
+  }
+
+  if (ids.length === 1) {
+    const message = await prisma.adminMessage.create({
+      data: { recipientId: ids[0], senderId: adminUser.sub, subject, body, priority },
+    });
+    return NextResponse.json({ sentCount: 1, message });
+  }
+
+  await prisma.adminMessage.createMany({
+    data: ids.map((recipientId) => ({ recipientId, senderId: adminUser.sub, subject, body, priority, createdAt: sentAt })),
+  });
+  return NextResponse.json({ sentCount: ids.length });
 });

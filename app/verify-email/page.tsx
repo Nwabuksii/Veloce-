@@ -54,7 +54,13 @@ function VerifyEmailInner() {
           <p className="auth-sub">{status}</p>
           {failed && (
             <p className="auth-switch">
-              <a href="/login">Go to login</a> to request a new link.
+              {status.toLowerCase().includes("sign up again") ? (
+                <a href="/signup">Sign up again</a>
+              ) : (
+                <>
+                  <a href="/login">Go to login</a> to request a new link.
+                </>
+              )}
             </p>
           )}
         </div>

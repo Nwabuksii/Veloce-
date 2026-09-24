@@ -6,8 +6,16 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Pooled connection (PgBouncer, via Neon's "-pooler" host) — every
+  // serverless function invocation on Vercel opens its own connection, and
+  // without pooling this app can exhaust Postgres's connection limit under
+  // real traffic. DIRECT_URL bypasses the pooler for schema migrations,
+  // which need a direct, transaction-capable connection — set both in
+  // Vercel's env vars (DATABASE_URL to the "-pooler" host, DIRECT_URL to
+  // the plain host; Neon's dashboard shows both connection strings).
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ─────────────────────────────────────────────
@@ -15,12 +23,13 @@ datasource db {
 // ─────────────────────────────────────────────
 
 model University {
-  id          String       @id @default(uuid())
-  name        String
-  slug        String       @unique // e.g. "babcock", "unilag" — used for routing
-  departments Department[]
-  users       User[]
-  createdAt   DateTime     @default(now())
+  id                   String                @id @default(uuid())
+  name                 String
+  slug                 String                @unique // e.g. "babcock", "unilag" — used for routing
+  departments          Department[]
+  users                User[]
+  pendingRegistrations PendingRegistration[]
+  createdAt            DateTime              @default(now())
 }
 
 model Department {
@@ -29,6 +38,7 @@ model Department {
   universityId String
   university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
   courses      Course[]
+  users        User[] // students whose academic profile (see onboarding) points here
 
   @@unique([universityId, name])
 }
@@ -141,9 +151,18 @@ model User {
   // Set once at signup and never changed — see app/api/auth/signup.
   fullNameNormalized String @unique
 
+  // When this account agreed to the Terms of Service — collected as a
+  // required, un-checked-by-default checkbox at signup (see
+  // PendingRegistration.termsAcceptedAt, which is where it's actually
+  // captured; this column is just where it lands once the account is
+  // real). Nullable only because accounts created before this existed
+  // don't have it — every new signup always sets it.
+  termsAcceptedAt DateTime?
+
   universityId String
   university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
   departmentId String? // student's own department, optional
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   level        String? // e.g. "200L"
 
   // Scribe-facing public reputation (only meaningful when role = SCRIBE)
@@ -194,6 +213,7 @@ model User {
   feedback           Feedback[]
   adminSectionViews  AdminSectionView[]   @relation("AdminSectionViews")
   convertedPayments  ConvertedPayment[]
+  pollVotes          PollVote[]
 }
 
 // One-way messages from an Admin to a specific user — e.g. explaining a
@@ -201,16 +221,62 @@ model User {
 // senderId is nullable so automated system messages (new-account welcome)
 // can be created with no admin actor behind them; the UI shows those as
 // coming from "Veloce" when sender is null.
+enum MessageType {
+  TEXT
+  POLL
+}
+
+enum MessagePriority {
+  NORMAL
+  // Blocks the recipient from using the app (see app/components/BlockingMessageModal.tsx
+  // and GET /api/messages/blocking) until they open and acknowledge it.
+  SERIOUS
+}
+
 model AdminMessage {
-  id          String    @id @default(uuid())
+  id          String          @id @default(uuid())
   recipientId String
-  recipient   User      @relation("MessageRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  recipient   User            @relation("MessageRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
   senderId    String?
-  sender      User?     @relation("MessageSender", fields: [senderId], references: [id], onDelete: SetNull)
+  sender      User?           @relation("MessageSender", fields: [senderId], references: [id], onDelete: SetNull)
   subject     String
   body        String
+  type        MessageType     @default(TEXT)
+  priority    MessagePriority @default(NORMAL)
   readAt      DateTime?
-  createdAt   DateTime  @default(now())
+  createdAt   DateTime        @default(now())
+
+  // Only populated when type = POLL. A poll sent to several recipients is
+  // one AdminMessage row PER recipient, each with its own copy of the
+  // options — votes are per-message (see PollVote's unique constraint), so
+  // a shared options list across recipients would let one person's vote
+  // count show up on everyone else's poll.
+  pollOptions PollOption[]
+}
+
+model PollOption {
+  id        String       @id @default(uuid())
+  messageId String
+  message   AdminMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  label     String
+  order     Int
+  votes     PollVote[]
+
+  @@unique([messageId, order])
+}
+
+model PollVote {
+  id        String     @id @default(uuid())
+  messageId String // denormalized from optionId for the one-vote-per-message constraint below
+  optionId  String
+  option    PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+
+  // The whole point: one vote per person per poll, enforced by the
+  // database, not just checked in application code.
+  @@unique([messageId, userId])
 }
 
 enum ApplicationStatus {
@@ -297,6 +363,10 @@ model Note {
   reports    Report[]
 
   createdAt DateTime @default(now())
+
+  @@index([status])
+  @@index([scribeId])
+  @@index([status, scribeId])
 }
 
 // A cached, plain (no watermark) render of one page of a note's PDF.
@@ -402,6 +472,11 @@ model Purchase {
   // start reading this?" Powers the "you haven't opened this yet" nudge
   // on the purchases page — nothing else reads it.
   firstOpenedAt DateTime?
+
+  @@index([buyerId])
+  @@index([noteId])
+  @@index([refundedAt])
+  @@index([buyerId, noteId])
 }
 
 // A Paystack charge that could NOT become a purchase and was turned into
@@ -563,4 +638,46 @@ model AdminSectionView {
   lastSeenAt DateTime @default(now())
 
   @@unique([adminId, section])
+}
+
+// ─────────────────────────────────────────────
+// Staged sign-up
+// ─────────────────────────────────────────────
+
+// Sign-up no longer writes to User directly — the submitted form sits here
+// until the email link is clicked, and only THEN does a real User row get
+// created (see app/api/auth/signup and app/api/auth/verify-email). This
+// keeps unverified, possibly-fake signups out of the real user table
+// entirely, and makes the "must verify within 5 minutes" rule a hard
+// property of storage rather than just a UI countdown a person could
+// ignore by never clicking away.
+model PendingRegistration {
+  id           String @id @default(uuid())
+  email        String @unique
+  passwordHash String
+  fullName     String
+  // Same case-insensitive uniqueness as User.fullNameNormalized, checked
+  // against BOTH tables at signup so two people can't simultaneously claim
+  // the same name in the few minutes before either verifies.
+  fullNameNormalized String @unique
+
+  universityId String
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  departmentId String?
+  level        String?
+
+  // Required at signup (see the zod schema in app/api/auth/signup) — this
+  // is never null in practice, only nullable because Prisma has no
+  // "NOT NULL, set exactly once" shorthand.
+  termsAcceptedAt DateTime?
+
+  verificationToken String   @unique
+  createdAt         DateTime @default(now())
+  // Strict 5-minute deadline from createdAt — resending a link (see
+  // app/api/auth/resend-verification) issues a fresh token but does NOT
+  // push this deadline out further. Past it, verify-email deletes the row
+  // outright and the person has to sign up again from scratch.
+  expiresAt         DateTime
+
+  @@index([expiresAt])
 }

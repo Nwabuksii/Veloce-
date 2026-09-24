@@ -18,6 +18,7 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
     where: { id: blockId },
     include: {
       course: { include: { department: true } },
+      topics: { orderBy: { order: "asc" } },
       notes: {
         where: { status: "LIVE" },
         include: {
@@ -95,6 +96,12 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
       noteAvgRating,
       noteRatingCount,
       uploadedAt: n.createdAt,
+      // Specs shown in the version-inspector accordion on the block page —
+      // deliberately nothing from the file's actual content (that stays
+      // gated behind purchase; see lib/note-access.ts), just metadata a
+      // buyer can use to judge a version before paying for it.
+      pageCount: n.pageCount,
+      attestedOriginal: n.attestedOriginal,
       owned: Boolean(myPurchase),
       purchaseId: myPurchase?.id ?? null,
       myReview: myPurchase?.review ? { rating: myPurchase.review.rating, comment: myPurchase.review.comment } : null,
@@ -107,5 +114,13 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
     };
   });
 
-  return NextResponse.json({ blockTitle: block.title, price: block.price, notes });
+  return NextResponse.json({
+    blockTitle: block.title,
+    price: block.price,
+    courseName: block.course.name,
+    courseCode: block.course.code,
+    departmentName: block.course.department.name,
+    topics: block.topics.map((t) => t.title),
+    notes,
+  });
 });

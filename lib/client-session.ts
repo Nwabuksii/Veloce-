@@ -19,6 +19,11 @@ export interface StoredUser {
   theme?: "light" | "dark";
   avatarUrl?: string | null;
   avatarDisplay?: "default" | "custom";
+  // Onboarding status — see app/components/AcademicProfileModal. Absent
+  // (undefined) means "not fetched yet," not "confirmed empty," so
+  // SiteChrome only judges completeness after a real /api/account read.
+  departmentId?: string | null;
+  level?: string | null;
 }
 
 const USER_KEY = "veloce_user";
