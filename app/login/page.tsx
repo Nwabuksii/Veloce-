@@ -2,7 +2,7 @@
 
 import { useState, FormEvent, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { clearAcademicProfile, saveUser } from "@/lib/client-session";
+import { saveUser } from "@/lib/client-session";
 import { applyTheme } from "@/lib/theme";
 import Logo from "@/app/components/Logo";
 import { apiFetch, friendlyErrorMessage, ApiError } from "@/lib/api-client";
@@ -42,13 +42,18 @@ function LoginForm() {
         body: JSON.stringify({ email, password }),
       });
 
-      clearAcademicProfile();
+      localStorage.removeItem("veloce_user");
       saveUser({
         ...data.user,
         departmentId: data.user.departmentId ?? null,
         level: data.user.level ?? null,
       });
       applyTheme(data.user.theme === "dark" ? "dark" : "light");
+
+      // Every login re-checks the user's real academic profile status from the DB.
+      // If they are missing department/level, the global site gate will show the
+      // blocking modal once they reach the app; the redirect still goes through so
+      // the modal can appear immediately on the dashboard.
       router.push(safeReturnTo(searchParams.get("returnTo")));
     } catch (err) {
       setError(friendlyErrorMessage(err));
