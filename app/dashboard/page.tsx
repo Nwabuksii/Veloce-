@@ -23,6 +23,8 @@ interface BlockView {
   topics: string[];
   scribeId: string | null;
   scribeName: string | null;
+  purchaseCount: number;
+  featuredNoteId: string | null;
   liveNoteCount: number;
   ratingAvg: number | null;
   ratingCount: number;
@@ -303,7 +305,7 @@ function CatalogPage() {
             <article
               key={block.id}
               className="note-card"
-              onClick={() => router.push(`/blocks/${block.id}`)}
+              onClick={() => router.push(block.featuredNoteId ? `/blocks/${block.id}?note=${block.featuredNoteId}` : `/blocks/${block.id}`)}
             >
               <div>
                 <div className="note-card-top">
@@ -328,14 +330,21 @@ function CatalogPage() {
                 </p>
 
                 <div className="note-card-meta">
+                  <span className="count">
+                    <i className="fas fa-shopping-cart"></i> {block.purchaseCount}
+                  </span>
                   {block.ratingAvg != null ? (
                     <>
+                      <span className="dot">•</span>
                       <i className="fas fa-star star"></i>
                       <strong>{block.ratingAvg.toFixed(1)}</strong>
                       <span className="count">({block.ratingCount})</span>
                     </>
                   ) : (
-                    <span className="count">No ratings yet</span>
+                    <>
+                      <span className="dot">•</span>
+                      <span className="count">No ratings yet</span>
+                    </>
                   )}
                   {block.scribeName && (
                     <>
@@ -391,7 +400,9 @@ function CatalogPage() {
                     className="btn btn-dark btn-sm"
                     onClick={(e) => {
                       e.stopPropagation();
-                      router.push(`/blocks/${block.id}`);
+                      router.push(
+                        block.featuredNoteId ? `/blocks/${block.id}?note=${block.featuredNoteId}` : `/blocks/${block.id}`,
+                      );
                     }}
                   >
                     View Notes

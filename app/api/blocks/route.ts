@@ -53,6 +53,7 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
         notes: {
           where: { status: "LIVE" },
           select: {
+            id: true,
             fulfillsRequestId: true,
             scribeId: true,
             scribe: { select: { fullName: true } },
@@ -90,6 +91,15 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
     // this block's live versions, so a block with competing uploads shows
     // one combined score (each version's own rating is on the block page).
     const ratings = b.notes.flatMap((n) => n.reviews.map((r) => r.rating));
+    const featuredNote = b.notes.reduce<
+      { noteId: string; score: number; reviews: number } | null
+    >((best, n) => {
+      const noteScore = n.reviews.reduce((sum, r) => sum + r.rating, 0) / Math.max(1, n.reviews.length);
+      const candidate = { noteId: n.id, score: noteScore, reviews: n.reviews.length };
+      if (!best) return candidate;
+      if (candidate.reviews !== best.reviews) return candidate.reviews > best.reviews ? candidate : best;
+      return candidate.score > best.score ? candidate : best;
+    }, null);
 
     return {
       id: b.id,
@@ -103,6 +113,7 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
       topics: b.topics.map((t) => t.title),
       moderationStatus: b.moderationStatus ?? "NORMAL",
       purchaseCount: b.purchases.length,
+      featuredNoteId: featuredNote?.noteId ?? b.notes[0]?.id ?? null,
       scribeId: scribe?.scribeId ?? null,
       scribeName: scribe?.scribe.fullName ?? null,
       liveNoteCount: b.notes.length,
