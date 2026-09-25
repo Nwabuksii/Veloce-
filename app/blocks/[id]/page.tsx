@@ -357,7 +357,7 @@ function BlockDetailInner() {
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.6rem" }}>
                     <div style={{ display: "flex", gap: "0.7rem", alignItems: "flex-start" }}>
-                      <Avatar name={n.scribeName} imageUrl={n.scribeAvatarUrl} />
+                      <Avatar name={n.scribeName} imageUrl={n.scribeAvatarUrl} size="sm" />
                       <div>
                       {n.noteId === highlightNoteId && (
                         <div style={{ fontSize: "0.75rem", color: "var(--text-info)", fontWeight: 600, marginBottom: "0.2rem" }}>
