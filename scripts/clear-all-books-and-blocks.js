@@ -1,94 +1,62 @@
-// Deletes ALL notes and ALL blocks — including ones that were purchased.
-// Unlike clear-non-live-notes.js, this does NOT protect purchased content:
-// it also deletes the Purchase rows themselves (and the Reviews that hang
-// off them). Reports tied to a deleted note/block/purchase cascade away
-// automatically at the DB level (see schema.prisma onDelete: Cascade).
-//
-// Left alone on purpose:
-//   - Courses, Departments, Universities — the catalog structure stays.
-//   - Payout rows — these belong to the scribe (withdrawal history), not
-//     to any specific note/block, so they're untouched.
-//   - BlockRequest rows — a request is separate from the block that
-//     fulfills it (blockId is nullable). Deleting blocks just detaches
-//     them; any request left marked FULFILLED with no block behind it
-//     is reset back to OPEN so it isn't stuck in a broken state.
-//   - RequestVote rows — the demand signal (who asked for what) survives
-//     independent of whether a block was ever made for it.
+// Deletes ALL blocks only — no courses, no departments, no universities.
+// This intentionally leaves the catalog structure in place while removing
+// every block and the data tied directly to it (notes, purchases, reviews,
+// reports, and any fulfilled request that was attached to that block).
 //
 // Usage:
-//   node scripts/clear-all-books-and-blocks.js            (dry run — reports what would be deleted)
-//   node scripts/clear-all-books-and-blocks.js --confirm   (actually deletes)
+//   node scripts/clear-all-books-and-blocks.js            (dry run)
+//   node scripts/clear-all-books-and-blocks.js --confirm (actually deletes)
 //
-// Safe to run more than once — once everything's gone, it's a no-op.
+// Safe to run more than once — once everything is gone, it becomes a no-op.
 
 const { PrismaClient } = require("@prisma/client");
-const { del } = require("@vercel/blob");
 const prisma = new PrismaClient();
 
 const CONFIRM = process.argv.includes("--confirm");
 
 async function main() {
-  const [noteCount, blockCount, purchaseCount, reviewCount, pageImageCount, reportCount, staleFulfilled] =
-    await Promise.all([
-      prisma.note.count(),
-      prisma.block.count(),
-      prisma.purchase.count(),
-      prisma.review.count(),
-      prisma.notePageImage.count(),
-      prisma.report.count({
-        where: { OR: [{ noteId: { not: null } }, { blockId: { not: null } }, { purchaseId: { not: null } }] },
-      }),
-      prisma.blockRequest.count({ where: { status: "FULFILLED" } }),
-    ]);
+  const [blockCount, noteCount, purchaseCount, reviewCount, reportCount, fulfilledRequests] = await Promise.all([
+    prisma.block.count(),
+    prisma.note.count({ where: { blockId: { not: null } } }),
+    prisma.purchase.count({ where: { blockId: { not: null } } }),
+    prisma.review.count({ where: { purchase: { blockId: { not: null } } } }),
+    prisma.report.count({ where: { blockId: { not: null } } }),
+    prisma.blockRequest.count({ where: { blockId: { not: null }, status: "FULFILLED" } }),
+  ]);
 
   console.log(`${CONFIRM ? "Deleting" : "Would delete"}:`);
-  console.log(`  - ${noteCount} note(s)`);
   console.log(`  - ${blockCount} block(s)`);
-  console.log(`  - ${purchaseCount} purchase(s)`);
-  console.log(`  - ${reviewCount} review(s)`);
-  console.log(`  - ${pageImageCount} cached page image(s) (cascades with notes)`);
-  console.log(`  - ${reportCount} report(s) referencing a note/block/purchase (cascades)`);
-  console.log(`  - ${staleFulfilled} fulfilled request(s) will be reset to OPEN once their block is gone`);
+  console.log(`  - ${noteCount} note(s) attached to blocks`);
+  console.log(`  - ${purchaseCount} purchase(s) for those blocks`);
+  console.log(`  - ${reviewCount} review(s) tied to those purchases`);
+  console.log(`  - ${reportCount} report(s) attached to those blocks`);
+  console.log(`  - ${fulfilledRequests} fulfilled request(s) attached to those blocks`);
 
-  if (noteCount === 0 && blockCount === 0) {
-    console.log("\nNothing to delete — no notes or blocks found.");
+  if (blockCount === 0) {
+    console.log("\nNothing to delete — no blocks were found.");
     return;
   }
 
   if (!CONFIRM) {
-    console.log("\nDry run only — nothing was deleted. Re-run with --confirm to actually delete these.");
+    console.log("\nDry run only — nothing was deleted. Re-run with --confirm to actually delete the blocks.");
     return;
   }
 
-  // Grab blob URLs before the rows disappear.
-  const notes = await prisma.note.findMany({ select: { fileUrl: true } });
-  const pageImages = await prisma.notePageImage.findMany({ select: { imageUrl: true } });
+  console.log("\nDeleting block-related rows...");
 
-  console.log(`\nDeleting ${notes.length} stored PDF(s) and ${pageImages.length} cached page image(s) from blob storage...`);
-  for (const url of [...notes.map((n) => n.fileUrl), ...pageImages.map((p) => p.imageUrl)]) {
-    try {
-      await del(url);
-    } catch (err) {
-      console.error(`  Could not delete blob ${url} (continuing anyway):`, err.message);
-    }
-  }
+  await prisma.$transaction([
+    prisma.review.deleteMany({ where: { purchase: { blockId: { not: null } } } }),
+    prisma.report.deleteMany({ where: { blockId: { not: null } } }),
+    prisma.purchase.deleteMany({ where: { blockId: { not: null } } }),
+    prisma.note.deleteMany({ where: { blockId: { not: null } } }),
+    prisma.blockRequest.updateMany({
+      where: { blockId: { not: null } },
+      data: { blockId: null, status: "OPEN" },
+    }),
+    prisma.block.deleteMany({}),
+  ]);
 
-  // Order matters: Review and Purchase both have required, non-cascading
-  // FKs to Note/Block, so they must go first. NotePageImage and Report
-  // cascade automatically at the DB level once Note/Block/Purchase are gone.
-  console.log("\nDeleting database rows...");
-  await prisma.review.deleteMany({});
-  await prisma.purchase.deleteMany({});
-  await prisma.note.deleteMany({});
-  await prisma.block.deleteMany({});
-
-  const reset = await prisma.blockRequest.updateMany({
-    where: { status: "FULFILLED", blockId: null },
-    data: { status: "OPEN" },
-  });
-
-  console.log(`\nDeleted ${noteCount} note(s), ${blockCount} block(s), ${purchaseCount} purchase(s), ${reviewCount} review(s).`);
-  console.log(`Reset ${reset.count} orphaned fulfilled request(s) back to OPEN.`);
+  console.log(`\nDeleted ${blockCount} block(s) and all attached note/purchase/report rows.`);
 }
 
 main()

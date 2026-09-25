@@ -330,7 +330,7 @@ export default function AdminUsersPage() {
 
         {selectedUser && (
           <div style={{ position: "fixed", inset: 0, background: "rgba(3,7,18,0.56)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem", zIndex: 30 }} onClick={() => setSelectedUser(null)}>
-            <div style={{ width: "min(980px, 100%)", maxHeight: "85vh", overflowY: "auto", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "18px", padding: "1.25rem", boxShadow: "0 16px 50px rgba(0,0,0,0.24)" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ width: "min(760px, calc(100vw - 1rem))", maxWidth: "100%", maxHeight: "85vh", overflowY: "auto", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "18px", padding: "1rem", boxShadow: "0 16px 50px rgba(0,0,0,0.24)" }} onClick={(e) => e.stopPropagation()}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.8rem", marginBottom: "1rem" }}>
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>

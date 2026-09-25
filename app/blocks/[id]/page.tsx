@@ -19,6 +19,7 @@ interface NoteVersion {
   trustLabel: string;
   noteAvgRating: number | null;
   noteRatingCount: number;
+  purchaseCount: number;
   uploadedAt: string;
   pageCount: number | null;
   attestedOriginal: boolean;
@@ -388,6 +389,9 @@ function BlockDetailInner() {
                         >
                           <i className="fas fa-flag"></i> Report this version
                         </button>
+                        <span className="seal" style={{ background: "var(--bg-success)", color: "var(--text-success)" }}>
+                          <i className="fas fa-shopping-cart"></i> {n.purchaseCount.toLocaleString()} bought
+                        </span>
                         <button
                           onClick={() => setDetailsOpenFor((cur) => (cur === n.noteId ? null : n.noteId))}
                           style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.8rem", color: "var(--text-secondary)" }}

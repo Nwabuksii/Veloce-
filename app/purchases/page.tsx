@@ -12,6 +12,7 @@ import { REFUND_WINDOW_MINUTES } from "@/lib/pricing";
 interface PurchaseView {
   purchaseId: string;
   noteId: string;
+  blockId: string;
   blockTitle: string;
   courseCode: string;
   courseName: string;
@@ -208,7 +209,14 @@ export default function PurchasesPage() {
             return (
               <div key={p.purchaseId} className="ledger-row" style={{ maxWidth: 480 }}>
                 <div className="badge">{p.courseCode}</div>
-                <h3>{p.blockTitle}</h3>
+                <h3>
+                  <button
+                    onClick={() => router.push(`/blocks/${p.blockId}`)}
+                    style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "var(--text-primary)", textAlign: "left", font: "inherit" }}
+                  >
+                    {p.blockTitle}
+                  </button>
+                </h3>
                 <div className="meta">
                   {p.courseName} · by{" "}
                   <button
@@ -227,6 +235,13 @@ export default function PurchasesPage() {
                   </div>
                 ) : (
                   <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap", marginTop: "0.6rem" }}>
+                    <button
+                      onClick={() => router.push(`/blocks/${p.blockId}`)}
+                      className="btn"
+                      style={{ width: "fit-content" }}
+                    >
+                      <i className="fas fa-info-circle"></i> View block details
+                    </button>
                     <button
                       onClick={() => router.push(`/notes/${p.noteId}/read`)}
                       className="btn btn-primary"

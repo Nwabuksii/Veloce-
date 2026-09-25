@@ -38,7 +38,7 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
   // Overall sales + rating per scribe (across all their notes, not just this
   // one) so the trust badge here matches what shows on their profile page.
   const scribeIds = [...new Set(block.notes.map((n) => n.scribeId))];
-  const [salesByScribe, ratingsByScribe, rejectedByScribe, myPurchases] = await Promise.all([
+  const [salesByScribe, ratingsByScribe, rejectedByScribe, myPurchases, notePurchaseCounts] = await Promise.all([
     prisma.purchase.findMany({
       where: { note: { scribeId: { in: scribeIds } } },
       select: { note: { select: { scribeId: true } } },
@@ -55,9 +55,15 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
       where: { buyerId: user.sub, blockId, refundedAt: null },
       select: { id: true, noteId: true, review: { select: { rating: true, comment: true } } },
     }),
+    prisma.purchase.groupBy({
+      by: ["noteId"],
+      where: { noteId: { in: block.notes.map((n) => n.id) }, refundedAt: null },
+      _count: { noteId: true },
+    }),
   ]);
 
   const purchaseByNoteId = new Map(myPurchases.map((p) => [p.noteId, p]));
+  const purchaseCountByNoteId = new Map(notePurchaseCounts.map((item) => [item.noteId, item._count.noteId]));
 
   const salesCountByScribe = new Map<string, number>();
   for (const p of salesByScribe) {
@@ -99,6 +105,7 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
       trustLabel: trust.label,
       noteAvgRating,
       noteRatingCount,
+      purchaseCount: purchaseCountByNoteId.get(n.id) ?? 0,
       uploadedAt: n.createdAt,
       // Specs shown in the version-inspector accordion on the block page —
       // deliberately nothing from the file's actual content (that stays
