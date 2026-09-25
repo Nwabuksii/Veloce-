@@ -1,22 +1,34 @@
-# Changed / new files in this zip
+# Changed files
 
-- app/components/SiteChrome.tsx — academic-profile check fails safe
-  (shows the gate + logs to console) instead of silently failing open.
-- app/api/auth/verify-email/route.ts — verify-email response now
-  includes departmentId/level, matching the login route.
-- prisma/seed.ts — REPLACES prisma/seed.js. The old seed.js used
-  require() on lib/babcock-programmes.ts, which is a TypeScript file
-  with `export` syntax — Node can't require() that directly, which is
-  the "Cannot find module" error you hit. seed.ts uses `import`
-  instead and is run through `tsx` (a TypeScript runner), which can
-  load it correctly.
-  -> Delete prisma/seed.js from your project, this replaces it.
-- package.json — added `tsx` as a devDependency, and wired
-  `prisma.seed` / `prisma:seed` to run `tsx prisma/seed.ts`.
-- .gitignore — added `.next` and `tsconfig.tsbuildinfo`.
+1. app/globals.css
+   - Fixed `.avatar-image { width: inherit; height: inherit; }` — `inherit`
+     pulls from the PARENT element, not from `.avatar`/`.avatar-sm` on the
+     same tag, so any avatar with a photo rendered at its natural
+     (uploaded) size instead of the intended circle. This is why the
+     scribe avatar on the block page looked huge, and the header one
+     only looked fine by accident (a higher-specificity `.avatar-btn
+     .avatar` rule was masking the bug there). Now avatars size correctly
+     everywhere.
+   - Added `.avatar-tap`, `.avatar-lightbox*` — styles for the new
+     tap-to-view-photo feature.
+   - Added `.admin-user-modal*`, `.admin-user-stat-*`,
+     `.admin-user-detail-grid` — the admin "Details" panel now has a real
+     mobile layout (bottom-sheet style, 2-column stat grid, wrapping
+     header with the Close button pinned top-right) instead of relying on
+     a plain flex row with no wrap handling.
 
-# After copying these in
+2. app/components/Avatar.tsx
+   - Tapping any avatar that has an actual photo now opens a full-screen
+     viewer (dark backdrop, tap or Escape to close) — like WhatsApp.
+     Avatars showing only initials are unaffected (nothing to enlarge).
+   - New optional prop `enlargeOnTap` (default true) to opt an avatar out
+     of this when it's already nested in its own clickable control.
 
-1. Delete the old prisma/seed.js (this replaces it with seed.ts).
-2. npm install        (pulls in tsx)
-3. npm run prisma:seed
+3. app/components/ProfileMenu.tsx
+   - Passes `enlargeOnTap={false}` on the header avatar, since it already
+     lives inside the account-menu toggle button — keeps that click
+     opening the menu, as before.
+
+4. app/admin/users/page.tsx
+   - "Details" modal now uses the new CSS classes above instead of inline
+     styles, so it gets a proper mobile layout at ≤640px width.

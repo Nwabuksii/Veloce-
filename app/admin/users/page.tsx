@@ -329,9 +329,9 @@ export default function AdminUsersPage() {
         </div>
 
         {selectedUser && (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(3,7,18,0.56)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem", zIndex: 30 }} onClick={() => setSelectedUser(null)}>
-            <div style={{ width: "min(980px, 100%)", maxHeight: "85vh", overflowY: "auto", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "18px", padding: "1.25rem", boxShadow: "0 16px 50px rgba(0,0,0,0.24)" }} onClick={(e) => e.stopPropagation()}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.8rem", marginBottom: "1rem" }}>
+          <div className="admin-user-modal-overlay" onClick={() => setSelectedUser(null)}>
+            <div className="admin-user-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="admin-user-modal-header">
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
                     <h3 style={{ margin: 0 }}>{selectedUser.fullName}</h3>
@@ -343,10 +343,10 @@ export default function AdminUsersPage() {
                   </div>
                   <div style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>{selectedUser.email}</div>
                 </div>
-                <button className="btn" onClick={() => setSelectedUser(null)}>Close</button>
+                <button className="btn admin-user-modal-close" onClick={() => setSelectedUser(null)}>Close</button>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "0.75rem", marginBottom: "1rem" }}>
+              <div className="admin-user-stat-grid">
                 {[
                   { label: "Department", value: selectedUser.departmentName || "Not set" },
                   { label: "Level", value: selectedUser.level || "Pending" },
@@ -355,14 +355,14 @@ export default function AdminUsersPage() {
                   { label: "Last seen", value: selectedUser.lastSeenAt ? new Date(selectedUser.lastSeenAt).toLocaleDateString() : "Never" },
                   { label: "Status", value: selectedUser.bannedAt ? "Banned" : "Active" },
                 ].map((item) => (
-                  <div key={item.label} style={{ background: "var(--surface-strong)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "0.75rem 0.85rem" }}>
+                  <div key={item.label} className="admin-user-stat-card">
                     <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{item.label}</div>
                     <div style={{ marginTop: "0.35rem", fontWeight: 700 }}>{item.value}</div>
                   </div>
                 ))}
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem" }}>
+              <div className="admin-user-detail-grid">
                 <div style={{ background: "var(--surface-strong)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "0.9rem" }}>
                   <h4 style={{ margin: "0 0 0.75rem", fontSize: "1rem" }}>Purchases</h4>
                   {selectedUser.purchases.length === 0 ? <div style={{ color: "var(--text-secondary)" }}>No purchases yet.</div> : (

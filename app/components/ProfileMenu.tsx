@@ -56,7 +56,7 @@ export default function ProfileMenu({ user: userProp }: { user?: StoredUser }) {
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
       >
-        <Avatar name={currentUser.fullName} imageUrl={imageUrl} size="sm" tone="ink" />
+        <Avatar name={currentUser.fullName} imageUrl={imageUrl} size="sm" tone="ink" enlargeOnTap={false} />
       </button>
 
       {open && (
