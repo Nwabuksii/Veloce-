@@ -19,6 +19,7 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
     include: {
       course: { include: { department: true } },
       topics: { orderBy: { order: "asc" } },
+      purchases: { select: { id: true } },
       notes: {
         where: { status: "LIVE" },
         include: {
@@ -71,6 +72,9 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
   }
   const rejectedScribeIds = new Set(rejectedByScribe.map((n) => n.scribeId));
 
+  const allRatings = block.notes.flatMap((n) => n.reviews.map((r) => r.rating));
+  const blockAvgRating = allRatings.length ? allRatings.reduce((s, r) => s + r, 0) / allRatings.length : null;
+
   const notes = block.notes.map((n) => {
     const noteRatingCount = n.reviews.length;
     const noteAvgRating = noteRatingCount
@@ -121,6 +125,10 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
     courseCode: block.course.code,
     departmentName: block.course.department.name,
     topics: block.topics.map((t) => t.title),
+    purchaseCount: block.purchases.length,
+    liveNoteCount: block.notes.length,
+    avgRating: blockAvgRating,
+    ratingCount: allRatings.length,
     notes,
   });
 });

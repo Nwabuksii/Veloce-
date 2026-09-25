@@ -49,6 +49,10 @@ function BlockDetailInner() {
   const [courseCode, setCourseCode] = useState("");
   const [departmentName, setDepartmentName] = useState("");
   const [topics, setTopics] = useState<string[]>([]);
+  const [purchaseCount, setPurchaseCount] = useState(0);
+  const [liveNoteCount, setLiveNoteCount] = useState(0);
+  const [blockAvgRating, setBlockAvgRating] = useState<number | null>(null);
+  const [blockRatingCount, setBlockRatingCount] = useState(0);
   const [detailsOpenFor, setDetailsOpenFor] = useState<string | null>(null);
   const [notes, setNotes] = useState<NoteVersion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,6 +97,10 @@ function BlockDetailInner() {
         setCourseCode(data.courseCode);
         setDepartmentName(data.departmentName);
         setTopics(data.topics ?? []);
+        setPurchaseCount(data.purchaseCount ?? 0);
+        setLiveNoteCount(data.liveNoteCount ?? 0);
+        setBlockAvgRating(data.avgRating ?? null);
+        setBlockRatingCount(data.ratingCount ?? 0);
         // A shared link points at one specific scribe's version — when
         // that's the case, put it first so the person who followed the
         // link lands directly on it instead of having to find it among
@@ -285,17 +293,48 @@ function BlockDetailInner() {
               <p style={{ color: "var(--text-success)", marginTop: "0.6rem", fontSize: "0.85rem" }}>{reportStatus}</p>
             )}
 
-            {topics.length > 0 && (
-          <div style={{ marginTop: "1rem", display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
-            {topics.map((t) => (
-              <span key={t} className="seal" style={{ background: "var(--stone-light)", color: "var(--text-secondary)" }}>
-                {t}
-              </span>
-            ))}
-          </div>
-        )}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                gap: "0.75rem",
+                marginTop: "1rem",
+              }}
+            >
+              <div style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "0.8rem", padding: "0.8rem" }}>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Purchases</div>
+                <div style={{ fontSize: "1.2rem", fontWeight: 700, marginTop: "0.25rem" }}>{purchaseCount.toLocaleString()}</div>
+              </div>
+              <div style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "0.8rem", padding: "0.8rem" }}>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Versions</div>
+                <div style={{ fontSize: "1.2rem", fontWeight: 700, marginTop: "0.25rem" }}>{liveNoteCount}</div>
+              </div>
+              <div style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "0.8rem", padding: "0.8rem" }}>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Rating</div>
+                <div style={{ fontSize: "1.2rem", fontWeight: 700, marginTop: "0.25rem" }}>
+                  {blockAvgRating != null ? `${blockAvgRating.toFixed(1)}` : "New"}
+                </div>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginTop: "0.1rem" }}>
+                  {blockRatingCount > 0 ? `${blockRatingCount} review${blockRatingCount === 1 ? "" : "s"}` : "No reviews yet"}
+                </div>
+              </div>
+              <div style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "0.8rem", padding: "0.8rem" }}>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Topics</div>
+                <div style={{ fontSize: "1.2rem", fontWeight: 700, marginTop: "0.25rem" }}>{topics.length}</div>
+              </div>
+            </div>
 
-        <h3 style={{ marginTop: "1.5rem", fontSize: "1.05rem" }}>
+            {topics.length > 0 && (
+              <div style={{ marginTop: "1rem", display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+                {topics.map((t) => (
+                  <span key={t} className="seal" style={{ background: "var(--stone-light)", color: "var(--text-secondary)" }}>
+                    {t}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <h3 style={{ marginTop: "1.5rem", fontSize: "1.05rem" }}>
               <i className="fas fa-file-alt" style={{ color: "var(--text-info)" }}></i> Available versions
             </h3>
 
