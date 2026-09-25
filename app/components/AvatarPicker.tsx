@@ -94,7 +94,11 @@ export default function AvatarPicker() {
         flexWrap: "wrap",
       }}
     >
-      <Avatar name={user.fullName} imageUrl={user.avatarDisplay === "custom" ? user.avatarUrl : null} />
+      <Avatar
+        name={user.fullName}
+        imageUrl={user.avatarDisplay === "custom" ? user.avatarUrl : null}
+        allowPreview={true}
+      />
 
       <div style={{ flex: "1 1 200px" }}>
         <div style={{ fontWeight: 500, fontSize: "0.9rem", color: "var(--text-primary)" }}>Profile icon</div>

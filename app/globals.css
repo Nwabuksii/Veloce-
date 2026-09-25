@@ -741,9 +741,10 @@ html[data-theme="dark"] .split-auth-left { background: #0B132B; border-right: 1p
   color: white;
   flex-shrink: 0;
   background: #0F172A;
+  overflow: hidden;
 }
 .avatar-sm { width: 1.7rem; height: 1.7rem; font-size: 0.62rem; }
-.avatar-image { object-fit: cover; }
+.avatar-image { display: block; width: 100%; height: 100%; object-fit: cover; }
 
 /* --- Stat hierarchy: one hero, secondary support --- */
 .stat-hero {

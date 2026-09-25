@@ -20,6 +20,7 @@ export default function Avatar({
   size = "md",
   imageUrl,
   tone,
+  allowPreview = false,
 }: {
   name: string;
   size?: "sm" | "md";
@@ -30,10 +31,24 @@ export default function Avatar({
   // to display it (avatarDisplay === "custom"). Omit/leave undefined to
   // always fall back to the initials-on-color-background look.
   imageUrl?: string | null;
+  allowPreview?: boolean;
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
 
   if (imageUrl) {
+    const image = (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={imageUrl}
+        alt={name}
+        className={`avatar avatar-image${size === "sm" ? " avatar-sm" : ""}`}
+      />
+    );
+
+    if (!allowPreview) {
+      return image;
+    }
+
     return (
       <>
         <button
@@ -42,12 +57,7 @@ export default function Avatar({
           onClick={() => setPreviewOpen(true)}
           style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "inline-block" }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={imageUrl}
-            alt={name}
-            className={`avatar avatar-image${size === "sm" ? " avatar-sm" : ""}`}
-          />
+          {image}
         </button>
         {previewOpen && (
           <div
