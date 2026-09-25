@@ -30,6 +30,7 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, user) => {
     applications,
     appeals,
     moderation,
+    maliciousBlocks,
     reports,
     payouts,
     disputes,
@@ -55,6 +56,12 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, user) => {
       where: {
         status: { in: ["PENDING_REVIEW", "FLAGGED"] },
         scribe: { universityId },
+      },
+    }),
+    prisma.block.count({
+      where: {
+        moderationStatus: { in: ["POTENTIAL_MALICIOUS", "ADMIN_REVIEW"] },
+        course: { department: { universityId } },
       },
     }),
     prisma.report.count({
@@ -98,6 +105,7 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, user) => {
     applications +
     appeals +
     moderation +
+    maliciousBlocks +
     reports +
     payouts +
     demotedScribes +
@@ -107,7 +115,7 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, user) => {
   return NextResponse.json({
     applications,
     appeals,
-    moderation,
+    moderation: moderation + maliciousBlocks,
     reports,
     payouts,
     disputes,

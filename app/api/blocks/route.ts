@@ -49,6 +49,7 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
       include: {
         course: true,
         topics: { orderBy: { order: "asc" } },
+        purchases: { select: { id: true } },
         notes: {
           where: { status: "LIVE" },
           select: {
@@ -100,6 +101,8 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
       level: b.level ?? null,
       unlocked: purchasedIds.has(b.id),
       topics: b.topics.map((t) => t.title),
+      moderationStatus: b.moderationStatus ?? "NORMAL",
+      purchaseCount: b.purchases.length,
       scribeId: scribe?.scribeId ?? null,
       scribeName: scribe?.scribe.fullName ?? null,
       liveNoteCount: b.notes.length,
@@ -108,5 +111,7 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
     };
   });
 
-  return NextResponse.json({ blocks: result });
+  const response = NextResponse.json({ blocks: result });
+  response.headers.set("Cache-Control", "public, s-maxage=45, stale-while-revalidate=120");
+  return response;
 });

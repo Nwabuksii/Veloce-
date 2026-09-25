@@ -9,7 +9,7 @@ import { getFinanceData } from "@/lib/finance";
 export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
   const data = await getFinanceData(adminUser.universityId);
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     grossRevenue: data.grossRevenue,
     platformRevenue: data.platformRevenue,
     scribePool: data.scribePool,
@@ -21,4 +21,7 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
     creditOutstanding: data.creditOutstanding,
     recentTransactions: data.recentTransactions,
   });
+
+  response.headers.set("Cache-Control", "private, max-age=60, stale-while-revalidate=180");
+  return response;
 });

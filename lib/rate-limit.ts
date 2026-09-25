@@ -1,31 +1,60 @@
+import { Redis } from "@upstash/redis";
 import { prisma } from "@/lib/prisma";
 
+const RATE_LIMIT_KEY_PREFIX = "veloce:rate-limit";
+
+function getRedisClient(): Redis | null {
+  const url = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
+
+  if (!url || !token) {
+    return null;
+  }
+
+  return new Redis({ url, token });
+}
+
 /**
- * Deliberately simple, DB-backed rate limiter. An in-memory Map would be
- * the "simpler" option on paper, but it would not actually work correctly
- * here: Vercel serverless functions are stateless and can spin up multiple
- * instances, each with its own memory, so an in-memory counter resets
- * constantly and never sees requests handled by a different instance.
- * Every instance shares the same Neon database, so a row there is the only
- * counter that's actually correct across instances — no separate
- * rate-limiting service needed for a pilot at this scale.
+ * Rate limiting is intentionally kept behind the same function signature as
+ * before so the rest of the app never needs to know whether requests are
+ * being counted in Redis or in the fallback Prisma table.
  *
- * Fixed-window, not sliding-window or token-bucket — good enough here;
- * anything fancier would be solving a problem this app doesn't have yet.
- *
- * Returns true if the request is allowed, false if the limit was hit.
+ * Upstash Redis is preferred because it decouples rate-limit counters from the
+ * application database and avoids writing extra Postgres traffic on every
+ * login/signup/purchase request. If the service is not configured, the app
+ * safely falls back to the existing DB-backed table for local/dev work.
  */
 export async function checkRateLimit(key: string, limit: number, windowMs: number): Promise<boolean> {
-  const now = new Date();
-  const existing = await prisma.rateLimitHit.findUnique({ where: { key } });
+  const now = Date.now();
+  const redis = getRedisClient();
+  const rateLimitKey = `${RATE_LIMIT_KEY_PREFIX}:${key}`;
 
-  const windowExpired = !existing || now.getTime() - existing.windowStart.getTime() > windowMs;
+  if (redis) {
+    const existing = (await redis.get<{ count: number; windowStart: number }>(rateLimitKey)) ?? null;
+    const windowExpired = !existing || now - existing.windowStart > windowMs;
+
+    if (windowExpired) {
+      await redis.set(rateLimitKey, { count: 1, windowStart: now }, { ex: Math.max(1, Math.ceil(windowMs / 1000)) });
+      return true;
+    }
+
+    if (existing.count >= limit) {
+      return false;
+    }
+
+    const next = { count: existing.count + 1, windowStart: existing.windowStart };
+    await redis.set(rateLimitKey, next, { ex: Math.max(1, Math.ceil(windowMs / 1000)) });
+    return true;
+  }
+
+  const existing = await prisma.rateLimitHit.findUnique({ where: { key } });
+  const windowExpired = !existing || now - existing.windowStart.getTime() > windowMs;
 
   if (windowExpired) {
     await prisma.rateLimitHit.upsert({
       where: { key },
-      create: { key, count: 1, windowStart: now },
-      update: { count: 1, windowStart: now },
+      create: { key, count: 1, windowStart: new Date(now) },
+      update: { count: 1, windowStart: new Date(now) },
     });
     return true;
   }

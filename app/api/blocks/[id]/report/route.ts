@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
+import { evaluateBlockModeration } from "@/lib/block-moderation";
 
 interface RouteContext {
   params: { id: string };
@@ -36,6 +37,8 @@ export const POST = requireRole<RouteContext>("STUDENT", async (req: NextRequest
       reason: parsed.data.reason,
     },
   });
+
+  await evaluateBlockModeration(blockId);
 
   return NextResponse.json({ report });
 });

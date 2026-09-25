@@ -75,6 +75,34 @@ export async function renderPdfPageToImage(pdfBuffer: Buffer, pageNum: number): 
   }
 }
 
+export async function renderPdfPagesToImages(pdfBuffer: Buffer, pageCount: number): Promise<Map<number, Buffer>> {
+  const canvasFactory = new NodeCanvasFactory();
+  const doc = await pdfjsLib.getDocument({
+    data: new Uint8Array(pdfBuffer),
+    canvasFactory,
+  } as any).promise;
+
+  try {
+    const pageNumbers = Array.from({ length: pageCount }, (_, index) => index + 1);
+    const pages = await Promise.all(
+      pageNumbers.map(async (pageNum) => {
+        const page = await doc.getPage(pageNum);
+        const viewport = page.getViewport({ scale: RENDER_SCALE });
+        const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
+        const context = canvas.getContext("2d") as unknown as CanvasRenderingContext2D;
+
+        await page.render({ canvasContext: context, viewport, canvasFactory } as any).promise;
+        const image = await canvas.encode("jpeg", JPEG_QUALITY);
+        return [pageNum, image] as const;
+      })
+    );
+
+    return new Map(pages);
+  } finally {
+    await doc.destroy();
+  }
+}
+
 export async function stampWatermark(baseImageBuffer: Buffer, lines: string[]): Promise<Buffer> {
   const img = await loadImage(baseImageBuffer);
   const canvas = createCanvas(img.width, img.height);

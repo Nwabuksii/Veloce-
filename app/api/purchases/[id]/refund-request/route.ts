@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { REFUND_WINDOW_MINUTES } from "@/lib/pricing";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { evaluateBlockModeration } from "@/lib/block-moderation";
 
 interface RouteContext {
   params: { id: string };
@@ -67,6 +68,8 @@ export const POST = requireRole<RouteContext>("STUDENT", async (req: NextRequest
       reason: parsed.data.reason,
     },
   });
+
+  await evaluateBlockModeration(purchase.blockId);
 
   return NextResponse.json({ report: { id: report.id, status: report.status } });
 });

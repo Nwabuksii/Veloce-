@@ -20,6 +20,7 @@ export default function NoteReaderPage() {
   const noteId = params.id as string;
 
   const [pageCount, setPageCount] = useState<number | null>(null);
+  const [pageImages, setPageImages] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [imageLoading, setImageLoading] = useState(true);
   const [error, setError] = useState("");
@@ -32,10 +33,24 @@ export default function NoteReaderPage() {
     }
 
     apiFetch(`/api/notes/${noteId}/pages`)
-      .then((data) => setPageCount(data.pageCount))
+      .then(async (data) => {
+        setPageCount(data.pageCount);
+        try {
+          const allPages = await apiFetch(`/api/notes/${noteId}/all-pages`);
+          setPageImages(allPages.images ?? []);
+        } catch (err) {
+          setError(friendlyErrorMessage(err));
+        }
+      })
       .catch((err) => setError(friendlyErrorMessage(err)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, noteId]);
+
+  useEffect(() => {
+    if (pageImages.length > 0) {
+      setImageLoading(false);
+    }
+  }, [pageImages, currentPage]);
 
   function goTo(page: number) {
     if (!pageCount || page < 1 || page > pageCount) return;
@@ -73,10 +88,10 @@ export default function NoteReaderPage() {
               {imageLoading && (
                 <span style={{ position: "absolute", color: "var(--text-secondary)", fontSize: "0.85rem" }}>Loading page...</span>
               )}
-              {pageCount && (
+              {pageCount && pageImages[currentPage - 1] && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={`/api/notes/${noteId}/page/${currentPage}`}
+                  src={pageImages[currentPage - 1]}
                   alt={`Page ${currentPage}`}
                   onLoad={() => setImageLoading(false)}
                   onError={() => {

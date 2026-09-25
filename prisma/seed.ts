@@ -26,6 +26,10 @@ async function main() {
     where: { universityId_name: { universityId: university.id, name: "Computer Science" } },
   });
 
+  if (!department) {
+    throw new Error("Computer Science department was not found during seed setup.");
+  }
+
   const course = await prisma.course.upsert({
     where: { departmentId_code: { departmentId: department.id, code: "COS 201" } },
     update: {},

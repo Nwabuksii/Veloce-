@@ -150,7 +150,7 @@ export const GET = requireRole("SCRIBE", async (req: NextRequest, user) => {
 
   const followerCount = await prisma.follow.count({ where: { scribeId: user.sub } });
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     trustLevel: trust.level,
     trustLabel: trust.label,
     nextTier,
@@ -165,4 +165,7 @@ export const GET = requireRole("SCRIBE", async (req: NextRequest, user) => {
     followerCount,
     byBlock,
   });
+
+  response.headers.set("Cache-Control", "private, max-age=60, stale-while-revalidate=120");
+  return response;
 });

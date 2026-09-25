@@ -9,6 +9,8 @@
 // already fails immediately and clearly on its own if it's missing, so
 // there's nothing this file needs to add for that one.
 const REQUIRED_ENV_VARS = [
+  "DATABASE_URL",
+  "DIRECT_URL",
   "JWT_SECRET",
   "PAYSTACK_SECRET_KEY",
   "CLOUDINARY_CLOUD_NAME",
