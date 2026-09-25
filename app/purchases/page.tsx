@@ -12,6 +12,7 @@ import { REFUND_WINDOW_MINUTES } from "@/lib/pricing";
 interface PurchaseView {
   purchaseId: string;
   noteId: string;
+  blockId: string;
   blockTitle: string;
   courseCode: string;
   courseName: string;
@@ -208,7 +209,25 @@ export default function PurchasesPage() {
             return (
               <div key={p.purchaseId} className="ledger-row" style={{ maxWidth: 480 }}>
                 <div className="badge">{p.courseCode}</div>
-                <h3>{p.blockTitle}</h3>
+                <button
+                  onClick={() => router.push(`/blocks/${p.blockId}?note=${p.noteId}`)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                    cursor: "pointer",
+                    display: "block",
+                    textAlign: "left",
+                    fontSize: "1rem",
+                    fontWeight: 600,
+                    letterSpacing: "-0.01em",
+                    lineHeight: 1.4,
+                    color: "var(--text-info)",
+                  }}
+                  title="Open this note in its block page"
+                >
+                  {p.blockTitle}
+                </button>
                 <div className="meta">
                   {p.courseName} · by{" "}
                   <button

@@ -332,17 +332,15 @@ export default function AdminUsersPage() {
           <div className="admin-user-modal-overlay" onClick={() => setSelectedUser(null)}>
             <div className="admin-user-modal" onClick={(e) => e.stopPropagation()}>
               <div className="admin-user-modal-header">
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
-                    <h3 style={{ margin: 0 }}>{selectedUser.fullName}</h3>
-                    <span style={{ fontSize: "0.72rem", color: "var(--text-secondary)" }}>({selectedUser.role})</span>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", fontSize: "0.72rem", color: selectedUser.isOnline ? "#16a34a" : "var(--text-secondary)", fontWeight: 700 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: selectedUser.isOnline ? "#22c55e" : "#94a3b8" }}></span>
-                      {selectedUser.isOnline ? "Online now" : "Offline"}
-                    </span>
-                  </div>
-                  <div style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>{selectedUser.email}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+                  <h3 style={{ margin: 0 }}>{selectedUser.fullName}</h3>
+                  <span style={{ fontSize: "0.72rem", color: "var(--text-secondary)" }}>({selectedUser.role})</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", fontSize: "0.72rem", color: selectedUser.isOnline ? "#16a34a" : "var(--text-secondary)", fontWeight: 700 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: selectedUser.isOnline ? "#22c55e" : "#94a3b8" }}></span>
+                    {selectedUser.isOnline ? "Online now" : "Offline"}
+                  </span>
                 </div>
+                <div style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>{selectedUser.email}</div>
                 <button className="btn admin-user-modal-close" onClick={() => setSelectedUser(null)}>Close</button>
               </div>
 

@@ -1,34 +1,26 @@
-# Changed files
+# Changed files, this round
 
-1. app/globals.css
-   - Fixed `.avatar-image { width: inherit; height: inherit; }` — `inherit`
-     pulls from the PARENT element, not from `.avatar`/`.avatar-sm` on the
-     same tag, so any avatar with a photo rendered at its natural
-     (uploaded) size instead of the intended circle. This is why the
-     scribe avatar on the block page looked huge, and the header one
-     only looked fine by accident (a higher-specificity `.avatar-btn
-     .avatar` rule was masking the bug there). Now avatars size correctly
-     everywhere.
-   - Added `.avatar-tap`, `.avatar-lightbox*` — styles for the new
-     tap-to-view-photo feature.
-   - Added `.admin-user-modal*`, `.admin-user-stat-*`,
-     `.admin-user-detail-grid` — the admin "Details" panel now has a real
-     mobile layout (bottom-sheet style, 2-column stat grid, wrapping
-     header with the Close button pinned top-right) instead of relying on
-     a plain flex row with no wrap handling.
+1. app/purchases/page.tsx ("My Library")
+   - The block title on each purchased-note card is now a link to
+     `/blocks/{blockId}?note={noteId}` — the specific scribe's version
+     you bought, sorted to the top of that block's note list and
+     visually highlighted (reusing the existing "Shared with you"
+     mechanism that block page already had for shared links).
 
-2. app/components/Avatar.tsx
-   - Tapping any avatar that has an actual photo now opens a full-screen
-     viewer (dark backdrop, tap or Escape to close) — like WhatsApp.
-     Avatars showing only initials are unaffected (nothing to enlarge).
-   - New optional prop `enlargeOnTap` (default true) to opt an avatar out
-     of this when it's already nested in its own clickable control.
+2. app/api/student/purchases/route.ts
+   - Added `blockId` to the response — the frontend needs it to build
+     the link above; it wasn't being sent before.
 
-3. app/components/ProfileMenu.tsx
-   - Passes `enlargeOnTap={false}` on the header avatar, since it already
-     lives inside the account-menu toggle button — keeps that click
-     opening the menu, as before.
+3. app/admin/users/page.tsx + app/globals.css — "Details" modal on mobile
+   - Previous fix used a CSS `order: -1` trick to move the Close button,
+     which was the likely cause of the header content not showing
+     correctly on your device.
+   - Rebuilt it more simply: the name/status/email block is now in
+     plain, normal document flow (impossible to accidentally hide), and
+     the Close button is `position: absolute` in the header's top-right
+     corner, completely out of the way of that content, at every screen
+     size.
 
-4. app/admin/users/page.tsx
-   - "Details" modal now uses the new CSS classes above instead of inline
-     styles, so it gets a proper mobile layout at ≤640px width.
+(Avatar.tsx / ProfileMenu.tsx are included again since they're part of
+the same globals.css this builds on — no further changes to them this
+round beyond what you already have.)

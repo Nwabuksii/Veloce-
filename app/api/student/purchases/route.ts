@@ -22,6 +22,7 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
   const result = purchases.map((p) => ({
     purchaseId: p.id,
     noteId: p.noteId,
+    blockId: p.blockId,
     blockTitle: p.block.title,
     courseCode: p.block.course.code,
     courseName: p.block.course.name,
