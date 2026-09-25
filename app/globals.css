@@ -744,7 +744,7 @@ html[data-theme="dark"] .split-auth-left { background: #0B132B; border-right: 1p
 }
 .avatar-sm { width: 1.7rem; height: 1.7rem; font-size: 0.62rem; }
 .avatar-image { object-fit: cover; }
-
+inherit; height: inherit
 /* --- Stat hierarchy: one hero, secondary support --- */
 .stat-hero {
   background: var(--ink);
