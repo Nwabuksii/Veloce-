@@ -359,78 +359,77 @@ function BlockDetailInner() {
                         : undefined
                     }
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.6rem" }}>
-                    <div style={{ display: "flex", gap: "0.7rem", alignItems: "flex-start" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", alignItems: "flex-start", gap: "0.7rem", width: "100%" }}>
                       <Avatar name={n.scribeName} imageUrl={n.scribeAvatarUrl} size="sm" />
-                      <div>
-                      {n.noteId === highlightNoteId && (
-                        <div style={{ fontSize: "0.75rem", color: "var(--text-info)", fontWeight: 600, marginBottom: "0.2rem" }}>
-                          <i className="fas fa-share"></i> Shared with you
-                        </div>
-                      )}
-                      <button
-                        onClick={() => router.push(`/scribe/${n.scribeId}`)}
-                        style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontWeight: 600, color: "var(--text-primary)" }}
-                      >
-                        {n.scribeName}
-                      </button>
-                      <div style={{ display: "flex", gap: "0.6rem", alignItems: "center", marginTop: "0.3rem", flexWrap: "wrap" }}>
-                        <span className="seal" style={{ background: trustStyle.bg, color: trustStyle.color }}>
-                          {n.trustLabel}
-                        </span>
-                        {n.isRequestFulfillment && <span className="seal">Fixed request price</span>}
-                        <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                          <i className="fas fa-bag-shopping"></i> {n.purchaseCount.toLocaleString()} bought
-                        </span>
+                      <div style={{ minWidth: 0 }}>
+                        {n.noteId === highlightNoteId && (
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-info)", fontWeight: 600, marginBottom: "0.2rem" }}>
+                            <i className="fas fa-share"></i> Shared with you
+                          </div>
+                        )}
                         <button
-                          onClick={() => setReviewsOpenFor((cur) => (cur === n.noteId ? null : n.noteId))}
-                          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.8rem", color: "var(--text-secondary)", textDecoration: "underline" }}
+                          onClick={() => router.push(`/scribe/${n.scribeId}`)}
+                          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontWeight: 600, color: "var(--text-primary)" }}
                         >
-                          <i className="fas fa-star" style={{ color: "var(--star)" }}></i>{" "}
-                          {n.noteAvgRating != null ? `${n.noteAvgRating.toFixed(1)} (${n.noteRatingCount})` : "No ratings yet"}
+                          {n.scribeName}
                         </button>
-                        <button
-                          onClick={() => setReportingNoteId((cur) => (cur === n.noteId ? null : n.noteId))}
-                          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.8rem", color: "var(--text-secondary)" }}
-                        >
-                          <i className="fas fa-flag"></i> Report this version
-                        </button>
-                        <button
-                          onClick={() => setDetailsOpenFor((cur) => (cur === n.noteId ? null : n.noteId))}
-                          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.8rem", color: "var(--text-secondary)" }}
-                        >
-                          <i className={`fas fa-chevron-${detailsOpenFor === n.noteId ? "up" : "down"}`}></i> Details
-                        </button>
-                      </div>
-                      {detailsOpenFor === n.noteId && (
-                        <div
-                          style={{
-                            marginTop: "0.5rem",
-                            padding: "0.6rem 0.8rem",
-                            background: "var(--stone-light)",
-                            borderRadius: "0.5rem",
-                            fontSize: "0.78rem",
-                            color: "var(--text-secondary)",
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "0.25rem",
-                          }}
-                        >
-                          {n.scribeLevel && <span>Level at upload: {n.scribeLevel}</span>}
-                          <span>Uploaded {new Date(n.uploadedAt).toLocaleDateString()}</span>
-                          <span>{n.pageCount != null ? `${n.pageCount} page${n.pageCount === 1 ? "" : "s"}` : "Page count not yet available"}</span>
-                          <span>
-                            {n.attestedOriginal ? (
-                              <>
-                                <i className="fas fa-check" style={{ color: "var(--text-success)" }}></i> Scribe attested this is
-                                their own original work
-                              </>
-                            ) : (
-                              "No originality attestation on file"
-                            )}
+                        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginTop: "0.3rem", flexWrap: "wrap" }}>
+                          <span className="seal" style={{ background: trustStyle.bg, color: trustStyle.color }}>
+                            {n.trustLabel}
                           </span>
+                          {n.isRequestFulfillment && <span className="seal">Fixed request price</span>}
+                          <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                            <i className="fas fa-bag-shopping"></i> {n.purchaseCount.toLocaleString()} bought
+                          </span>
+                          <button
+                            onClick={() => setReviewsOpenFor((cur) => (cur === n.noteId ? null : n.noteId))}
+                            style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.8rem", color: "var(--text-secondary)", textDecoration: "underline" }}
+                          >
+                            <i className="fas fa-star" style={{ color: "var(--star)" }}></i>{" "}
+                            {n.noteAvgRating != null ? `${n.noteAvgRating.toFixed(1)} (${n.noteRatingCount})` : "No ratings yet"}
+                          </button>
+                          <button
+                            onClick={() => setReportingNoteId((cur) => (cur === n.noteId ? null : n.noteId))}
+                            style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.8rem", color: "var(--text-secondary)" }}
+                          >
+                            <i className="fas fa-flag"></i> Report this version
+                          </button>
+                          <button
+                            onClick={() => setDetailsOpenFor((cur) => (cur === n.noteId ? null : n.noteId))}
+                            style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.8rem", color: "var(--text-secondary)" }}
+                          >
+                            <i className={`fas fa-chevron-${detailsOpenFor === n.noteId ? "up" : "down"}`}></i> Details
+                          </button>
                         </div>
-                      )}
+                        {detailsOpenFor === n.noteId && (
+                          <div
+                            style={{
+                              marginTop: "0.5rem",
+                              padding: "0.6rem 0.8rem",
+                              background: "var(--stone-light)",
+                              borderRadius: "0.5rem",
+                              fontSize: "0.78rem",
+                              color: "var(--text-secondary)",
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "0.25rem",
+                            }}
+                          >
+                            {n.scribeLevel && <span>Level at upload: {n.scribeLevel}</span>}
+                            <span>Uploaded {new Date(n.uploadedAt).toLocaleDateString()}</span>
+                            <span>{n.pageCount != null ? `${n.pageCount} page${n.pageCount === 1 ? "" : "s"}` : "Page count not yet available"}</span>
+                            <span>
+                              {n.attestedOriginal ? (
+                                <>
+                                  <i className="fas fa-check" style={{ color: "var(--text-success)" }}></i> Scribe attested this is
+                                  their own original work
+                                </>
+                              ) : (
+                                "No originality attestation on file"
+                              )}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -448,13 +447,12 @@ function BlockDetailInner() {
                         {purchasingNoteId === n.noteId
                           ? "Redirecting..."
                           : creditBalance != null && creditBalance > 0
-                          ? creditBalance >= n.price
-                            ? "Use credit (free)"
-                            : `Use ₦${creditBalance.toLocaleString()} credit — pay ₦${(n.price - creditBalance).toLocaleString()}`
-                          : `Buy for ₦${n.price.toLocaleString()}`}
+                            ? creditBalance >= n.price
+                              ? "Use credit (free)"
+                              : `Use ₦${creditBalance.toLocaleString()} credit — pay ₦${(n.price - creditBalance).toLocaleString()}`
+                            : `Buy for ₦${n.price.toLocaleString()}`}
                       </button>
                     )}
-                    </div>
 
                     {reviewsOpenFor === n.noteId && (
                       <NoteReviews
