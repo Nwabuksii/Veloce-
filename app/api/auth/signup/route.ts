@@ -26,7 +26,7 @@ const signupSchema = z
 // Strict, non-negotiable — see PendingRegistration.expiresAt. Resending a
 // link (see /api/auth/resend-verification) issues a fresh token but never
 // pushes this deadline out.
-const VERIFICATION_TOKEN_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const VERIFICATION_TOKEN_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 // Names reserved for the platform itself, never available to a real
 // account — checked as a case-insensitive exact match against the whole
@@ -41,7 +41,7 @@ function normalizeFullName(fullName: string): string {
 
 // Sign-up does NOT write to User at all. It writes a PendingRegistration
 // row instead, which only becomes a real account if the verification link
-// is clicked within 5 minutes (see /api/auth/verify-email) — an
+// is clicked within 10 minutes (see /api/auth/verify-email) — an
 // unverified, possibly-throwaway signup never touches the real user table.
 export async function POST(req: NextRequest) {
   const allowed = await checkRateLimit(ipKeyFrom(req, "signup"), 8, 60 * 60 * 1000);
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Clean up any stale pending row for this email/name first — a lapsed
-  // 5-minute attempt shouldn't block a fresh one, and there's no scheduled
+  // 10-minute attempt shouldn't block a fresh one, and there's no scheduled
   // job sweeping these, so encountering one here is also how they get
   // cleaned up in practice.
   await prisma.pendingRegistration.deleteMany({
@@ -137,17 +137,17 @@ export async function POST(req: NextRequest) {
   try {
     await sendEmail({
       to: pending.email,
-      subject: "Verify your Veloce account — link expires in 5 minutes",
-      text: `Welcome to Veloce! Confirm your email to finish setting up your account: ${verifyUrl}\n\nThis link expires in 5 minutes — if it lapses, you'll need to sign up again.`,
-      html: `<p>Welcome to Veloce!</p><p><a href="${verifyUrl}">Click here to verify your email</a> and finish setting up your account.</p><p><strong>This link expires in 5 minutes</strong> — if it lapses, you'll need to sign up again.</p>`,
+      subject: "Verify your Veloce account — link expires in 10 minutes",
+      text: `Welcome to Veloce! Confirm your email to finish setting up your account: ${verifyUrl}\n\nThis link expires in 10 minutes — if it lapses, you'll need to sign up again.`,
+      html: `<p>Welcome to Veloce!</p><p><a href="${verifyUrl}">Click here to verify your email</a> and finish setting up your account.</p><p><strong>This link expires in 10 minutes</strong> — if it lapses, you'll need to sign up again.</p>`,
     });
   } catch (err) {
     // The pending row exists but no email went out — they can use "resend"
-    // on the login page, as long as they do it within the 5-minute window.
+    // on the login page, as long as they do it within the 10-minute window.
     console.error("Failed to send verification email:", err);
   }
 
   return NextResponse.json({
-    message: "Check your email to verify your account within the next 5 minutes.",
+    message: "Check your email to verify your account within the next 10 minutes.",
   });
 }

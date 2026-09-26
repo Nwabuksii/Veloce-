@@ -1,10 +1,14 @@
 import { defineConfig } from "vitest/config";
+import { fileURLToPath } from "node:url";
 
-// Deliberately minimal — these tests only cover pure functions in lib/
-// (no React components, no database), so there's no jsdom environment or
-// test-database setup to configure. Add those later only if a test
-// actually needs them.
+const rootDir = fileURLToPath(new URL("./", import.meta.url));
+
 export default defineConfig({
+  resolve: {
+    alias: {
+      "@": rootDir,
+    },
+  },
   test: {
     environment: "node",
   },

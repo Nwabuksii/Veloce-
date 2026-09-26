@@ -5,6 +5,7 @@ import { saveNoteFile } from "@/lib/storage";
 import { runQualityGate } from "@/lib/quality-check";
 import { getPdfPageCount } from "@/lib/pdf-render";
 import { notifyFollowersOfNewNote } from "@/lib/notify-followers";
+import { queueNoteRender } from "@/lib/render-queue";
 // @ts-expect-error — pdf-parse ships without its own type declarations
 import pdfParse from "pdf-parse";
 
@@ -166,22 +167,20 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
         flagReason: reasons.length > 0 ? reasons.join("; ") : null,
         attestedOriginal: true,
         fulfillsRequestId: fulfilledRequest?.id,
-        status: flagged ? "FLAGGED" : "LIVE",
+        status: flagged ? "FLAGGED" : "RENDERING",
         scribeLevelAtUpload: scribeProfile?.level ?? null,
       },
     });
 
-    // Only when it's actually visible to anyone — a flagged upload still
-    // needs admin approval first (see the approve route for that path).
     if (!flagged) {
-      await notifyFollowersOfNewNote(user.sub, block.title);
+      void queueNoteRender(note.id);
     }
 
     return NextResponse.json({
       note: { id: note.id, status: note.status },
       message: flagged
         ? "Uploaded — flagged for admin review before it goes live."
-        : "Uploaded and live!",
+        : "Uploaded — rendering pages before it becomes live.",
     });
   } catch (err) {
     console.error("Scribe upload failed:", err);

@@ -6,7 +6,7 @@ import { sendEmail } from "@/lib/email";
 import { checkRateLimit, ipKeyFrom } from "@/lib/rate-limit";
 
 const RESEND_COOLDOWN_MS = 60 * 1000; // 60 seconds
-const LEGACY_VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+const LEGACY_VERIFICATION_TOKEN_TTL_MS = 10 * 60 * 1000;
 
 const resendSchema = z.object({
   email: z.string().email(),
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
       // start over, rather than silently doing nothing.
       await prisma.pendingRegistration.delete({ where: { id: pending.id } }).catch(() => {});
       return NextResponse.json(
-        { error: "That signup's 5-minute window has expired. Please sign up again." },
+        { error: "That signup's 10-minute window has expired. Please sign up again." },
         { status: 400 }
       );
     }
@@ -53,8 +53,8 @@ export async function POST(req: NextRequest) {
       await sendEmail({
         to: pending.email,
         subject: "Verify your Veloce account — link expires soon",
-        text: `Confirm your email to finish setting up your account: ${verifyUrl}\n\nThis link expires in about ${minutesLeft} minute(s) — the original 5-minute window doesn't reset.`,
-        html: `<p><a href="${verifyUrl}">Click here to verify your email</a> and finish setting up your account.</p><p>This link expires in about ${minutesLeft} minute(s) — the original 5-minute window doesn't reset.</p>`,
+        text: `Confirm your email to finish setting up your account: ${verifyUrl}\n\nThis link expires in about ${minutesLeft} minute(s) — the original 10-minute window doesn't reset.`,
+        html: `<p><a href="${verifyUrl}">Click here to verify your email</a> and finish setting up your account.</p><p>This link expires in about ${minutesLeft} minute(s) — the original 10-minute window doesn't reset.</p>`,
       });
     } catch (err) {
       console.error("Failed to resend verification email:", err);
@@ -88,8 +88,8 @@ export async function POST(req: NextRequest) {
     await sendEmail({
       to: user.email,
       subject: "Verify your Veloce account",
-      text: `Confirm your email to finish setting up your account: ${verifyUrl}\n\nThis link expires in 24 hours.`,
-      html: `<p><a href="${verifyUrl}">Click here to verify your email</a> and finish setting up your account.</p><p>This link expires in 24 hours.</p>`,
+      text: `Confirm your email to finish setting up your account: ${verifyUrl}\n\nThis link expires in 10 minutes.`,
+      html: `<p><a href="${verifyUrl}">Click here to verify your email</a> and finish setting up your account.</p><p>This link expires in 10 minutes.</p>`,
     });
   } catch (err) {
     console.error("Failed to resend verification email:", err);

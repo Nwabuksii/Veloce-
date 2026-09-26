@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { notifyFollowersOfNewNote } from "@/lib/notify-followers";
+import { queueNoteRender } from "@/lib/render-queue";
 
 interface RouteContext {
   params: { id: string };
@@ -34,12 +35,14 @@ export const POST = requireRole<RouteContext>("ADMIN", async (req: NextRequest, 
 
   const updated = await prisma.note.update({
     where: { id: note.id },
-    data: { status: "LIVE", flaggedForReview: false },
+    data: { status: "RENDERING", flaggedForReview: false },
   });
+
+  void queueNoteRender(note.id);
 
   // The other place a note can reach LIVE — see app/api/scribe/upload for
   // the direct (non-flagged) path.
-  await notifyFollowersOfNewNote(note.scribeId, note.block.title);
+  await notifyFollowersOfNewNote(note.scribeId, note.block.title).catch(() => undefined);
 
   return NextResponse.json({ note: updated });
 });

@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       // Strict — no grace period. Delete it and send them back to signup.
       await prisma.pendingRegistration.delete({ where: { id: pending.id } }).catch(() => {});
       return NextResponse.json(
-        { error: "This verification link has expired (links are only valid for 5 minutes). Please sign up again." },
+        { error: "This verification link has expired (links are only valid for 10 minutes). Please sign up again." },
         { status: 400 }
       );
     }

@@ -66,7 +66,7 @@ export default function SignupPage() {
               <h1>Check your email</h1>
               <p className="auth-sub">
                 We sent a verification link to <strong>{submittedEmail}</strong>. Click it within the next{" "}
-                <strong>5 minutes</strong> to finish setting up your account — after that, the link expires and
+                <strong>10 minutes</strong> to finish setting up your account — after that, the link expires and
                 you'll need to sign up again.
               </p>
               <p className="auth-switch">

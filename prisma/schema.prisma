@@ -371,6 +371,7 @@ enum NoteStatus {
   PENDING_REVIEW // awaiting automated check
   FLAGGED // automated check flagged it, needs manual review
   APPROVED // passed checks / manual review
+  RENDERING // queued to render base page images before going live
   LIVE // visible and purchasable
   REJECTED
 }
@@ -710,7 +711,7 @@ model AdminSectionView {
 // until the email link is clicked, and only THEN does a real User row get
 // created (see app/api/auth/signup and app/api/auth/verify-email). This
 // keeps unverified, possibly-fake signups out of the real user table
-// entirely, and makes the "must verify within 5 minutes" rule a hard
+// entirely, and makes the "must verify within 10 minutes" rule a hard
 // property of storage rather than just a UI countdown a person could
 // ignore by never clicking away.
 model PendingRegistration {
@@ -735,7 +736,7 @@ model PendingRegistration {
 
   verificationToken String   @unique
   createdAt         DateTime @default(now())
-  // Strict 5-minute deadline from createdAt — resending a link (see
+  // Strict 10-minute deadline from createdAt — resending a link (see
   // app/api/auth/resend-verification) issues a fresh token but does NOT
   // push this deadline out further. Past it, verify-email deletes the row
   // outright and the person has to sign up again from scratch.

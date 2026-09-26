@@ -21,6 +21,7 @@ interface ScribeNote {
 const STATUS_STYLES: Record<string, { bg: string; color: string; label: string }> = {
   LIVE: { bg: "var(--bg-success)", color: "var(--text-success)", label: "Live" },
   APPROVED: { bg: "var(--bg-success)", color: "var(--text-success)", label: "Live" },
+  RENDERING: { bg: "var(--bg-warning)", color: "var(--text-warning)", label: "Rendering" },
   FLAGGED: { bg: "var(--bg-warning)", color: "var(--text-warning)", label: "Under review" },
   PENDING_REVIEW: { bg: "var(--bg-warning)", color: "var(--text-warning)", label: "Under review" },
   REJECTED: { bg: "var(--bg-danger)", color: "var(--text-danger)", label: "Rejected" },

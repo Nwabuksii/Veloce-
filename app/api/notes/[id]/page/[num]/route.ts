@@ -75,6 +75,10 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
 
   // Look for an already-rendered base image for this exact page first —
   // this is the expensive step we only ever want to do once per page.
+  if (note.status !== "LIVE") {
+    return NextResponse.json({ error: "This note is still rendering and isn't available yet" }, { status: 409 });
+  }
+
   let pageImage = await prisma.notePageImage.findUnique({
     where: { noteId_pageNum: { noteId: note.id, pageNum } },
   });
