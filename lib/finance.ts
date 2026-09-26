@@ -58,7 +58,11 @@ export async function getFinanceData(universityId: string) {
   });
   const convertedCash = converted.reduce((sum, c) => sum + c.amount, 0);
 
-  const grossRevenue = cashRetained.reduce((sum, p) => sum + p.amountPaid, 0) + convertedCash;
+  // Gross revenue has to reflect the full sale value actually moved,
+  // not just the cash paid out of pocket. Credit is real money already
+  // counted as part of the purchase value, so the total has to use
+  // effectivePrice(p) (cash + credit), not amountPaid alone.
+  const grossRevenue = cashRetained.reduce((sum, p) => sum + effectivePrice(p), 0) + convertedCash;
   const platformRevenue = confirmed.reduce((sum, p) => sum + platformCutOf(p), 0);
   const scribePool = confirmed.reduce((sum, p) => sum + scribeCutOf(p), 0);
 
