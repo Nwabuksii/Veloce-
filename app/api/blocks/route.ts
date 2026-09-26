@@ -129,7 +129,11 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
     };
   });
 
+  // This response is personalized per logged-in student because the request-
+  // fulfillment discount depends on the current user's vote history. Caching
+  // it as a shared/public response causes one account's discount state to leak
+  // into another user's dashboard until a later refresh.
   const response = NextResponse.json({ blocks: result });
-  response.headers.set("Cache-Control", "public, s-maxage=45, stale-while-revalidate=120");
+  response.headers.set("Cache-Control", "private, no-store, max-age=0, must-revalidate");
   return response;
 });

@@ -149,7 +149,7 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
     };
   });
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     blockTitle: block.title,
     price: block.price,
     courseName: block.course.name,
@@ -163,4 +163,10 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
     ratingCount: allRatings.length,
     notes,
   });
+
+  // This payload is also user-specific because it includes a buyer's request-
+  // vote status and whether they already own a note. Never cache it across
+  // accounts or browser sessions.
+  response.headers.set("Cache-Control", "private, no-store, max-age=0, must-revalidate");
+  return response;
 });
