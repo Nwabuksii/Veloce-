@@ -36,7 +36,11 @@ export const POST = requireRole<RouteContext>("ADMIN", async (req: NextRequest, 
     return NextResponse.json({ error: "Purchase not found" }, { status: 404 });
   }
 
-  if (purchase.buyer.universityId !== adminUser.universityId) {
+  // Authority follows the content, not the buyer: only the admin at the
+  // SCRIBE'S university can act here, matching the report-routing rule
+  // above (see lib/report-scope.ts) and the revenue-attribution rule
+  // (a sale/refund is always the content-owning university's to manage).
+  if (purchase.note.scribe.universityId !== adminUser.universityId) {
     return NextResponse.json({ error: "Cannot manage purchases outside your university" }, { status: 403 });
   }
 

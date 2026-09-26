@@ -15,6 +15,7 @@ interface NoteVersion {
   scribeId: string;
   scribeName: string;
   scribeAvatarUrl: string | null;
+  scribeLevel: string | null;
   trustLevel: string;
   trustLabel: string;
   noteAvgRating: number | null;
@@ -22,6 +23,7 @@ interface NoteVersion {
   uploadedAt: string;
   pageCount: number | null;
   attestedOriginal: boolean;
+  purchaseCount: number;
   owned: boolean;
   purchaseId: string | null;
   myReview: { rating: number; comment: string | null } | null;
@@ -48,6 +50,7 @@ function BlockDetailInner() {
   const [courseName, setCourseName] = useState("");
   const [courseCode, setCourseCode] = useState("");
   const [departmentName, setDepartmentName] = useState("");
+  const [universityName, setUniversityName] = useState("");
   const [topics, setTopics] = useState<string[]>([]);
   const [purchaseCount, setPurchaseCount] = useState(0);
   const [liveNoteCount, setLiveNoteCount] = useState(0);
@@ -96,6 +99,7 @@ function BlockDetailInner() {
         setCourseName(data.courseName);
         setCourseCode(data.courseCode);
         setDepartmentName(data.departmentName);
+        setUniversityName(data.universityName);
         setTopics(data.topics ?? []);
         setPurchaseCount(data.purchaseCount ?? 0);
         setLiveNoteCount(data.liveNoteCount ?? 0);
@@ -248,7 +252,7 @@ function BlockDetailInner() {
             >
               <div>
                 <span className="mono" style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.65)" }}>
-                  {courseCode} · {courseName} · {departmentName}
+                  {universityName ? `${universityName} · ` : ""}{courseCode} · {courseName} · {departmentName}
                 </span>
                 <h2 style={{ fontSize: "1.4rem", marginTop: "0.15rem" }}>{blockTitle}</h2>
                 <span className="price-tag mono" style={{ marginTop: "0.4rem", display: "inline-block", color: "white" }}>
@@ -374,7 +378,11 @@ function BlockDetailInner() {
                         <span className="seal" style={{ background: trustStyle.bg, color: trustStyle.color }}>
                           {n.trustLabel}
                         </span>
+                        {n.scribeLevel && <span className="seal">{n.scribeLevel}</span>}
                         {n.isRequestFulfillment && <span className="seal">Fixed request price</span>}
+                        <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                          <i className="fas fa-bag-shopping"></i> {n.purchaseCount.toLocaleString()} bought
+                        </span>
                         <button
                           onClick={() => setReviewsOpenFor((cur) => (cur === n.noteId ? null : n.noteId))}
                           style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.8rem", color: "var(--text-secondary)", textDecoration: "underline" }}

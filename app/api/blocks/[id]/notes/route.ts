@@ -17,7 +17,7 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
   const block = await prisma.block.findUnique({
     where: { id: blockId },
     include: {
-      course: { include: { department: true } },
+      course: { include: { department: { include: { university: true } } } },
       topics: { orderBy: { order: "asc" } },
       purchases: { select: { id: true } },
       notes: {
@@ -41,7 +41,7 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
   const [salesByScribe, ratingsByScribe, rejectedByScribe, myPurchases] = await Promise.all([
     prisma.purchase.findMany({
       where: { note: { scribeId: { in: scribeIds } } },
-      select: { note: { select: { scribeId: true } } },
+      select: { noteId: true, note: { select: { scribeId: true } } },
     }),
     prisma.review.findMany({
       where: { note: { scribeId: { in: scribeIds } } },
@@ -60,8 +60,15 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
   const purchaseByNoteId = new Map(myPurchases.map((p) => [p.noteId, p]));
 
   const salesCountByScribe = new Map<string, number>();
+  // Per VERSION, not per scribe — a scribe's second upload of the same
+  // block starts its own count at zero rather than inheriting the sales
+  // of their earlier version. Kept separate from salesCountByScribe above,
+  // which is deliberately still scribe-wide (it feeds the trust badge,
+  // an overall-reputation number that's correct to keep cumulative).
+  const salesCountByNote = new Map<string, number>();
   for (const p of salesByScribe) {
     salesCountByScribe.set(p.note.scribeId, (salesCountByScribe.get(p.note.scribeId) ?? 0) + 1);
+    salesCountByNote.set(p.noteId, (salesCountByNote.get(p.noteId) ?? 0) + 1);
   }
   const ratingsSumByScribe = new Map<string, { sum: number; count: number }>();
   for (const r of ratingsByScribe) {
@@ -95,6 +102,10 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
       scribeId: n.scribeId,
       scribeName: n.scribe.fullName,
       scribeAvatarUrl: n.scribe.avatarDisplay === "custom" ? n.scribe.avatarUrl : null,
+      // Snapshotted at upload time — see prisma/schema.prisma
+      // Note.scribeLevelAtUpload for why this isn't just a live read of
+      // the scribe's current level.
+      scribeLevel: n.scribeLevelAtUpload,
       trustLevel: trust.level,
       trustLabel: trust.label,
       noteAvgRating,
@@ -106,6 +117,11 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
       // buyer can use to judge a version before paying for it.
       pageCount: n.pageCount,
       attestedOriginal: n.attestedOriginal,
+      // How many people bought THIS version specifically — see
+      // salesCountByNote above. Distinct from the scribe's overall
+      // trust-badge sales count, which stays cumulative across all their
+      // notes on purpose.
+      purchaseCount: salesCountByNote.get(n.id) ?? 0,
       owned: Boolean(myPurchase),
       purchaseId: myPurchase?.id ?? null,
       myReview: myPurchase?.review ? { rating: myPurchase.review.rating, comment: myPurchase.review.comment } : null,
@@ -124,6 +140,7 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
     courseName: block.course.name,
     courseCode: block.course.code,
     departmentName: block.course.department.name,
+    universityName: block.course.department.university.name,
     topics: block.topics.map((t) => t.title),
     purchaseCount: block.purchases.length,
     liveNoteCount: block.notes.length,

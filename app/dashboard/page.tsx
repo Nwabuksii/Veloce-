@@ -19,10 +19,12 @@ interface BlockView {
   discountedPrice: number | null;
   courseName: string;
   courseCode: string;
+  universityName: string;
   unlocked: boolean;
   topics: string[];
   scribeId: string | null;
   scribeName: string | null;
+  scribeLevel: string | null;
   purchaseCount: number;
   featuredNoteId: string | null;
   liveNoteCount: number;
@@ -310,6 +312,7 @@ function CatalogPage() {
               <div>
                 <div className="note-card-top">
                   <span className={`seal mono${hasDiscount ? " seal-amber" : ""}`}>{block.courseCode}</span>
+                  <span className="seal" style={{ opacity: 0.75 }}>{block.universityName}</span>
                   {block.unlocked ? (
                     <span className="note-card-side is-good">
                       <i className="fas fa-check-circle"></i> Unlocked
@@ -358,6 +361,7 @@ function CatalogPage() {
                       >
                         {block.scribeName}
                       </button>
+                      {block.scribeLevel && <span className="count">({block.scribeLevel})</span>}
                     </>
                   )}
                 </div>

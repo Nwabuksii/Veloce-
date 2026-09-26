@@ -80,6 +80,15 @@ export default function AdminUsersPage() {
   const [banReason, setBanReason] = useState("");
   const [banDurationDays, setBanDurationDays] = useState(""); // empty = indefinite
 
+  const [levelStatus, setLevelStatus] = useState<{
+    eligibleNow: boolean;
+    inWindow: boolean;
+    lockedForThisWindow: boolean;
+    lastLevelAdvanceAt: string | null;
+  } | null>(null);
+  const [levelBusy, setLevelBusy] = useState(false);
+  const [levelMessage, setLevelMessage] = useState("");
+
   useEffect(() => {
     const user = getStoredUser();
     if (!user) {
@@ -91,6 +100,34 @@ export default function AdminUsersPage() {
       return;
     }
   }, [router]);
+
+  useEffect(() => {
+    apiFetch("/api/admin/university/advance-level")
+      .then((data) => setLevelStatus(data))
+      .catch(() => {});
+  }, []);
+
+  async function handleAdvanceLevel() {
+    if (
+      !confirm(
+        "This advances EVERY student and scribe at your university one level, and graduates anyone already at 500L (they keep their notes and earnings, but lose upload access). This can't be undone from here. Continue?"
+      )
+    ) {
+      return;
+    }
+    setLevelBusy(true);
+    setLevelMessage("");
+    try {
+      const data = await apiFetch("/api/admin/university/advance-level", { method: "POST" });
+      setLevelMessage(`Done — advanced ${data.advancedCount}, graduated ${data.graduatedCount}.`);
+      const status = await apiFetch("/api/admin/university/advance-level");
+      setLevelStatus(status);
+    } catch (err) {
+      setLevelMessage(friendlyErrorMessage(err));
+    } finally {
+      setLevelBusy(false);
+    }
+  }
 
   useEffect(() => {
     setSearching(true);
@@ -191,6 +228,41 @@ export default function AdminUsersPage() {
             </div>
           ))}
         </div>
+
+        <div
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border-blue)",
+            borderRadius: "12px",
+            padding: "1rem",
+            marginTop: "1rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "0.75rem",
+          }}
+        >
+          <div>
+            <div style={{ fontWeight: 700 }}>Start a new level</div>
+            <div style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>
+              Advances every student/scribe at your university one level (100L → 200L, etc.), and graduates anyone
+              already at 500L. Only available in May or July, once per window.
+              {levelStatus && !levelStatus.inWindow && " It isn't May or July right now."}
+              {levelStatus?.inWindow && levelStatus.lockedForThisWindow && " Already used for this window."}
+              {levelStatus?.lastLevelAdvanceAt &&
+                ` Last run: ${new Date(levelStatus.lastLevelAdvanceAt).toLocaleDateString()}.`}
+            </div>
+          </div>
+          <button
+            className="btn btn-primary"
+            disabled={!levelStatus?.eligibleNow || levelBusy}
+            onClick={handleAdvanceLevel}
+          >
+            {levelBusy ? "Working…" : "Start new level"}
+          </button>
+        </div>
+        {levelMessage && <p style={{ fontSize: "0.85rem", marginTop: "0.5rem" }}>{levelMessage}</p>}
 
         <p style={{ color: "var(--text-secondary)", marginTop: "1rem", fontSize: "0.9rem" }}>
           Search any student, scribe, or admin at your university to review their academic profile, login history, and activity. Admins cannot be banned or demoted here; those changes must be made directly in the database.

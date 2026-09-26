@@ -41,9 +41,26 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
       );
     }
 
-    const block = await prisma.block.findUnique({ where: { id: blockId } });
+    const block = await prisma.block.findUnique({
+      where: { id: blockId },
+      include: { course: { include: { department: true } } },
+    });
     if (!block) {
       return NextResponse.json({ error: "Block not found" }, { status: 404 });
+    }
+    if (block.course.department.universityId !== user.universityId) {
+      return NextResponse.json({ error: "You can only upload to blocks at your own university" }, { status: 403 });
+    }
+
+    const scribeProfile = await prisma.user.findUnique({
+      where: { id: user.sub },
+      select: { level: true, graduatedAt: true },
+    });
+    if (scribeProfile?.graduatedAt) {
+      return NextResponse.json(
+        { error: "You've graduated past 500L, so new uploads are closed — your existing notes stay live and still earn." },
+        { status: 403 }
+      );
     }
 
     // If this block was created to fulfill a demand-feed request, tag the
@@ -150,6 +167,7 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
         attestedOriginal: true,
         fulfillsRequestId: fulfilledRequest?.id,
         status: flagged ? "FLAGGED" : "LIVE",
+        scribeLevelAtUpload: scribeProfile?.level ?? null,
       },
     });
 

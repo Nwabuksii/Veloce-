@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
+import { reportOwnerUniversityId } from "@/lib/report-scope";
 
 interface RouteContext {
   params: { id: string };
@@ -49,9 +50,9 @@ export const POST = requireRole<RouteContext>("ADMIN", async (req: NextRequest, 
     where: { id: ctx.params.id },
     include: {
       reporter: true,
-      block: { select: { title: true } },
-      reportedUser: { select: { fullName: true } },
-      note: { select: { scribe: { select: { fullName: true } } } },
+      block: { select: { title: true, course: { select: { department: { select: { universityId: true } } } } } },
+      reportedUser: { select: { fullName: true, universityId: true } },
+      note: { select: { scribe: { select: { fullName: true, universityId: true } } } },
       purchase: { select: { block: { select: { title: true } } } },
     },
   });
@@ -60,7 +61,7 @@ export const POST = requireRole<RouteContext>("ADMIN", async (req: NextRequest, 
     return NextResponse.json({ error: "Report not found" }, { status: 404 });
   }
 
-  if (report.reporter.universityId !== adminUser.universityId) {
+  if (reportOwnerUniversityId(report) !== adminUser.universityId) {
     return NextResponse.json({ error: "Cannot manage reports outside your university" }, { status: 403 });
   }
 

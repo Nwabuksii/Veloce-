@@ -15,12 +15,12 @@ const reportSchema = z.object({
 export const POST = requireRole<RouteContext>("STUDENT", async (req: NextRequest, user, ctx) => {
   const blockId = ctx.params.id;
 
-  const block = await prisma.block.findUnique({
-    where: { id: blockId },
-    include: { course: { include: { department: true } } },
-  });
+  const block = await prisma.block.findUnique({ where: { id: blockId } });
 
-  if (!block || block.course.department.universityId !== user.universityId) {
+  // Same reasoning as app/api/notes/[id]/report/route.ts — no university
+  // check on filing; app/api/admin/reports/route.ts routes this to the
+  // block's own university's admins regardless of the reporter's.
+  if (!block) {
     return NextResponse.json({ error: "Block not found" }, { status: 404 });
   }
 

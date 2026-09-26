@@ -17,12 +17,15 @@ const reportSchema = z.object({
 export const POST = requireRole<RouteContext>("STUDENT", async (req: NextRequest, user, ctx) => {
   const noteId = ctx.params.id;
 
-  const note = await prisma.note.findUnique({
-    where: { id: noteId },
-    include: { block: { include: { course: { include: { department: true } } } } },
-  });
+  const note = await prisma.note.findUnique({ where: { id: noteId } });
 
-  if (!note || note.block.course.department.universityId !== user.universityId) {
+  // Deliberately no same-university check here anymore — once cross-
+  // university browsing/buying is on, a student can legitimately encounter
+  // and need to report a note from another school. The report still ends
+  // up in the right place: app/api/admin/reports/route.ts routes it to
+  // the NOTE'S OWN university's admins (the ones with authority over that
+  // scribe), not the reporter's.
+  if (!note) {
     return NextResponse.json({ error: "Note not found" }, { status: 404 });
   }
 

@@ -47,7 +47,7 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
           : {}),
       },
       include: {
-        course: true,
+        course: { include: { department: { include: { university: true } } } },
         topics: { orderBy: { order: "asc" } },
         purchases: { select: { id: true } },
         notes: {
@@ -57,6 +57,7 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
             fulfillsRequestId: true,
             scribeId: true,
             scribe: { select: { fullName: true } },
+            scribeLevelAtUpload: true,
             reviews: { select: { rating: true } },
           },
           orderBy: { createdAt: "asc" },
@@ -108,6 +109,7 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
       discountedPrice: hasFulfillmentPricing ? REQUEST_FULFILLED_PRICE : null,
       courseName: b.course.name,
       courseCode: b.course.code,
+      universityName: b.course.department.university.name,
       level: b.level ?? null,
       unlocked: purchasedIds.has(b.id),
       topics: b.topics.map((t) => t.title),
@@ -116,6 +118,11 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
       featuredNoteId: featuredNote?.noteId ?? b.notes[0]?.id ?? null,
       scribeId: scribe?.scribeId ?? null,
       scribeName: scribe?.scribe.fullName ?? null,
+      // The featured/first version's own level snapshot (see
+      // prisma/schema.prisma Note.scribeLevelAtUpload) — one label per
+      // card, matching how scribeName above already picks a single
+      // representative version when a block has several.
+      scribeLevel: scribe?.scribeLevelAtUpload ?? null,
       liveNoteCount: b.notes.length,
       ratingAvg: ratings.length ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length : null,
       ratingCount: ratings.length,

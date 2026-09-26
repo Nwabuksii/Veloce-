@@ -49,6 +49,7 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
       departmentId: true,
       level: true,
       department: { select: { name: true } },
+      university: { select: { name: true } },
     },
   });
 

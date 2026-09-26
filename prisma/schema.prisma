@@ -30,6 +30,22 @@ model University {
   users                User[]
   pendingRegistrations PendingRegistration[]
   createdAt            DateTime              @default(now())
+
+  // The last time an admin ran the "start a new level" action for this
+  // university (see app/api/admin/university/advance-level/route.ts).
+  // Only settable during that route's own May/July window, and checked
+  // there to block a second advance inside the same window — this column
+  // is that lock, not just a log entry.
+  lastLevelAdvanceAt DateTime?
+
+  // Set once, the first time this university crosses the "enough of its
+  // own catalog to stand alone" threshold (currently 10 live blocks).
+  // Deliberately a timestamp, not a live-recomputed count: it must never
+  // flip back even if the block count later dips, and it must never itself
+  // change anyone's stored User.catalogScope — it only ever triggers the
+  // one-time "you can switch in Settings now" notice. Unused while there's
+  // only one university; see the note on User.catalogScope.
+  wentLocalAt DateTime?
 }
 
 model Department {
@@ -100,6 +116,13 @@ enum UserRole {
   STUDENT
   SCRIBE
   ADMIN
+}
+
+// Which catalog a user has chosen to see — see User.catalogScope. Unused
+// until a second university exists.
+enum CatalogScope {
+  OWN // only their own university's blocks
+  ALL // every university's blocks
 }
 
 model User {
@@ -184,6 +207,25 @@ model User {
   // both "is this person eligible to appeal at all" and the once-a-month
   // appeal cooldown (alongside ScribeApplication.reviewedAt).
   demotedAt DateTime?
+
+  // Set once, permanently, the first time a university-wide "start a new
+  // level" advance (see University.lastLevelAdvanceAt) finds this user
+  // already at the final level (500L). A graduated scribe keeps every note
+  // they ever uploaded fully live and still earns on it — this only gates
+  // the *upload* action going forward (see app/api/scribe/upload/route.ts
+  // and app/api/scribe/blocks/route.ts). Role is deliberately left as-is
+  // (still SCRIBE, not demoted) so payout/earnings history stays intact.
+  graduatedAt DateTime?
+
+  // Which catalog they see: their own university's blocks only, or every
+  // university's. Nullable on purpose, and NOT just a boolean — "no
+  // preference set yet" is a distinct, meaningful state from "chose ALL on
+  // purpose", since the default assigned at signup must never be silently
+  // overwritten later by an auto-detected threshold change (see
+  // University.wentLocalAt). Unused while there's only one university;
+  // added now so the later multi-university launch is a pure feature
+  // switch-on, not a schema migration on top of a feature launch.
+  catalogScope CatalogScope?
 
   // Bank details for withdrawals — only meaningful when role = SCRIBE.
   // accountName is what Paystack's own account-resolve API returned, not
@@ -339,6 +381,16 @@ model Note {
   block    Block   @relation(fields: [blockId], references: [id], onDelete: Cascade)
   scribeId String
   scribe   User    @relation("ScribeNotes", fields: [scribeId], references: [id], onDelete: Cascade)
+
+  // The scribe's own account level (e.g. "200L") at the moment they
+  // uploaded THIS specific version — a permanent snapshot, not a live
+  // read of scribe.level. A scribe's level advances over time (and an
+  // admin can advance a whole university's levels at once, see
+  // University.lastLevelAdvanceAt); without snapshotting this here, every
+  // note a scribe ever wrote would silently relabel itself each time they
+  // advance, misrepresenting how advanced the material actually was when
+  // it was written. Nullable only for notes uploaded before this existed.
+  scribeLevelAtUpload String?
 
   fileUrl String // stored filename on disk — NOT a public URL; access is gated
   extractedText String? // raw text pulled from the PDF, used by the quality gate

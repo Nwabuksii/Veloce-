@@ -53,6 +53,11 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState("");
   const [accountStatus, setAccountStatus] = useState("");
   const [accountSubmitting, setAccountSubmitting] = useState(false);
+  const [profileInfo, setProfileInfo] = useState<{
+    universityName: string;
+    departmentName: string | null;
+    level: string | null;
+  } | null>(null);
 
   useEffect(() => {
     const storedUser = getStoredUser();
@@ -72,6 +77,19 @@ export default function SettingsPage() {
       .catch(() => setAdminEmail(""))
       .finally(() => setContactLoading(false));
   }, [tab, adminEmail]);
+
+  useEffect(() => {
+    if (tab !== "account" || profileInfo !== null) return;
+    apiFetch("/api/account")
+      .then((data) =>
+        setProfileInfo({
+          universityName: data.user.university?.name ?? "",
+          departmentName: data.user.department?.name ?? null,
+          level: data.user.level ?? null,
+        })
+      )
+      .catch(() => {});
+  }, [tab, profileInfo]);
 
   async function handleAccountSubmit(e: FormEvent) {
     e.preventDefault();
@@ -210,6 +228,38 @@ export default function SettingsPage() {
               <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "1rem" }}>
                 Change your email or password. Your name can't be changed here.
               </p>
+
+              {user && (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                    gap: "0.75rem",
+                    background: "var(--surface-strong)",
+                    border: "1px solid var(--border-blue)",
+                    borderRadius: "10px",
+                    padding: "0.85rem 1rem",
+                    marginBottom: "1.25rem",
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Name</div>
+                    <div style={{ fontWeight: 600, marginTop: "0.2rem" }}>{user.fullName}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>School</div>
+                    <div style={{ fontWeight: 600, marginTop: "0.2rem" }}>{profileInfo?.universityName || "—"}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Department</div>
+                    <div style={{ fontWeight: 600, marginTop: "0.2rem" }}>{profileInfo?.departmentName || "Not set"}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Level</div>
+                    <div style={{ fontWeight: 600, marginTop: "0.2rem" }}>{profileInfo?.level || "Not set"}</div>
+                  </div>
+                </div>
+              )}
 
               <form onSubmit={handleAccountSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                 <label style={{ display: "flex", flexDirection: "column", gap: "0.3rem", fontSize: "0.85rem", color: "var(--text-secondary)" }}>

@@ -20,7 +20,10 @@ export const POST = requireRole<RouteContext>("STUDENT", async (req: NextRequest
 
   const target = await prisma.user.findUnique({ where: { id: reportedUserId } });
 
-  if (!target || target.universityId !== user.universityId) {
+  // No same-university check anymore — see app/api/notes/[id]/report for
+  // the same reasoning. Routes to the reported person's own university's
+  // admins via app/api/admin/reports/route.ts, not the reporter's.
+  if (!target) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 

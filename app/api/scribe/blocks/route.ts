@@ -35,9 +35,15 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const course = await prisma.course.findUnique({ where: { id: parsed.data.courseId } });
+  const course = await prisma.course.findUnique({
+    where: { id: parsed.data.courseId },
+    include: { department: true },
+  });
   if (!course) {
     return NextResponse.json({ error: "Course not found" }, { status: 404 });
+  }
+  if (course.department.universityId !== user.universityId) {
+    return NextResponse.json({ error: "You can only create blocks at your own university" }, { status: 403 });
   }
 
   // If the scribe picked an open request to fulfill, validate it belongs to
@@ -56,8 +62,14 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
   const existingCount = await prisma.block.count({ where: { courseId: course.id } });
   const scribeProfile = await prisma.user.findUnique({
     where: { id: user.sub },
-    select: { level: true },
+    select: { level: true, graduatedAt: true },
   });
+  if (scribeProfile?.graduatedAt) {
+    return NextResponse.json(
+      { error: "You've graduated past 500L, so starting new blocks is closed — your existing notes stay live and still earn." },
+      { status: 403 }
+    );
+  }
 
   const block = await prisma.block.create({
     data: {
