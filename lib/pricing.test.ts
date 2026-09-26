@@ -3,6 +3,7 @@ import {
   computeScribeCut,
   computePlatformCut,
   effectivePrice,
+  getEffectivePriceForNote,
   planCreditRedemption,
   SCRIBE_SHARE,
   PLATFORM_SHARE,
@@ -70,6 +71,34 @@ describe("computePlatformCut", () => {
         expect(scribeCut + platformCut).toBe(amount);
       }
     }
+  });
+});
+
+describe("getEffectivePriceForNote", () => {
+  it("uses the request-fulfillment price only for the buyer who actually voted for that request", () => {
+    expect(
+      getEffectivePriceForNote({
+        basePrice: 1000,
+        fulfillsRequestId: "req-1",
+        buyerVotedForRequest: true,
+      })
+    ).toBe(900);
+
+    expect(
+      getEffectivePriceForNote({
+        basePrice: 1000,
+        fulfillsRequestId: "req-1",
+        buyerVotedForRequest: false,
+      })
+    ).toBe(1000);
+
+    expect(
+      getEffectivePriceForNote({
+        basePrice: 1000,
+        fulfillsRequestId: null,
+        buyerVotedForRequest: true,
+      })
+    ).toBe(1000);
   });
 });
 

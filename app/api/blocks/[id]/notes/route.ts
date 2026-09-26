@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { computeTrustLevel } from "@/lib/trust-level";
-import { REQUEST_FULFILLED_PRICE } from "@/lib/pricing";
+import { getEffectivePriceForNote } from "@/lib/pricing";
 
 interface RouteContext {
   params: { id: string };
@@ -58,6 +58,16 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
   ]);
 
   const purchaseByNoteId = new Map(myPurchases.map((p) => [p.noteId, p]));
+  const fulfilledRequestIds = block.notes
+    .map((n) => n.fulfillsRequestId)
+    .filter((id): id is string => Boolean(id));
+  const myRequestVotes = fulfilledRequestIds.length
+    ? await prisma.requestVote.findMany({
+        where: { requestId: { in: fulfilledRequestIds }, studentId: user.sub },
+        select: { requestId: true },
+      })
+    : [];
+  const myVotedRequestIds = new Set(myRequestVotes.map((v) => v.requestId));
 
   const salesCountByScribe = new Map<string, number>();
   // Per VERSION, not per scribe — a scribe's second upload of the same
@@ -125,11 +135,14 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
       owned: Boolean(myPurchase),
       purchaseId: myPurchase?.id ?? null,
       myReview: myPurchase?.review ? { rating: myPurchase.review.rating, comment: myPurchase.review.comment } : null,
-      // A note that fulfills a student request is always REQUEST_FULFILLED_PRICE,
-      // never the block's normal price — this must match exactly what
-      // app/api/payments/initialize/route.ts actually charges, or the page
-      // shows one number and collects another.
-      price: n.fulfillsRequestId ? REQUEST_FULFILLED_PRICE : block.price,
+      // The actual charge depends on whether the viewing student voted for
+      // that request. A non-requester still pays the block's regular price,
+      // and the payment route enforces the same logic in one place.
+      price: getEffectivePriceForNote({
+        basePrice: block.price,
+        fulfillsRequestId: n.fulfillsRequestId,
+        buyerVotedForRequest: myVotedRequestIds.has(n.fulfillsRequestId ?? ""),
+      }),
       isRequestFulfillment: Boolean(n.fulfillsRequestId),
     };
   });

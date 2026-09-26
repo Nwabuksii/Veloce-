@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { initializeTransaction } from "@/lib/paystack";
-import { REQUEST_FULFILLED_PRICE, computeScribeCut, planCreditRedemption } from "@/lib/pricing";
+import { computeScribeCut, getEffectivePriceForNote, planCreditRedemption } from "@/lib/pricing";
 
 export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
   try {
@@ -51,22 +51,25 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
     // requested this note — not a discount for every buyer of a
     // request-fulfilling block. See lib/pricing.ts and RequestVote.
     let discountApplied = false;
-    let amountToCharge = block.price;
 
     const noteWithRequest = await prisma.note.findUnique({
       where: { id: note.id },
       select: { fulfillsRequestId: true },
     });
 
-    if (noteWithRequest?.fulfillsRequestId) {
-      const votedForIt = await prisma.requestVote.findUnique({
-        where: { requestId_studentId: { requestId: noteWithRequest.fulfillsRequestId, studentId: user.sub } },
-      });
-      if (votedForIt) {
-        discountApplied = true;
-        amountToCharge = REQUEST_FULFILLED_PRICE;
-      }
-    }
+    const buyerVotedForRequest = Boolean(
+      noteWithRequest?.fulfillsRequestId &&
+        (await prisma.requestVote.findUnique({
+          where: { requestId_studentId: { requestId: noteWithRequest.fulfillsRequestId, studentId: user.sub } },
+        }))
+    );
+
+    const amountToCharge = getEffectivePriceForNote({
+      basePrice: block.price,
+      fulfillsRequestId: noteWithRequest?.fulfillsRequestId ?? null,
+      buyerVotedForRequest,
+    });
+    discountApplied = buyerVotedForRequest && Boolean(noteWithRequest?.fulfillsRequestId);
 
     // Refund credit is real cash Veloce already holds (see lib/pricing.ts)
     // — unlimited, never expires, leftovers carry forward — applied as a

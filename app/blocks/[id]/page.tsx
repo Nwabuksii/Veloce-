@@ -9,6 +9,7 @@ import { SkeletonList } from "@/app/components/Skeleton";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
 import CouponConfirmDialog from "@/app/components/CouponConfirmDialog";
+import { getEffectivePriceForNote } from "@/lib/pricing";
 
 interface NoteVersion {
   noteId: string;
@@ -256,9 +257,9 @@ function BlockDetailInner() {
                 </span>
                 <h2 style={{ fontSize: "1.4rem", marginTop: "0.15rem" }}>{blockTitle}</h2>
                 <span className="price-tag mono" style={{ marginTop: "0.4rem", display: "inline-block", color: "white" }}>
-                  {notes.length > 0 && new Set(notes.map((n) => n.price)).size > 1
+                  {notes.length > 0
                     ? `From ₦${Math.min(...notes.map((n) => n.price)).toLocaleString()}`
-                    : `₦${(notes[0]?.price ?? price).toLocaleString()}`}
+                    : `₦${price.toLocaleString()}`}
                 </span>
               </div>
               <div style={{ display: "flex", gap: "0.6rem" }}>

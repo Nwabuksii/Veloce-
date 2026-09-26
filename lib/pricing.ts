@@ -43,6 +43,24 @@ export function computePlatformCut(price: number, isRequestFulfillment: boolean)
   return price - computeScribeCut(price, isRequestFulfillment);
 }
 
+/**
+ * The actual price a buyer sees and pays for a specific note version.
+ * A request-fulfillment price is only a real discount for the student who
+ * voted on that exact request; everyone else still pays the block's base price.
+ */
+export function getEffectivePriceForNote({
+  basePrice,
+  fulfillsRequestId,
+  buyerVotedForRequest,
+}: {
+  basePrice: number;
+  fulfillsRequestId: string | null;
+  buyerVotedForRequest: boolean;
+}): number {
+  if (fulfillsRequestId && buyerVotedForRequest) return REQUEST_FULFILLED_PRICE;
+  return basePrice;
+}
+
 /** The real price of a purchase — cash actually charged plus whatever credit was applied toward it. */
 export function effectivePrice(p: { amountPaid: number; creditApplied: number }): number {
   return p.amountPaid + p.creditApplied;
