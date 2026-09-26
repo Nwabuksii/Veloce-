@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Avatar from "@/app/components/Avatar";
 
 export interface Transaction {
@@ -44,6 +44,15 @@ export function StatCard({ label, value, sub }: { label: string; value: string; 
 }
 
 function TransactionRow({ t }: { t: Transaction }) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const update = () => setIsMobile(window.innerWidth < 640);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
   return (
     <div className="tx-row card-hover">
       <Avatar name={t.buyerName} />
@@ -55,8 +64,20 @@ function TransactionRow({ t }: { t: Transaction }) {
           {t.buyerName} bought from {t.scribeName}
         </div>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: "0.7rem" }}>
-        {t.discountApplied && <span className="pill pill-info">Fixed request price</span>}
+      <div style={{ display: "flex", alignItems: "center", gap: "0.7rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+        {t.discountApplied && (
+          <span
+            className="pill pill-info"
+            style={{
+              whiteSpace: "nowrap",
+              padding: isMobile ? "0.18rem 0.5rem" : "0.25rem 0.7rem",
+              fontSize: isMobile ? "0.62rem" : "0.68rem",
+              lineHeight: 1.2,
+            }}
+          >
+            {isMobile ? "FRP" : "Fixed request price"}
+          </span>
+        )}
         {t.disputed ? (
           <span className="pill" style={{ background: "var(--bg-danger)", color: "var(--text-danger)" }}>
             <i className="fas fa-triangle-exclamation"></i> Disputed

@@ -143,7 +143,9 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
         fulfillsRequestId: n.fulfillsRequestId,
         buyerVotedForRequest: myVotedRequestIds.has(n.fulfillsRequestId ?? ""),
       }),
-      isRequestFulfillment: Boolean(n.fulfillsRequestId),
+      // Only a buyer who actually requested this block before publication
+      // should see the fixed-request price label.
+      isRequestFulfillment: Boolean(n.fulfillsRequestId && myVotedRequestIds.has(n.fulfillsRequestId)),
     };
   });
 
