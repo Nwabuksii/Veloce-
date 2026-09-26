@@ -1,20 +1,23 @@
-// The platform's revenue split — scribes keep 60% of every sale, the
-// platform takes 40%. Centralized here so every place that needs to
-// reason about revenue (admin ledger, future payout logic) reads from
-// one source instead of re-hardcoding the percentage.
-export const SCRIBE_SHARE = 0.6;
-export const PLATFORM_SHARE = 1 - SCRIBE_SHARE;
+// The product rule we are using is deliberately fixed for each sale tier:
+// - regular sale: scribe gets ₦600, platform keeps the remainder of the sale
+// - request-fulfilled sale: the buyer pays a fixed ₦900 total, so the scribe
+//   keeps ₦600 and the platform keeps ₦300
+//
+// This is centralized here so the transaction ledger, payout logic, and buyer-
+// facing pricing all read from one source of truth.
+export const NORMAL_SCRIBE_CUT = 600;
+export const NORMAL_PLATFORM_CUT = 400;
+export const SCRIBE_SHARE = NORMAL_SCRIBE_CUT / 1000;
+export const PLATFORM_SHARE = NORMAL_PLATFORM_CUT / 1000;
 
 // Founder-set fixed pricing for any note that fulfills a student request
 // (Note.fulfillsRequestId is set) — but only for the student(s) who actually
 // requested it (has a RequestVote on that request). Everyone else still pays
-// the scribe's normal block price. For an eligible buyer this overrides the
-// normal scribe-set block price AND the normal 60/40 percentage split
-// entirely — always ₦900 total, always ₦600 to the scribe, always ₦300 to
-// the platform, no rounding involved since the numbers are exact.
+// the scribe's normal block price. For an eligible buyer, the sale is fixed at
+// ₦900 total: ₦600 to the scribe and ₦300 to the platform.
 export const REQUEST_FULFILLED_PRICE = 900;
 export const REQUEST_FULFILLED_SCRIBE_CUT = 600;
-export const REQUEST_FULFILLED_PLATFORM_CUT = REQUEST_FULFILLED_PRICE - REQUEST_FULFILLED_SCRIBE_CUT;
+export const REQUEST_FULFILLED_PLATFORM_CUT = 300;
 
 /**
  * The scribe's cut of one purchase, given the FULL price actually paid for
@@ -35,12 +38,19 @@ export const REQUEST_FULFILLED_PLATFORM_CUT = REQUEST_FULFILLED_PRICE - REQUEST_
  * into a single aggregate multiply would misallocate money on both sides.
  */
 export function computeScribeCut(price: number, isRequestFulfillment: boolean): number {
-  return isRequestFulfillment ? REQUEST_FULFILLED_SCRIBE_CUT : Math.round(price * SCRIBE_SHARE);
+  if (price <= 0) return 0;
+  return isRequestFulfillment ? REQUEST_FULFILLED_SCRIBE_CUT : NORMAL_SCRIBE_CUT;
 }
 
-/** The platform's cut is always the remainder, so the two always sum exactly to price. */
+/**
+ * On a normal sale, the platform keeps the rest of the actual sale after the
+ * fixed ₦600 scribe payout. On an eligible request-discounted sale, the total
+ * is fixed at ₦900 and the platform keeps ₦300.
+ */
 export function computePlatformCut(price: number, isRequestFulfillment: boolean): number {
-  return price - computeScribeCut(price, isRequestFulfillment);
+  if (price <= 0) return 0;
+  if (isRequestFulfillment) return REQUEST_FULFILLED_PLATFORM_CUT;
+  return Math.max(0, price - NORMAL_SCRIBE_CUT);
 }
 
 /**

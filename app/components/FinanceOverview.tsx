@@ -75,7 +75,7 @@ function TransactionRow({ t }: { t: Transaction }) {
               lineHeight: 1.2,
             }}
           >
-            {isMobile ? "FRP" : "Fixed request price"}
+            {isMobile ? "FRP" : "Request-discounted"}
           </span>
         )}
         {t.disputed ? (
@@ -127,14 +127,14 @@ export default function FinanceOverview({ data, children }: { data: FinanceOverv
 
         <div className="stat-secondary-group">
           <StatCard
-            label="Platform revenue"
+            label="Platform fee"
             value={`₦${data.platformRevenue.toLocaleString()}`}
-            sub={`${data.platformSharePercent}% of gross, confirmed sales only`}
+            sub="₦400 for normal sales · ₦300 for request-discounted sales"
           />
           <StatCard
-            label="Scribe pool"
+            label="Scribe payout"
             value={`₦${data.scribePool.toLocaleString()}`}
-            sub={`${data.scribeSharePercent}% of gross, owed across all scribes`}
+            sub="₦600 per confirmed sale, split across scribes"
           />
         </div>
       </div>

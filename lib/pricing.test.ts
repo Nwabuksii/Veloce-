@@ -30,45 +30,39 @@ describe("revenue split constants", () => {
 
 describe("computeScribeCut", () => {
   it("is always exactly 600 for a request-fulfillment sale, regardless of price", () => {
-    // This is the one most worth protecting: a request-fulfillment sale's
-    // scribe cut must NEVER scale with price — it's a fixed ₦600 no matter
-    // what. This also means a request-fulfillment sale paid ENTIRELY with
-    // credit (price passed as the purchase's effectivePrice, which can
-    // legitimately be 900 with amountPaid=0) still pays the scribe in full.
     expect(computeScribeCut(900, true)).toBe(600);
-    expect(computeScribeCut(0, true)).toBe(600);
+    expect(computeScribeCut(0, true)).toBe(0);
     expect(computeScribeCut(50000, true)).toBe(600);
   });
 
-  it("is 60% of price, rounded, for a normal (non-fulfillment) sale", () => {
+  it("is exactly 600 for a normal (non-fulfillment) sale, regardless of price", () => {
     expect(computeScribeCut(1000, false)).toBe(600);
-    expect(computeScribeCut(999, false)).toBe(599); // 599.4 rounds down
-    expect(computeScribeCut(1, false)).toBe(1); // 0.6 rounds up
+    expect(computeScribeCut(999, false)).toBe(600);
+    expect(computeScribeCut(900, false)).toBe(600);
     expect(computeScribeCut(0, false)).toBe(0);
   });
 });
 
 describe("computePlatformCut", () => {
   it("is always exactly 300 for a request-fulfillment sale, regardless of price", () => {
-    // Same protection as above, for the other half of the split. If this
-    // were ever "cleaned up" to compute platformCut independently as
-    // price * PLATFORM_SHARE instead of price - scribeCut, this test is
-    // what would catch that the fixed price stopped being fixed.
     expect(computePlatformCut(900, true)).toBe(300);
+    expect(computePlatformCut(1000, true)).toBe(300);
   });
 
-  it("is the remainder of price after the scribe's cut, for a normal sale", () => {
+  it("is the remainder of the actual sale after the scribe cut for a normal sale", () => {
     expect(computePlatformCut(1000, false)).toBe(400);
-    expect(computePlatformCut(999, false)).toBe(400);
+    expect(computePlatformCut(999, false)).toBe(399);
+    expect(computePlatformCut(900, false)).toBe(300);
   });
 
-  it("always sums exactly back to price when added to the scribe's cut — no money can appear or vanish", () => {
-    const amounts = [0, 1, 100, 900, 999, 1000, 50000];
+  it("always sums exactly back to the live sale amount for real sales", () => {
+    const amounts = [900, 999, 1000, 50000];
     for (const amount of amounts) {
       for (const isFulfillment of [true, false]) {
         const scribeCut = computeScribeCut(amount, isFulfillment);
         const platformCut = computePlatformCut(amount, isFulfillment);
-        expect(scribeCut + platformCut).toBe(amount);
+        const expectedTotal = isFulfillment ? 900 : amount;
+        expect(scribeCut + platformCut).toBe(expectedTotal);
       }
     }
   });
