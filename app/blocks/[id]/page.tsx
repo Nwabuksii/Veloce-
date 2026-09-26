@@ -378,7 +378,6 @@ function BlockDetailInner() {
                         <span className="seal" style={{ background: trustStyle.bg, color: trustStyle.color }}>
                           {n.trustLabel}
                         </span>
-                        {n.scribeLevel && <span className="seal">{n.scribeLevel}</span>}
                         {n.isRequestFulfillment && <span className="seal">Fixed request price</span>}
                         <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
                           <i className="fas fa-bag-shopping"></i> {n.purchaseCount.toLocaleString()} bought
@@ -417,6 +416,7 @@ function BlockDetailInner() {
                             gap: "0.25rem",
                           }}
                         >
+                          {n.scribeLevel && <span>Level at upload: {n.scribeLevel}</span>}
                           <span>Uploaded {new Date(n.uploadedAt).toLocaleDateString()}</span>
                           <span>{n.pageCount != null ? `${n.pageCount} page${n.pageCount === 1 ? "" : "s"}` : "Page count not yet available"}</span>
                           <span>

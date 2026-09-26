@@ -163,7 +163,7 @@ export default function ScribeProfilePage() {
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
-                          gap: "0.3rem",
+                          gap: "0.38rem",
                           background: TRUST_STYLES[profile.trustLevel].bg,
                           color: TRUST_STYLES[profile.trustLevel].color,
                           padding: "0.3rem 0.9rem",
@@ -172,12 +172,13 @@ export default function ScribeProfilePage() {
                           fontWeight: 700,
                         }}
                       >
-                        <i className="fas fa-shield-alt"></i> {profile.trustLabel}
+                        <i className="fas fa-shield-alt" style={{ marginRight: "0.18rem" }}></i> {profile.trustLabel}
                       </span>
                       <span
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
+                          gap: "0.38rem",
                           background: "var(--bg-pill)",
                           color: "var(--text-secondary)",
                           padding: "0.3rem 0.9rem",
@@ -186,12 +187,13 @@ export default function ScribeProfilePage() {
                           fontWeight: 600,
                         }}
                       >
-                        <i className="fas fa-school"></i> {profile.schoolName}
+                        <i className="fas fa-school" style={{ marginRight: "0.18rem" }}></i> {profile.schoolName}
                       </span>
                       <span
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
+                          gap: "0.38rem",
                           background: "var(--bg-info)",
                           color: "var(--text-secondary)",
                           padding: "0.3rem 0.9rem",
@@ -200,7 +202,7 @@ export default function ScribeProfilePage() {
                           fontWeight: 600,
                         }}
                       >
-                        <i className="fas fa-graduation-cap"></i> {profile.currentLevel}
+                        <i className="fas fa-graduation-cap" style={{ marginRight: "0.18rem" }}></i> {profile.currentLevel}
                       </span>
                       {!profile.isActiveScribe && (
                         <span
