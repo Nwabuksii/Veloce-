@@ -17,7 +17,18 @@ export const GET = requireRole<RouteContext>(
 
     const scribe = await prisma.user.findUnique({
       where: { id: scribeId },
-      select: { id: true, fullName: true, role: true, createdAt: true, bannedAt: true, avatarUrl: true, avatarDisplay: true },
+      select: {
+        id: true,
+        fullName: true,
+        role: true,
+        createdAt: true,
+        bannedAt: true,
+        avatarUrl: true,
+        avatarDisplay: true,
+        level: true,
+        university: { select: { name: true } },
+        department: { select: { name: true } },
+      },
     });
 
     if (!scribe) {
@@ -79,6 +90,8 @@ export const GET = requireRole<RouteContext>(
         fullName: scribe.fullName,
         avatarUrl: scribe.avatarDisplay === "custom" ? scribe.avatarUrl : null,
         joinedAt: scribe.createdAt,
+        schoolName: scribe.university?.name ?? "—",
+        currentLevel: scribe.level ?? "Not set",
         isActiveScribe,
         paidSubscriberCount,
         followerCount,

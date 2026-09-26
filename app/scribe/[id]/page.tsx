@@ -23,6 +23,8 @@ interface Profile {
   fullName: string;
   avatarUrl: string | null;
   joinedAt: string;
+  schoolName: string;
+  currentLevel: string;
   isActiveScribe: boolean;
   paidSubscriberCount: number;
   followerCount: number;
@@ -171,6 +173,34 @@ export default function ScribeProfilePage() {
                         }}
                       >
                         <i className="fas fa-shield-alt"></i> {profile.trustLabel}
+                      </span>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          background: "var(--bg-pill)",
+                          color: "var(--text-secondary)",
+                          padding: "0.3rem 0.9rem",
+                          borderRadius: "999px",
+                          fontSize: "0.78rem",
+                          fontWeight: 600,
+                        }}
+                      >
+                        <i className="fas fa-school"></i> {profile.schoolName}
+                      </span>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          background: "var(--bg-info)",
+                          color: "var(--text-secondary)",
+                          padding: "0.3rem 0.9rem",
+                          borderRadius: "999px",
+                          fontSize: "0.78rem",
+                          fontWeight: 600,
+                        }}
+                      >
+                        <i className="fas fa-graduation-cap"></i> {profile.currentLevel}
                       </span>
                       {!profile.isActiveScribe && (
                         <span

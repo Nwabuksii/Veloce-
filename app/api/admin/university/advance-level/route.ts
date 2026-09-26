@@ -63,7 +63,7 @@ export const POST = requireRole("ADMIN", async (req: NextRequest, adminUser) => 
     select: { id: true, level: true, graduatedAt: true },
   });
 
-  const updates: ReturnType<typeof prisma.user.update>[] = [];
+  const updates: Array<ReturnType<typeof prisma.user.update> | ReturnType<typeof prisma.university.update>> = [];
   let advancedCount = 0;
   let graduatedCount = 0;
 

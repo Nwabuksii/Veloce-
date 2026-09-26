@@ -346,7 +346,7 @@ function BlockDetailInner() {
               <p style={{ color: "var(--text-secondary)", marginTop: "0.6rem" }}>No live notes for this topic yet.</p>
             )}
 
-            <div className="ledger-list" style={{ marginTop: "0.8rem" }}>
+            <div className="ledger-list" style={{ marginTop: "0.8rem", gridTemplateColumns: "1fr" }}>
               {notes.map((n) => {
                 const trustStyle = TRUST_STYLES[n.trustLevel] || TRUST_STYLES.NEW;
                 return (

@@ -127,17 +127,23 @@ export default function NoteReaderPage() {
               aria-label="Previous page"
               style={{
                 position: "fixed",
-                left: "0.75rem",
+                left: "0.5rem",
                 top: "50%",
                 transform: "translateY(-50%)",
                 zIndex: 40,
-                width: "2.75rem",
-                height: "2.75rem",
+                width: "2.15rem",
+                height: "2.15rem",
                 borderRadius: "50%",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 padding: 0,
+                border: "1px solid rgba(148, 163, 184, 0.35)",
+                background: "rgba(255, 255, 255, 0.82)",
+                color: "var(--text-primary)",
+                boxShadow: "0 10px 22px -12px rgba(15, 23, 42, 0.26)",
+                backdropFilter: "blur(4px)",
+                opacity: currentPage <= 1 ? 0.55 : 1,
               }}
             >
               <i className="fas fa-chevron-left"></i>
@@ -149,17 +155,23 @@ export default function NoteReaderPage() {
               aria-label="Next page"
               style={{
                 position: "fixed",
-                right: "0.75rem",
+                right: "0.5rem",
                 top: "50%",
                 transform: "translateY(-50%)",
                 zIndex: 40,
-                width: "2.75rem",
-                height: "2.75rem",
+                width: "2.15rem",
+                height: "2.15rem",
                 borderRadius: "50%",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 padding: 0,
+                border: "1px solid rgba(148, 163, 184, 0.35)",
+                background: "rgba(255, 255, 255, 0.82)",
+                color: "var(--text-primary)",
+                boxShadow: "0 10px 22px -12px rgba(15, 23, 42, 0.26)",
+                backdropFilter: "blur(4px)",
+                opacity: currentPage >= pageCount ? 0.55 : 1,
               }}
             >
               <i className="fas fa-chevron-right"></i>
