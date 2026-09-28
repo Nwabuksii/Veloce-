@@ -34,9 +34,40 @@ interface Analytics {
   pendingEarnings: number;
   followerCount: number;
   byBlock: BlockPerf[];
+  monthlySales: Array<{ label: string; value: number }>;
+  monthlyEarnings: Array<{ label: string; value: number }>;
 }
 
 const naira = (n: number) => `₦${n.toLocaleString()}`;
+
+function TrendChart({
+  title,
+  description,
+  data,
+  formatValue,
+}: {
+  title: string;
+  description: string;
+  data: Array<{ label: string; value: number }>;
+  formatValue: (value: number) => string;
+}) {
+  const max = Math.max(1, ...data.map((item) => item.value));
+  return (
+    <div className="panel">
+      <h2 className="panel-title">{Icon.trend()} {title}</h2>
+      <p className="panel-desc">{description}</p>
+      <div className="chart-wrap" aria-label={title}>
+        {data.map((item) => (
+          <div className="chart-col" key={item.label}>
+            <div className="chart-val">{formatValue(item.value)}</div>
+            <div className="chart-bar" style={{ height: `${Math.max(4, (item.value / max) * 130)}px` }} />
+            <div className="chart-label">{item.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function ScribeAnalyticsPage() {
   const router = useRouter();
@@ -151,6 +182,22 @@ export default function ScribeAnalyticsPage() {
                 <span className="delta">{Icon.check()} confirmed</span>
               )}
             </div>
+          </div>
+
+          {/* --- Six-month trends --- */}
+          <div className="two-col mb-24">
+            <TrendChart
+              title="Sales trend"
+              description="Notes sold over the last six months."
+              data={data.monthlySales}
+              formatValue={(value) => value.toLocaleString()}
+            />
+            <TrendChart
+              title="Earnings trend"
+              description="Confirmed scribe earnings over the last six months."
+              data={data.monthlyEarnings}
+              formatValue={naira}
+            />
           </div>
 
           {/* --- Per-block performance --- */}

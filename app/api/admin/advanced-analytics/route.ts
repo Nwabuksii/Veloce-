@@ -8,11 +8,13 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
   const search = searchParams.get("search")?.trim().toLowerCase() ?? "";
   const department = searchParams.get("department")?.trim();
   const course = searchParams.get("course")?.trim();
+  const poll = searchParams.get("poll")?.trim() ?? "";
 
   const messages = await prisma.adminMessage.findMany({
     where: {
       type: "POLL",
       recipient: { universityId: adminUser.universityId },
+      ...(poll ? { OR: [{ pollGroupId: poll }, { id: poll }] } : {}),
     },
     include: {
       pollOptions: {
@@ -41,6 +43,7 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
       for (const vote of option.votes) {
         rows.push({
           messageId: message.id,
+          pollGroupId: message.pollGroupId,
           messageSubject: message.subject,
           messageBody: message.body,
           optionId: option.id,
@@ -68,9 +71,22 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
 
   const summary = summarizePollResults(filteredRows);
 
+  const selectedPoll = poll && messages.length > 0
+    ? {
+        subject: messages[0].subject,
+        body: messages[0].body,
+        options: messages[0].pollOptions.map((option, index) => ({
+          id: option.id,
+          label: option.label,
+          votes: messages.reduce((total, message) => total + (message.pollOptions[index]?.votes.length ?? 0), 0),
+        })),
+      }
+    : null;
+
   return NextResponse.json({
     summary,
     rows: filteredRows,
+    selectedPoll,
     filters: {
       departmentOptions,
       courseOptions,

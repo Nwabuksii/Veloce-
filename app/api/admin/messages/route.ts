@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
@@ -17,12 +18,12 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
 
   const groups = new Map<
     string,
-    { subject: string; body: string; type: string; priority: string; createdAt: Date; recipients: string[] }
+    { subject: string; body: string; type: string; priority: string; createdAt: Date; recipients: string[]; messageId: string; pollGroupId: string | null }
   >();
   for (const m of messages) {
-    const key = `${m.subject}|${m.body}|${m.createdAt.getTime()}`;
+    const key = m.pollGroupId ? `poll:${m.pollGroupId}` : `${m.subject}|${m.body}|${m.createdAt.getTime()}`;
     if (!groups.has(key)) {
-      groups.set(key, { subject: m.subject, body: m.body, type: m.type, priority: m.priority, createdAt: m.createdAt, recipients: [] });
+      groups.set(key, { subject: m.subject, body: m.body, type: m.type, priority: m.priority, createdAt: m.createdAt, recipients: [], messageId: m.id, pollGroupId: m.pollGroupId });
     }
     groups.get(key)!.recipients.push(m.recipient.fullName);
   }
@@ -40,6 +41,8 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
         g.recipients.length <= 3
           ? g.recipients.join(", ")
           : `${g.recipients.slice(0, 2).join(", ")} and ${g.recipients.length - 2} other${g.recipients.length - 2 === 1 ? "" : "s"}`,
+      messageId: g.messageId,
+      pollGroupId: g.pollGroupId,
     }));
 
   return NextResponse.json({ messages: result });
@@ -113,6 +116,7 @@ export const POST = requireRole("ADMIN", async (req: NextRequest, adminUser) => 
   const sentAt = new Date();
 
   if (type === "POLL") {
+    const pollGroupId = randomUUID();
     // A poll's options (and later, its votes) are per-message, not shared
     // across recipients — see the schema comment on AdminMessage.pollOptions —
     // so each recipient needs their own AdminMessage row with its own
@@ -129,6 +133,7 @@ export const POST = requireRole("ADMIN", async (req: NextRequest, adminUser) => 
             type: "POLL",
             priority,
             createdAt: sentAt,
+            pollGroupId,
             pollOptions: { create: pollOptions!.map((label, i) => ({ label, order: i })) },
           },
         })

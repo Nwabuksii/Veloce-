@@ -298,12 +298,19 @@ model AdminMessage {
   readAt      DateTime?
   createdAt   DateTime        @default(now())
 
+  // Shared identifier for all recipient copies of one broadcast poll.
+  // This lets admin analytics treat a poll as one poll even though each
+  // recipient intentionally has their own AdminMessage row and votes.
+  pollGroupId String?
+
   // Only populated when type = POLL. A poll sent to several recipients is
   // one AdminMessage row PER recipient, each with its own copy of the
   // options — votes are per-message (see PollVote's unique constraint), so
   // a shared options list across recipients would let one person's vote
   // count show up on everyone else's poll.
   pollOptions PollOption[]
+
+  @@index([pollGroupId])
 }
 
 model PollOption {

@@ -66,6 +66,30 @@ export async function getFinanceData(universityId: string) {
   const platformRevenue = confirmed.reduce((sum, p) => sum + platformCutOf(p), 0);
   const scribePool = confirmed.reduce((sum, p) => sum + scribeCutOf(p), 0);
 
+  // Six-month trend for the advanced analytics chart. Only confirmed sales
+  // are shown as realised revenue; clearing/refund-review money stays out
+  // until the same rules above say it is actually earned.
+  const monthKeys = Array.from({ length: 6 }, (_, offset) => {
+    const date = new Date();
+    date.setDate(1);
+    date.setMonth(date.getMonth() - (5 - offset));
+    return {
+      key: `${date.getFullYear()}-${date.getMonth()}`,
+      label: date.toLocaleString("en-US", { month: "short" }),
+    };
+  });
+  const revenueTrend = monthKeys.map(({ key, label }) => ({ label, value: 0 }));
+  const revenueSplit = monthKeys.map(({ label }) => ({ label, platform: 0, scribe: 0 }));
+  const monthIndex = new Map(monthKeys.map(({ key }, index) => [key, index]));
+  for (const purchase of confirmed) {
+    const key = `${purchase.purchasedAt.getFullYear()}-${purchase.purchasedAt.getMonth()}`;
+    const index = monthIndex.get(key);
+    if (index === undefined) continue;
+    revenueTrend[index].value += effectivePrice(purchase);
+    revenueSplit[index].platform += platformCutOf(purchase);
+    revenueSplit[index].scribe += scribeCutOf(purchase);
+  }
+
   // Credit is always real, unencumbered cash (see lib/pricing.ts) —
   // granted in full on every approved refund, plus every converted
   // payment. Disputes are excluded: handleDisputeCreated deliberately
@@ -104,6 +128,8 @@ export async function getFinanceData(universityId: string) {
     creditRedeemed,
     creditOutstanding,
     recentTransactions: purchases.slice(0, 20).map(toTx),
+    revenueTrend,
+    revenueSplit,
 
     // Advanced-only: the escrow breakdown. Every naira here is money that
     // WILL become platformRevenue/scribePool once resolved (if it clears

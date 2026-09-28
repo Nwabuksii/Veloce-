@@ -83,6 +83,20 @@ export default function MessagesPage() {
     }
   }
 
+  async function handleDelete(m: MessageView) {
+    if (!window.confirm(`Delete “${m.subject}” from your inbox?`)) return;
+
+    try {
+      const res = await fetch(`/api/messages/${m.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not delete message");
+      setMessages((prev) => prev.filter((msg) => msg.id !== m.id));
+      if (expandedId === m.id) setExpandedId(null);
+    } catch (err) {
+      toast.error(friendlyErrorMessage(err));
+    }
+  }
+
   async function handleOpen(m: MessageView) {
     setExpandedId(expandedId === m.id ? null : m.id);
 
@@ -128,6 +142,15 @@ export default function MessagesPage() {
                   {m.subject}
                 </strong>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    style={{ padding: "0.3rem 0.55rem", fontSize: "0.72rem" }}
+                    onClick={(e) => { e.stopPropagation(); void handleDelete(m); }}
+                    aria-label={`Delete message: ${m.subject}`}
+                  >
+                    Delete
+                  </button>
                   {m.type === "POLL" && (
                     <span className="pill pill-info">
                       <i className="fas fa-square-poll-vertical"></i> Poll

@@ -19,6 +19,8 @@ interface EscrowBucket {
 }
 
 interface AdvancedFinanceData extends FinanceOverviewData {
+  revenueTrend: Array<{ label: string; value: number }>;
+  revenueSplit: Array<{ label: string; platform: number; scribe: number }>;
   clearing: EscrowBucket;
   refundReview: EscrowBucket;
   disputedCount: number;
@@ -62,6 +64,55 @@ function EscrowSection({
         </div>
       )}
     </>
+  );
+}
+
+function BarChart({ title, description, data, formatValue }: {
+  title: string;
+  description: string;
+  data: Array<{ label: string; value: number }>;
+  formatValue: (value: number) => string;
+}) {
+  const max = Math.max(1, ...data.map((item) => item.value));
+  return (
+    <div className="panel">
+      <h2 className="panel-title">{AIcon.trend()} {title}</h2>
+      <p className="panel-desc">{description}</p>
+      <div className="chart-wrap" aria-label={title}>
+        {data.map((item) => (
+          <div className="chart-col" key={item.label}>
+            <div className="chart-val">{formatValue(item.value)}</div>
+            <div className="chart-bar" style={{ height: `${Math.max(4, (item.value / max) * 130)}px` }} />
+            <div className="chart-label">{item.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SplitChart({ data }: { data: Array<{ label: string; platform: number; scribe: number }> }) {
+  const max = Math.max(1, ...data.map((item) => Math.max(item.platform, item.scribe)));
+  return (
+    <div className="panel">
+      <h2 className="panel-title">{AIcon.chart()} Revenue split</h2>
+      <p className="panel-desc">Confirmed monthly revenue split between platform and scribe earnings.</p>
+      <div className="chart-wrap chart-dual" aria-label="Monthly platform and scribe revenue split">
+        {data.map((item) => (
+          <div className="chart-col" key={item.label}>
+            <div className="chart-dual-bars">
+              <div className="chart-bar" title={`Platform ₦${item.platform.toLocaleString()}`} style={{ height: `${Math.max(4, (item.platform / max) * 110)}px` }} />
+              <div className="chart-bar chart-bar-secondary" title={`Scribes ₦${item.scribe.toLocaleString()}`} style={{ height: `${Math.max(4, (item.scribe / max) * 110)}px` }} />
+            </div>
+            <div className="chart-label">{item.label}</div>
+          </div>
+        ))}
+      </div>
+      <div className="chart-legend">
+        <span><i className="chart-key" /> Platform</span>
+        <span><i className="chart-key secondary" /> Scribes</span>
+      </div>
+    </div>
   );
 }
 
@@ -121,7 +172,18 @@ export default function AdminFinanceAdvancedPage() {
       {error && !loading && <div className="auth-error">{error}</div>}
 
       {data && (
-        <FinanceOverview data={data}>
+        <>
+          <div className="two-col mb-24">
+            <BarChart
+              title="Realised revenue"
+              description="Confirmed sale value over the last six months."
+              data={data.revenueTrend}
+              formatValue={(value) => `₦${value.toLocaleString()}`}
+            />
+            <SplitChart data={data.revenueSplit} />
+          </div>
+
+          <FinanceOverview data={data}>
           <EscrowSection
             icon={AIcon.clock()}
             title="Clearing"
@@ -143,6 +205,7 @@ export default function AdminFinanceAdvancedPage() {
             </p>
           )}
         </FinanceOverview>
+        </>
       )}
     </div>
   );

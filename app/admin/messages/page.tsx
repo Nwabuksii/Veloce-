@@ -24,6 +24,8 @@ interface SentMessage {
   recipientCount: number;
   recipientSummary: string;
   createdAt: string;
+  messageId: string;
+  pollGroupId: string | null;
 }
 
 type Role = "STUDENT" | "SCRIBE" | "ADMIN";
@@ -383,7 +385,19 @@ export default function AdminMessagesPage() {
 
           <div className="stack-10">
             {sentMessages.map((m, i) => (
-              <div key={`${m.subject}-${m.createdAt}-${i}`} className="data-row link-row">
+              <div
+                key={`${m.subject}-${m.createdAt}-${i}`}
+                className={`data-row link-row${m.type === "POLL" ? " poll-row-clickable" : ""}`}
+                onClick={() => m.type === "POLL" && router.push(`/admin/advanced-analytics?poll=${encodeURIComponent(m.pollGroupId ?? m.messageId)}`)}
+                onKeyDown={(e) => {
+                  if (m.type === "POLL" && (e.key === "Enter" || e.key === " ")) {
+                    e.preventDefault();
+                    router.push(`/admin/advanced-analytics?poll=${encodeURIComponent(m.pollGroupId ?? m.messageId)}`);
+                  }
+                }}
+                role={m.type === "POLL" ? "link" : undefined}
+                tabIndex={m.type === "POLL" ? 0 : undefined}
+              >
                 <div>
                   <div className="row-title">{m.subject}</div>
                   <div className="row-desc">
@@ -392,7 +406,16 @@ export default function AdminMessagesPage() {
                   <div className="row-code">{new Date(m.createdAt).toLocaleDateString()}</div>
                 </div>
                 <div className="request-actions" style={{ justifyContent: "flex-end" }}>
-                  {m.type === "POLL" && <span className="status info">Poll</span>}
+                  {m.type === "POLL" ? (
+                    <button
+                      type="button"
+                      className="status info"
+                      onClick={() => router.push(`/admin/advanced-analytics?poll=${encodeURIComponent(m.pollGroupId ?? m.messageId)}`)}
+                      title="Open analytics for this poll"
+                    >
+                      Poll · Analytics
+                    </button>
+                  ) : null}
                   <span className={`status ${m.priority === "SERIOUS" ? "danger" : ""}`}>{m.priority === "SERIOUS" ? "Serious" : "Normal"}</span>
                 </div>
               </div>

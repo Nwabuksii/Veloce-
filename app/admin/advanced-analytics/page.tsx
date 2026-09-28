@@ -17,8 +17,15 @@ interface PollAnalyticsSummary {
   departmentMix: Array<{ department: string; votes: number }>;
 }
 
+interface SelectedPoll {
+  subject: string;
+  body: string;
+  options: Array<{ id: string; label: string; votes: number }>;
+}
+
 interface PollAnalyticsRow {
   messageId: string;
+  pollGroupId: string | null;
   messageSubject: string;
   messageBody: string;
   optionId: string;
@@ -34,11 +41,13 @@ export default function AdminAdvancedAnalyticsPage() {
   const router = useRouter();
   const [rows, setRows] = useState<PollAnalyticsRow[]>([]);
   const [summary, setSummary] = useState<PollAnalyticsSummary | null>(null);
+  const [selectedPoll, setSelectedPoll] = useState<SelectedPoll | null>(null);
   const [departmentOptions, setDepartmentOptions] = useState<string[]>([]);
   const [courseOptions, setCourseOptions] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [department, setDepartment] = useState("all");
   const [course, setCourse] = useState("all");
+  const [pollId, setPollId] = useState(() => (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("poll") ?? "" : ""));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -47,6 +56,7 @@ export default function AdminAdvancedAnalyticsPage() {
     if (search.trim()) params.set("search", search.trim());
     if (department !== "all") params.set("department", department);
     if (course !== "all") params.set("course", course);
+    if (pollId) params.set("poll", pollId);
     return params.toString();
   }, [search, department, course]);
 
@@ -70,6 +80,7 @@ export default function AdminAdvancedAnalyticsPage() {
         if (!response.ok) throw new Error(json.error || "Failed to load analytics");
         setRows(json.rows ?? []);
         setSummary(json.summary ?? null);
+        setSelectedPoll(json.selectedPoll ?? null);
         setDepartmentOptions(json.filters?.departmentOptions ?? []);
         setCourseOptions(json.filters?.courseOptions ?? []);
       } catch (err) {
@@ -86,13 +97,20 @@ export default function AdminAdvancedAnalyticsPage() {
 
   return (
     <div className="page-wrap">
-      <AdminPageHeader section="Polls" title="Advanced" serif="analytics" subtitle="Poll results and respondent breakdown across your audience.">
+      <AdminPageHeader section="Polls" title="Advanced" serif="analytics" subtitle={pollId ? "Analytics for the selected poll only." : "Poll results and respondent breakdown across your audience."}>
         <button className="btn btn-ghost" onClick={() => router.push("/admin")}>
           {AIcon.back()} Admin
         </button>
       </AdminPageHeader>
 
       <div className="filter-panel">
+        {pollId && (
+          <div className="callout is-info" style={{ marginBottom: 14 }}>
+            <div><strong>Filtered to one poll.</strong> Only responses belonging to this poll are shown.</div>
+            <button type="button" className="btn btn-ghost" onClick={() => { setPollId(""); router.push("/admin/advanced-analytics"); }}>Clear poll filter</button>
+          </div>
+        )}
+
         <div className="form-field">
           <label className="form-label" htmlFor="aa-search">Search</label>
           <input id="aa-search" className="input" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Poll, label or user" />
@@ -116,6 +134,22 @@ export default function AdminAdvancedAnalyticsPage() {
           </select>
         </div>
       </div>
+
+      {pollId && selectedPoll && !loading && (
+        <div className="panel mb-24">
+          <div className="code-label">Selected poll</div>
+          <h2 className="panel-title" style={{ marginTop: 6 }}>{selectedPoll.subject}</h2>
+          <p className="panel-desc" style={{ whiteSpace: "pre-wrap", marginBottom: 14 }}>{selectedPoll.body}</p>
+          <div className="info-list">
+            {selectedPoll.options.map((option) => (
+              <div className="info-row" key={option.id}>
+                <span className="k">{option.label}</span>
+                <span className="v">{option.votes} vote{option.votes === 1 ? "" : "s"}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <p style={{ color: "var(--text-secondary)" }}>Loading poll analytics…</p>
@@ -188,7 +222,7 @@ export default function AdminAdvancedAnalyticsPage() {
                 </thead>
                 <tbody>
                   {rows.map((row) => (
-                    <tr key={`${row.messageId}-${row.userId}-${row.optionId}`}>
+                    <tr key={`${row.pollGroupId ?? row.messageId}-${row.userId}-${row.optionId}`}>
                       <td>{row.userName}</td>
                       <td>{row.department}</td>
                       <td>{row.course ?? "—"}</td>

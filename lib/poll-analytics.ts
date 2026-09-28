@@ -1,5 +1,6 @@
 export interface PollAnalyticsRow {
   messageId: string;
+  pollGroupId: string | null;
   messageSubject: string;
   messageBody: string;
   optionId: string;
@@ -33,7 +34,7 @@ export interface PollSummary {
 
 export function summarizePollResults(rows: PollAnalyticsRow[]): PollSummary {
   const totalVotes = rows.length;
-  const totalPolls = new Set(rows.map((row) => row.messageId)).size;
+  const totalPolls = new Set(rows.map((row) => row.pollGroupId ?? row.messageId)).size;
   const uniqueRespondents = new Set(rows.map((row) => row.userId)).size;
 
   const optionCounts = new Map<string, number>();
