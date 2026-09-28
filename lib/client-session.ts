@@ -27,6 +27,7 @@ export interface StoredUser {
 }
 
 const USER_KEY = "veloce_user";
+export const USER_UPDATED_EVENT = "veloce:user-updated";
 
 export function saveUser(user: StoredUser) {
   localStorage.setItem(USER_KEY, JSON.stringify({
@@ -34,6 +35,9 @@ export function saveUser(user: StoredUser) {
     departmentId: user.departmentId ?? null,
     level: user.level ?? null,
   }));
+  // Let already-mounted UI (the header, the profile menu) pick up changes
+  // like a new profile photo straight away instead of on the next page load.
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(USER_UPDATED_EVENT));
 }
 
 export function clearAcademicProfile() {

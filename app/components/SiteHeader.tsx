@@ -7,7 +7,7 @@ import Logo from "@/app/components/Logo";
 import ProfileMenu from "@/app/components/ProfileMenu";
 import { Icon } from "@/app/components/icons";
 import { toggleTheme } from "@/app/components/toggle-theme";
-import { getStoredUser, StoredUser } from "@/lib/client-session";
+import { getStoredUser, StoredUser, USER_UPDATED_EVENT } from "@/lib/client-session";
 import { fetchAdminCounts } from "@/lib/admin-counts";
 import { useViewMode } from "@/lib/view-mode";
 
@@ -28,6 +28,14 @@ export default function SiteHeader() {
   const [unread, setUnread] = useState(0);
   const [adminTotal, setAdminTotal] = useState(0);
   const [credit, setCredit] = useState<number | null>(null);
+  // Re-read the stored user when something (e.g. the avatar picker) saves a
+  // change, so the header's photo/name update without a navigation.
+  useEffect(() => {
+    const sync = () => setUser(getStoredUser());
+    window.addEventListener(USER_UPDATED_EVENT, sync);
+    return () => window.removeEventListener(USER_UPDATED_EVENT, sync);
+  }, []);
+
   // Which role's nav to show — an admin/scribe can view the app as a lower role.
   const [viewMode] = useViewMode(user?.role);
   const mode = viewMode ?? user?.role;
@@ -127,7 +135,7 @@ export default function SiteHeader() {
                   {Icon.message()}
                   {unread > 0 && <span className="badge">{unread > 9 ? "9+" : unread}</span>}
                 </Link>
-                <ProfileMenu user={user} unread={unread} credit={credit} />
+                <ProfileMenu user={user} unread={unread} credit={credit} adminCount={adminTotal} />
               </>
             ) : (
               <>

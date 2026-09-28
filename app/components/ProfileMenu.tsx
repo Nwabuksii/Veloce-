@@ -69,10 +69,13 @@ export default function ProfileMenu({
   user: userProp,
   unread = 0,
   credit = null,
+  adminCount = 0,
 }: {
   user?: StoredUser;
   unread?: number;
   credit?: number | null;
+  // Unfinished admin tasks (real admins only) — shown on the Admin switch.
+  adminCount?: number;
 }) {
   const currentUser = userProp ?? getStoredUser();
   const router = useRouter();
@@ -125,6 +128,11 @@ export default function ProfileMenu({
   const shortcuts = shortcutsFor(mode, currentUser.role);
   const modes = allowedModes(currentUser.role);
   const MODE_LABEL: Record<Role, string> = { STUDENT: "Student", SCRIBE: "Scribe", ADMIN: "Admin" };
+  // Everything that wants this person's attention, across every role they
+  // hold: unread messages (students and scribes) + pending admin tasks.
+  const pendingAdmin = currentUser.role === "ADMIN" ? adminCount : 0;
+  const totalNotifications = unread + pendingAdmin;
+  const bubble = (n: number) => (n > 99 ? "99+" : String(n));
 
   function switchTo(next: Role) {
     setViewMode(next);
@@ -136,7 +144,7 @@ export default function ProfileMenu({
       <button
         type="button"
         className={`profile-btn${open ? " is-open" : ""}`}
-        aria-label="Account menu"
+        aria-label={totalNotifications > 0 ? `Account menu (${totalNotifications} notifications)` : "Account menu"}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
@@ -144,15 +152,20 @@ export default function ProfileMenu({
         <Avatar name={currentUser.fullName} imageUrl={imageUrl} tone="ink" enlargeOnTap={false} />
         <span className="pname">{firstName}</span>
         {Icon.caret()}
+        {totalNotifications > 0 && <span className="profile-badge">{bubble(totalNotifications)}</span>}
       </button>
 
       {open && (
         <div className="dropdown" role="menu">
           <div className="dd-header">
             <div className="dd-user">
-              <Avatar name={currentUser.fullName} imageUrl={imageUrl} tone="ink" enlargeOnTap={false} />
+              {/* Tapping the photo here opens it full-size. */}
+              <Avatar name={currentUser.fullName} imageUrl={imageUrl} tone="ink" />
               <div className="dd-user-info">
-                <div className="dd-user-name">{currentUser.fullName}</div>
+                <div className="dd-user-name">
+                  <span className="dd-user-fullname">{currentUser.fullName}</span>
+                  <span className="dd-user-role"> · {MODE_LABEL[currentUser.role]}</span>
+                </div>
                 <div className="dd-user-email">{currentUser.email}</div>
               </div>
             </div>
@@ -163,6 +176,9 @@ export default function ProfileMenu({
               {modes.map((m) => (
                 <button key={m} type="button" className={`dd-role-btn${mode === m ? " is-active" : ""}`} aria-pressed={mode === m} onClick={() => switchTo(m)}>
                   {MODE_LABEL[m]}
+                  {m === "ADMIN" && pendingAdmin > 0 && (
+                    <span className="dd-role-badge" aria-label={`${pendingAdmin} pending admin tasks`}>{bubble(pendingAdmin)}</span>
+                  )}
                 </button>
               ))}
             </div>

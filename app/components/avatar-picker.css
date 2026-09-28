@@ -1,0 +1,19 @@
+/* Upload / remove progress for the profile-photo picker. */
+.avatar-upload-spinner {
+  width: 13px; height: 13px; flex-shrink: 0;
+  border: 2px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: avatarUploadSpin 0.7s linear infinite;
+}
+@keyframes avatarUploadSpin { to { transform: rotate(360deg); } }
+
+.display-actions .btn:disabled { cursor: not-allowed; pointer-events: none; }
+.avatar-status { min-height: 0; }
+.avatar-status-text { display: block; margin-top: 10px; font-size: 12.5px; line-height: 1.5; color: var(--text-secondary); }
+.avatar-status-text.is-ok { color: var(--text-success); }
+.avatar-status-text.is-error { color: var(--text-danger); }
+
+@media (prefers-reduced-motion: reduce) {
+  .avatar-upload-spinner { animation-duration: 1.6s; }
+}

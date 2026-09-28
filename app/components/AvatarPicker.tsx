@@ -7,11 +7,17 @@ import { toast } from "@/lib/toast";
 import Avatar from "@/app/components/Avatar";
 import { AIcon } from "@/app/components/AdminIcons";
 import "@/app/admin/admin.css";
+import "./avatar-picker.css";
 
 export default function AvatarPicker() {
   const [user, setUser] = useState(() => getStoredUser());
   const [uploading, setUploading] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const [switching, setSwitching] = useState(false);
+  // Inline result of the last upload/remove, so the outcome stays visible
+  // after the toast disappears.
+  const [status, setStatus] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+  const busy = uploading || removing || switching;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!user) return null;
@@ -29,6 +35,7 @@ export default function AvatarPicker() {
     e.target.value = ""; // allow re-selecting the same file later
     if (!file) return;
 
+    setStatus(null);
     setUploading(true);
     try {
       const formData = new FormData();
@@ -44,8 +51,11 @@ export default function AvatarPicker() {
       }
       updateLocal({ avatarUrl: data.user.avatarUrl, avatarDisplay: data.user.avatarDisplay });
       toast.success("Profile icon updated.");
+      setStatus({ kind: "ok", text: "Photo uploaded." });
     } catch (err) {
-      toast.error(friendlyErrorMessage(err));
+      const text = friendlyErrorMessage(err);
+      toast.error(text);
+      setStatus({ kind: "error", text: `Upload failed — ${text}` });
     } finally {
       setUploading(false);
     }
@@ -69,15 +79,19 @@ export default function AvatarPicker() {
   }
 
   async function handleRemove() {
-    setUploading(true);
+    setStatus(null);
+    setRemoving(true);
     try {
       await apiFetch("/api/account/avatar", { method: "DELETE" });
       updateLocal({ avatarUrl: null, avatarDisplay: "default" });
       toast.success("Profile icon removed.");
+      setStatus({ kind: "ok", text: "Photo removed." });
     } catch (err) {
-      toast.error(friendlyErrorMessage(err));
+      const text = friendlyErrorMessage(err);
+      toast.error(text);
+      setStatus({ kind: "error", text: `Could not remove photo — ${text}` });
     } finally {
-      setUploading(false);
+      setRemoving(false);
     }
   }
 
@@ -92,25 +106,53 @@ export default function AvatarPicker() {
         <div className="display-desc">Upload a photo anytime, and choose whether it or the generic icon shows around the app.</div>
 
         <div className="display-actions">
-          <button className="btn btn-ghost btn-sm press-on-tap" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
-            {AIcon.upload()} {hasCustom ? "Replace photo" : "Upload photo"}
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm press-on-tap"
+            disabled={busy}
+            aria-busy={uploading}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {uploading ? (
+              <>
+                <span className="avatar-upload-spinner" aria-hidden="true" /> Uploading...
+              </>
+            ) : (
+              <>
+                {AIcon.upload()} {hasCustom ? "Replace photo" : "Upload photo"}
+              </>
+            )}
           </button>
           {hasCustom && (
-            <button className="btn btn-ghost btn-sm press-on-tap" disabled={uploading} onClick={handleRemove}>
-              {AIcon.trash()} Remove
+            <button type="button" className="btn btn-ghost btn-sm press-on-tap" disabled={busy} aria-busy={removing} onClick={handleRemove}>
+              {removing ? (
+                <>
+                  <span className="avatar-upload-spinner" aria-hidden="true" /> Removing...
+                </>
+              ) : (
+                <>
+                  {AIcon.trash()} Remove
+                </>
+              )}
             </button>
           )}
           <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} hidden />
         </div>
 
+        <div className="avatar-status" role="status" aria-live="polite">
+          {uploading && <span className="avatar-status-text">Uploading your photo — please wait, this can take a few seconds.</span>}
+          {removing && <span className="avatar-status-text">Removing your photo...</span>}
+          {!busy && status && <span className={`avatar-status-text ${status.kind === "error" ? "is-error" : "is-ok"}`}>{status.text}</span>}
+        </div>
+
         {hasCustom && (
           <div className="radio-row">
             <label>
-              <input type="radio" name="avatarDisplay" checked={user.avatarDisplay === "custom"} disabled={switching} onChange={() => setDisplay("custom")} />
+              <input type="radio" name="avatarDisplay" checked={user.avatarDisplay === "custom"} disabled={busy} onChange={() => setDisplay("custom")} />
               Show my photo
             </label>
             <label>
-              <input type="radio" name="avatarDisplay" checked={user.avatarDisplay !== "custom"} disabled={switching} onChange={() => setDisplay("default")} />
+              <input type="radio" name="avatarDisplay" checked={user.avatarDisplay !== "custom"} disabled={busy} onChange={() => setDisplay("default")} />
               Show generic icon
             </label>
           </div>

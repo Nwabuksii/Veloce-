@@ -11,3 +11,30 @@
   .dd-role { padding: 10px 12px; }
   .dd-role-btn { padding: 8px 4px; font-size: 11px; }
 }
+
+/* Role shown beside the name in the dropdown header: "Ada Okafor · Scribe". */
+.dd-user-name { display: flex; align-items: baseline; gap: 0; min-width: 0; }
+.dd-user-fullname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-user-role { flex-shrink: 0; white-space: pre; font-weight: 500; color: var(--text-secondary); }
+
+/* Total notification bubble on the profile button (messages + admin tasks). */
+.profile-btn { position: relative; }
+.profile-badge {
+  position: absolute; top: -5px; right: -5px;
+  min-width: 18px; height: 18px; padding: 0 5px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 999px; background: var(--plum); color: #fff;
+  font-size: 10px; font-weight: 700; line-height: 1;
+  border: 2px solid var(--bg-page);
+  pointer-events: none;
+}
+
+/* Pending-admin-tasks bubble on the Admin switch — the only place admin
+   tasks are counted inside the dropdown. */
+.dd-role-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.dd-role-badge {
+  min-width: 16px; height: 16px; padding: 0 4px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 999px; background: var(--plum); color: #fff;
+  font-size: 9.5px; font-weight: 700; line-height: 1;
+}
