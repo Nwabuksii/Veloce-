@@ -6,6 +6,8 @@ import { clearSession, getStoredUser, StoredUser } from "@/lib/client-session";
 import Avatar from "@/app/components/Avatar";
 import { Icon } from "@/app/components/icons";
 import { toggleTheme } from "@/app/components/toggle-theme";
+import { allowedModes, HOME_FOR, useViewMode, Role } from "@/lib/view-mode";
+import "./role-toggle.css";
 
 interface Shortcut {
   label: string;
@@ -13,42 +15,51 @@ interface Shortcut {
   icon?: keyof typeof Icon;
 }
 
-// Everything that isn't a top-level nav item lives here, grouped like the
-// template's dropdown: account, role shortcuts, then theme + sign out.
-function shortcutsFor(role: StoredUser["role"]): { label: string; items: Shortcut[] } {
-  if (role === "ADMIN") {
+// What sits under the role switch, by the role being viewed. Scribe and
+// admin views mirror the top nav; the student view keeps the extras only a
+// real student needs (applying, appealing).
+function shortcutsFor(mode: Role, realRole: Role): { label: string; items: Shortcut[] } {
+  if (mode === "ADMIN") {
     return {
       label: "Admin tools",
       items: [
-        { label: "Browse Catalog", href: "/dashboard" },
+        { label: "Admin Dashboard", href: "/admin" },
+        { label: "Moderation Queue", href: "/admin/moderation" },
+        { label: "Reports", href: "/admin/reports" },
         { label: "Applications", href: "/admin/applications" },
         { label: "Appeals", href: "/admin/appeals" },
         { label: "Payouts", href: "/admin/payouts" },
+        { label: "Financial Ledger", href: "/admin/finance" },
         { label: "Advanced Analytics", href: "/admin/advanced-analytics" },
+        { label: "Manage Users", href: "/admin/users" },
         { label: "Manage Scribes", href: "/admin/scribes" },
         { label: "Message Users", href: "/admin/messages" },
         { label: "Feedback Inbox", href: "/admin/feedback" },
       ],
     };
   }
-  if (role === "SCRIBE") {
+  if (mode === "SCRIBE") {
     return {
-      label: "Shortcuts",
+      label: "Scribe tools",
       items: [
-        { label: "Request a Block", href: "/requests" },
-        { label: "My Requests", href: "/requests/mine" },
-        { label: "My Library", href: "/purchases" },
-        { label: "Following", href: "/following" },
+        { label: "Scribe Studio", href: "/scribe" },
+        { label: "Analytics", href: "/scribe/analytics" },
+        { label: "Earnings", href: "/scribe/earnings" },
+        { label: "Upload Notes", href: "/scribe/upload" },
+        { label: "Discovery Feed", href: "/scribe/requests" },
       ],
     };
   }
-  return {
-    label: "Shortcuts",
-    items: [
-      { label: "Become a Scribe", href: "/scribe/apply" },
-      { label: "Appeal reinstatement", href: "/scribe/appeal" },
-    ],
-  };
+  const items: Shortcut[] = [
+    { label: "Request a Block", href: "/requests" },
+    { label: "My Requests", href: "/requests/mine" },
+    { label: "My Library", href: "/purchases" },
+    { label: "Following", href: "/following" },
+  ];
+  if (realRole === "STUDENT") {
+    items.push({ label: "Become a Scribe", href: "/scribe/apply" }, { label: "Appeal reinstatement", href: "/scribe/appeal" });
+  }
+  return { label: "Shortcuts", items };
 }
 
 // The profile button in the top-right of the site header, with the
@@ -67,6 +78,7 @@ export default function ProfileMenu({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [viewMode, setViewMode] = useViewMode(currentUser?.role);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -109,7 +121,15 @@ export default function ProfileMenu({
   // their uploaded photo or the initials — uploading one doesn't force it on.
   const imageUrl = currentUser.avatarDisplay === "custom" ? currentUser.avatarUrl : null;
   const firstName = currentUser.fullName.trim().split(/\s+/)[0] || currentUser.fullName;
-  const shortcuts = shortcutsFor(currentUser.role);
+  const mode = viewMode ?? currentUser.role;
+  const shortcuts = shortcutsFor(mode, currentUser.role);
+  const modes = allowedModes(currentUser.role);
+  const MODE_LABEL: Record<Role, string> = { STUDENT: "Student", SCRIBE: "Scribe", ADMIN: "Admin" };
+
+  function switchTo(next: Role) {
+    setViewMode(next);
+    go(HOME_FOR[next]);
+  }
 
   return (
     <div ref={menuRef} style={{ position: "relative" }}>
@@ -137,6 +157,16 @@ export default function ProfileMenu({
               </div>
             </div>
           </div>
+
+          {modes.length > 1 && (
+            <div className="dd-role" role="group" aria-label="Switch role">
+              {modes.map((m) => (
+                <button key={m} type="button" className={`dd-role-btn${mode === m ? " is-active" : ""}`} aria-pressed={mode === m} onClick={() => switchTo(m)}>
+                  {MODE_LABEL[m]}
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="dd-section">
             <div className="dd-label">Account</div>

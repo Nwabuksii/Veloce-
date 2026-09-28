@@ -5,6 +5,8 @@ import { getStoredUser, saveUser } from "@/lib/client-session";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
 import Avatar from "@/app/components/Avatar";
+import { AIcon } from "@/app/components/AdminIcons";
+import "@/app/admin/admin.css";
 
 export default function AvatarPicker() {
   const [user, setUser] = useState(() => getStoredUser());
@@ -82,58 +84,33 @@ export default function AvatarPicker() {
   const hasCustom = !!user.avatarUrl;
 
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "1rem",
-        padding: "0.9rem 1.1rem",
-        border: "1px solid var(--border-light)",
-        borderRadius: "0.8rem",
-        background: "var(--surface)",
-        flexWrap: "wrap",
-      }}
-    >
+    <div className="display-row">
       <Avatar name={user.fullName} imageUrl={user.avatarDisplay === "custom" ? user.avatarUrl : null} />
 
-      <div style={{ flex: "1 1 200px" }}>
-        <div style={{ fontWeight: 500, fontSize: "0.9rem", color: "var(--text-primary)" }}>Profile icon</div>
-        <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "0.15rem" }}>
-          Upload a photo anytime, and choose whether it or the generic icon shows around the app.
-        </div>
+      <div className="display-info">
+        <div className="display-title">Profile icon</div>
+        <div className="display-desc">Upload a photo anytime, and choose whether it or the generic icon shows around the app.</div>
 
-        <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.6rem", flexWrap: "wrap" }}>
-          <button className="btn press-on-tap" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
-            <i className="fas fa-upload"></i> {hasCustom ? "Replace photo" : "Upload photo"}
+        <div className="display-actions">
+          <button className="btn btn-ghost btn-sm press-on-tap" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
+            {AIcon.upload()} {hasCustom ? "Replace photo" : "Upload photo"}
           </button>
           {hasCustom && (
-            <button className="btn press-on-tap" disabled={uploading} onClick={handleRemove}>
-              <i className="fas fa-trash"></i> Remove
+            <button className="btn btn-ghost btn-sm press-on-tap" disabled={uploading} onClick={handleRemove}>
+              {AIcon.trash()} Remove
             </button>
           )}
-          <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} style={{ display: "none" }} />
+          <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} hidden />
         </div>
 
         {hasCustom && (
-          <div style={{ display: "flex", gap: "1rem", marginTop: "0.7rem", fontSize: "0.82rem" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", cursor: "pointer", color: "var(--text-primary)" }}>
-              <input
-                type="radio"
-                name="avatarDisplay"
-                checked={user.avatarDisplay === "custom"}
-                disabled={switching}
-                onChange={() => setDisplay("custom")}
-              />
+          <div className="radio-row">
+            <label>
+              <input type="radio" name="avatarDisplay" checked={user.avatarDisplay === "custom"} disabled={switching} onChange={() => setDisplay("custom")} />
               Show my photo
             </label>
-            <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", cursor: "pointer", color: "var(--text-primary)" }}>
-              <input
-                type="radio"
-                name="avatarDisplay"
-                checked={user.avatarDisplay !== "custom"}
-                disabled={switching}
-                onChange={() => setDisplay("default")}
-              />
+            <label>
+              <input type="radio" name="avatarDisplay" checked={user.avatarDisplay !== "custom"} disabled={switching} onChange={() => setDisplay("default")} />
               Show generic icon
             </label>
           </div>

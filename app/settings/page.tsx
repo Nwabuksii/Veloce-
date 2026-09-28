@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, FormEvent } from "react";
+import { useEffect, useState, FormEvent, ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser, saveUser, StoredUser } from "@/lib/client-session";
 import AdminPageHeader from "@/app/components/AdminPageHeader";
@@ -147,67 +147,81 @@ export default function SettingsPage() {
       )}`
     : undefined;
 
+  const TABS: { key: Tab; label: string; icon: ReactElement }[] = [
+    { key: "about", label: "About", icon: AIcon.spark() },
+    { key: "faq", label: "FAQ", icon: AIcon.list() },
+    { key: "contact", label: "Contact admin", icon: AIcon.mail() },
+    { key: "account", label: "Account", icon: AIcon.user() },
+    { key: "display", label: "Display", icon: AIcon.moon() },
+  ];
+
   return (
     <div className="page-wrap">
       <div className="narrow">
-        <AdminPageHeader section="Account" title="Your" serif="settings" subtitle="Manage your account and preferences.">
+        <AdminPageHeader section="Account" title="Your" serif="settings" subtitle="Manage your account, preferences, and everything else from one place.">
           <button className="btn btn-ghost" onClick={() => router.push("/dashboard")}>
             {AIcon.back()} Catalog
           </button>
         </AdminPageHeader>
 
-        <div className="tabs mb-24" style={{ width: "fit-content", maxWidth: "100%" }}>
-          {([
-            { key: "about", label: "About" },
-            { key: "faq", label: "FAQ" },
-            { key: "contact", label: "Contact admin" },
-            { key: "account", label: "Account" },
-            { key: "display", label: "Display" },
-          ] as { key: Tab; label: string }[]).map((t) => (
+        <div className="tabs mb-24">
+          {TABS.map((t) => (
             <button key={t.key} className={`tab${tab === t.key ? " is-active" : ""}`} onClick={() => setTab(t.key)}>
-              {t.label}
+              {t.icon} {t.label}
             </button>
           ))}
         </div>
 
         {tab === "about" && (
-          <div className="panel prose">
+          <div className="panel">
             <h2 className="panel-title">{AIcon.spark()} About Veloce</h2>
-            <p>
-              Veloce is a marketplace where students turn the notes they've already taken into something other
-              students can buy — organized by course and block, so anyone can find exactly the topic they're
-              stuck on.
+            <p className="panel-desc">
+              A marketplace where students turn the notes they&apos;ve already taken into something other students can buy — organized by course and block.
             </p>
-            <p>
-              Built for students, by a student who got tired of scrambling for good notes before exams —
-              Veloce started as a way to make that easier for everyone else too.
-            </p>
-            <p>Have feedback or an idea for what's next? Use the Contact tab — we read every message.</p>
+            <div className="prose">
+              <p>
+                Built for students, by a student who got tired of scrambling for good notes before exams — Veloce started as a way to make that easier for everyone else too.
+              </p>
+              <p>
+                Have feedback or an idea for what&apos;s next? Use the <strong>Contact</strong> tab — we read every message.
+              </p>
+            </div>
           </div>
         )}
 
         {tab === "faq" && (
-          <div className="stack-10">
-            {FAQ_ITEMS.map((item, i) => (
-              <details key={i} className="faq">
-                <summary>{item.q}</summary>
-                <p>{item.a}</p>
-              </details>
-            ))}
+          <div className="panel">
+            <h2 className="panel-title">{AIcon.list()} Frequently asked</h2>
+            <p className="panel-desc">Everything students and scribes ask us most often.</p>
+            <div className="faq-list">
+              {FAQ_ITEMS.map((item, i) => (
+                <details key={i} className="faq-item">
+                  <summary>{item.q}</summary>
+                  <div className="faq-body">{item.a}</div>
+                </details>
+              ))}
+            </div>
           </div>
         )}
 
         {tab === "contact" && (
           <div className="panel">
             <h2 className="panel-title">{AIcon.mail()} Contact your admin</h2>
+            <p className="panel-desc">Questions, refund requests, or anything else — reach your university&apos;s admin directly.</p>
             {contactLoading && <SkeletonCard height="4.5rem" />}
             {!contactLoading && adminEmail && (
-              <>
-                <p className="panel-desc">Questions, refund requests, or anything else — reach your university's admin directly.</p>
+              <div className="contact-cta">
+                <div className="icon-tile">{AIcon.mail()}</div>
+                <div className="info">
+                  <div className="info-title">Email support</div>
+                  <div className="info-desc">
+                    Reach us at <strong>{adminEmail}</strong>
+                  </div>
+                </div>
                 <a className="btn btn-primary" href={mailtoHref}>
-                  {AIcon.mail()} Email {adminEmail}
+                  {AIcon.send()} Email admin
                 </a>
-              </>
+              </div>
             )}
             {!contactLoading && !adminEmail && (
               <p className="panel-desc">No admin is set up for your university yet — check back later.</p>
@@ -217,14 +231,14 @@ export default function SettingsPage() {
 
         {tab === "account" && (
           <div className="panel">
-            <h2 className="panel-title">{AIcon.user()} Account</h2>
-            <p className="panel-desc">Change your email or password. Your name can't be changed here.</p>
+            <h2 className="panel-title">{AIcon.gear()} Account</h2>
+            <p className="panel-desc">Change your email or password. Your name can&apos;t be changed here.</p>
 
-            <div className="info-list mb-16">
-              <div className="info-row"><span className="k">Name</span><span className="v">{user.fullName}</span></div>
-              <div className="info-row"><span className="k">School</span><span className="v">{profileInfo?.universityName || "—"}</span></div>
-              <div className="info-row"><span className="k">Department</span><span className="v">{profileInfo?.departmentName || "Not set"}</span></div>
-              <div className="info-row"><span className="k">Level</span><span className="v">{profileInfo?.level || "Not set"}</span></div>
+            <div className="profile-summary">
+              <div><div className="k">Name</div><div className="v">{user.fullName}</div></div>
+              <div><div className="k">School</div><div className="v">{profileInfo?.universityName || "—"}</div></div>
+              <div><div className="k">Department</div><div className="v">{profileInfo?.departmentName || "Not set"}</div></div>
+              <div><div className="k">Level</div><div className="v">{profileInfo?.level || "Not set"}</div></div>
             </div>
 
             <form onSubmit={handleAccountSubmit}>
@@ -232,22 +246,20 @@ export default function SettingsPage() {
                 <label className="form-label">Email</label>
                 <input className="input" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
               </div>
-
               <div className="form-field">
-                <label className="form-label">New password (leave blank to keep current)</label>
-                <input className="input" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="At least 8 characters" />
+                <label className="form-label">New password</label>
+                <input className="input" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Leave blank to keep current — at least 8 characters" />
               </div>
-
               <div className="form-field">
-                <label className="form-label">Current password (required to save any change)</label>
-                <input className="input" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+                <label className="form-label">Current password <span className="text-danger">*</span></label>
+                <input className="input" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Required to save any change" />
               </div>
 
               {accountStatus && <div className={`form-status${accountStatus === "Saved." ? " is-ok" : ""}`}>{accountStatus}</div>}
 
-              <div className="flex-end">
+              <div className="form-footer">
                 <button className="btn btn-primary" type="submit" disabled={accountSubmitting}>
-                  {accountSubmitting ? "Saving..." : "Save changes"}
+                  {accountSubmitting ? "Saving..." : <>{AIcon.check()} Save changes</>}
                 </button>
               </div>
             </form>
@@ -256,24 +268,27 @@ export default function SettingsPage() {
 
         {tab === "display" && (
           <div className="panel">
-              <h2 className="panel-title">{AIcon.spark()} Appearance</h2>
-              <p className="panel-desc">Choose how Veloce looks, and how you show up around the app.</p>
-              <AvatarPicker />
-              <div className="info-list">
-                <div className="info-row">
-                  <span className="k">Dark mode — a darker, high-contrast look across the whole app</span>
-                  <button
-                    role="switch"
-                    aria-checked={isDark}
-                    aria-label="Toggle dark mode"
-                    className="toggle-switch press-on-tap"
-                    onClick={() => {
-                      toggleTheme();
-                      setIsDark((d) => !d);
-                    }}
-                  />
-                </div>
+            <h2 className="panel-title">{AIcon.moon()} Display</h2>
+            <p className="panel-desc">Choose how Veloce looks, and how you show up around the app.</p>
+
+            <AvatarPicker />
+
+            <div className="display-row">
+              <div className="display-info">
+                <div className="display-title">Dark mode</div>
+                <div className="display-desc">A darker, high-contrast look across the whole app. We also follow your system preference by default.</div>
               </div>
+              <button
+                role="switch"
+                aria-checked={isDark}
+                aria-label="Toggle dark mode"
+                className="toggle-lg press-on-tap"
+                onClick={() => {
+                  toggleTheme();
+                  setIsDark((d) => !d);
+                }}
+              />
+            </div>
           </div>
         )}
       </div>

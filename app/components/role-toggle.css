@@ -1,0 +1,13 @@
+/* Student / Scribe / Admin switch at the top of the profile dropdown. */
+.dd-role { display: flex; gap: 4px; padding: 12px 14px; border-bottom: 1px solid var(--border); background: var(--bg-page); }
+.dd-role-btn {
+  flex: 1; padding: 7px 6px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.3px;
+  color: var(--text-secondary); background: transparent; border: 1px solid transparent;
+  border-radius: 7px; cursor: pointer; transition: all 0.18s;
+}
+.dd-role-btn:hover { color: var(--text-primary); background: var(--surface); }
+.dd-role-btn.is-active { color: var(--tab-active-fg); background: var(--tab-active-bg); border-color: var(--tab-active-bg); }
+@media (max-width: 640px) {
+  .dd-role { padding: 10px 12px; }
+  .dd-role-btn { padding: 8px 4px; font-size: 11px; }
+}

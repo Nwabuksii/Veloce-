@@ -9,6 +9,7 @@ import { Icon } from "@/app/components/icons";
 import { toggleTheme } from "@/app/components/toggle-theme";
 import { getStoredUser, StoredUser } from "@/lib/client-session";
 import { fetchAdminCounts } from "@/lib/admin-counts";
+import { useViewMode } from "@/lib/view-mode";
 
 interface NavItem {
   label: string;
@@ -27,6 +28,9 @@ export default function SiteHeader() {
   const [unread, setUnread] = useState(0);
   const [adminTotal, setAdminTotal] = useState(0);
   const [credit, setCredit] = useState<number | null>(null);
+  // Which role's nav to show — an admin/scribe can view the app as a lower role.
+  const [viewMode] = useViewMode(user?.role);
+  const mode = viewMode ?? user?.role;
 
   // Re-read on every route change: the header stays mounted across client
   // navigations, and badges/credit/avatar can change between pages.
@@ -62,7 +66,7 @@ export default function SiteHeader() {
       icon: Icon.grid(),
       active: is("/dashboard") || is("/blocks"),
     };
-    if (user.role === "ADMIN") {
+    if (mode === "ADMIN") {
       nav = [
         { label: "Admin", href: "/admin", icon: Icon.shield(), active: pathname === "/admin", badge: adminTotal },
         { label: "Moderation", href: "/admin/moderation", icon: Icon.check(), active: is("/admin/moderation") },
@@ -70,7 +74,7 @@ export default function SiteHeader() {
         { label: "Finance", href: "/admin/finance", icon: Icon.chart(), active: is("/admin/finance") },
         { label: "Users", href: "/admin/users", icon: Icon.user(), active: is("/admin/users") },
       ];
-    } else if (user.role === "SCRIBE") {
+    } else if (mode === "SCRIBE") {
       nav = [
         browse,
         { label: "Studio", href: "/scribe", icon: Icon.workshop(), active: pathname === "/scribe" || is("/scribe/workspace") },
@@ -98,7 +102,7 @@ export default function SiteHeader() {
   return (
     <header className="site-header">
       <div className="site-header-inner">
-        <Link href={user ? (user.role === "ADMIN" ? "/admin" : "/dashboard") : "/login"} className="brand">
+        <Link href={user ? (mode === "ADMIN" ? "/admin" : "/dashboard") : "/login"} className="brand">
           <Logo size={38} tile />
           <span>Veloce</span>
         </Link>

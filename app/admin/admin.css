@@ -242,3 +242,47 @@ button.toggle-switch { border: 0; padding: 0; cursor: pointer; }
   .panel-row .btn { width: 100%; }
   .two-col { gap: 16px; }
 }
+
+/* ================================================================
+   Settings — template panels, FAQ, contact, account, display
+   ================================================================ */
+.tab svg { width: 12px; height: 12px; }
+.prose strong { color: var(--text-primary); font-weight: 600; }
+.form-footer { display: flex; justify-content: flex-end; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); }
+
+.profile-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px 22px; padding: 18px; margin-bottom: 22px; background: var(--bg-page); border: 1px solid var(--border); border-radius: 10px; }
+.profile-summary .k { font-size: 9.5px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+.profile-summary .v { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+
+.faq-list { display: flex; flex-direction: column; gap: 10px; }
+.faq-item { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0 18px; transition: border-color 0.2s, box-shadow 0.3s; }
+.faq-item:hover { border-color: var(--border-strong); }
+.faq-item[open] { border-color: var(--gold); box-shadow: var(--card-shadow); }
+.faq-item summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 16px 0; font-size: 14px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.1px; }
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary::after { content: ''; width: 9px; height: 9px; flex-shrink: 0; border-right: 1.5px solid var(--text-secondary); border-bottom: 1.5px solid var(--text-secondary); transform: rotate(45deg) translate(-3px, -3px); transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.2, 1), border-color 0.2s; }
+.faq-item[open] summary::after { transform: rotate(225deg) translate(-3px, -3px); border-color: var(--gold); }
+.faq-item .faq-body { font-size: 13.5px; line-height: 1.65; color: var(--text-secondary); padding: 14px 0 18px; border-top: 1px dashed var(--border); }
+
+.display-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 16px 18px; margin-bottom: 14px; background: var(--bg-page); border: 1px solid var(--border); border-radius: 10px; }
+.display-row:last-child { margin-bottom: 0; }
+.display-info { flex: 1 1 200px; min-width: 0; }
+.display-title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 3px; }
+.display-desc { font-size: 12.5px; color: var(--text-secondary); line-height: 1.55; }
+.display-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.radio-row { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 12px; font-size: 12.5px; color: var(--text-primary); }
+.radio-row label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.radio-row input { accent-color: var(--gold); }
+
+.toggle-lg { position: relative; width: 42px; height: 24px; padding: 0; border: 0; background: var(--border-strong); border-radius: 100px; transition: background 0.25s; flex-shrink: 0; cursor: pointer; }
+.toggle-lg::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: #fff; border-radius: 50%; transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); }
+html[data-theme="dark"] .toggle-lg { background: var(--gold); }
+html[data-theme="dark"] .toggle-lg::after { transform: translateX(18px); }
+
+.contact-cta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 18px; background: var(--bg-page); border: 1px solid var(--border); border-radius: 10px; }
+.contact-cta .icon-tile { width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); display: grid; place-items: center; color: var(--gold); }
+.contact-cta .icon-tile svg { width: 18px; height: 18px; }
+.contact-cta .info { flex: 1 1 200px; min-width: 0; }
+.contact-cta .info-title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 3px; }
+.contact-cta .info-desc { font-size: 12.5px; color: var(--text-secondary); line-height: 1.55; }
+.contact-cta .info-desc strong { color: var(--text-primary); font-weight: 600; font-family: var(--font-mono), ui-monospace, monospace; font-size: 12px; word-break: break-all; }
