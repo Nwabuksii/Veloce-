@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
 import PageHeader from "@/app/components/PageHeader";
 import Avatar from "@/app/components/Avatar";
+import { SkeletonList } from "@/app/components/Skeleton";
 import { friendlyErrorMessage, apiFetch } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
 import { Icon } from "@/app/components/icons";

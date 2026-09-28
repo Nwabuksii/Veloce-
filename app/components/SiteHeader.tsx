@@ -103,7 +103,7 @@ export default function SiteHeader() {
     <header className="site-header">
       <div className="site-header-inner">
         <Link href={user ? (mode === "ADMIN" ? "/admin" : "/dashboard") : "/login"} className="brand">
-          <Logo size={38} tile />
+          <Logo size={38} tile animated />
           <span>Veloce</span>
         </Link>
 

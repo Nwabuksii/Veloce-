@@ -41,7 +41,7 @@ function VerifyEmailInner() {
     <div className="split-auth-page">
       <div className="split-auth-left">
         <div className="split-auth-logo-wrap">
-          <Logo size={150} />
+          <Logo size={150} animated />
         </div>
         <div className="split-auth-brand">
           Veloce

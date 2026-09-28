@@ -1,0 +1,126 @@
+/* ================================================================
+   Settings page — responsive layer.
+   Everything is scoped under .st so nothing leaks into other pages.
+   Uses the app's existing design tokens (globals.css) and builds on
+   the shared .panel / .tabs / .faq-item / .display-row / .contact-cta
+   styles from admin.css.
+   ================================================================ */
+
+.st {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  animation: stIn 0.45s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+@keyframes stIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Tabs: one scrollable pill row at every width ---- */
+.st .st-tabs {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  margin-bottom: 24px;
+}
+.st .st-tabs::-webkit-scrollbar { display: none; }
+.st .st-tabs .tab {
+  flex-shrink: 0;
+  white-space: nowrap;
+  scroll-snap-align: center;
+  min-height: 36px;
+}
+
+/* ---- Panels ---- */
+.st .st-panel {
+  min-width: 0;
+  animation: stPanelIn 0.3s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+@keyframes stPanelIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.st .panel-title { flex-wrap: wrap; }
+.st .panel-desc { max-width: 60ch; }
+
+/* Long values (emails, school names) must never push the page sideways */
+.st .profile-summary .v,
+.st .contact-cta .info-desc,
+.st .display-desc { overflow-wrap: anywhere; }
+.st .input { min-width: 0; }
+
+/* ---- Account form footer ---- */
+.st .form-footer { gap: 10px; }
+
+/* ---- Tablet & down ---- */
+@media (max-width: 820px) {
+  .st .panel { padding: 20px; }
+}
+
+/* ---- Phone ---- */
+@media (max-width: 640px) {
+  .st .st-tabs { margin-bottom: 20px; margin-inline: 0; }
+  .st .st-tabs .tab { padding: 9px 13px; font-size: 12.5px; }
+
+  .st .panel { padding: 18px; border-radius: 10px; }
+  .st .panel-title { font-size: 17px; gap: 8px; }
+  .st .panel-desc { font-size: 12.5px; margin-bottom: 16px; }
+
+  /* 16px inputs stop iOS Safari zooming the page when a field is focused */
+  .st .input { font-size: 16px; min-height: 48px; padding: 12px; }
+  .st .form-field { margin-bottom: 14px; }
+
+  .st .profile-summary { padding: 14px; gap: 14px 18px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .st .profile-summary .v { font-size: 13px; }
+
+  .st .display-row { padding: 14px; gap: 12px; }
+  .st .display-info { flex: 1 1 100%; }
+  .st .display-actions { width: 100%; }
+  .st .display-actions .btn { flex: 1 1 auto; justify-content: center; min-height: 44px; }
+  .st .radio-row { flex-direction: column; align-items: flex-start; gap: 10px; }
+
+  /* Dark-mode row keeps its switch on the right, text takes the rest */
+  .st .display-row .toggle-lg { margin-left: auto; }
+
+  .st .contact-cta { padding: 14px; gap: 14px; }
+  .st .contact-cta .icon-tile { width: 40px; height: 40px; }
+  .st .contact-cta .btn { width: 100%; }
+
+  .st .faq-item { padding: 0 15px; }
+  .st .faq-item summary { padding: 14px 0; font-size: 13.5px; }
+  .st .faq-item .faq-body { font-size: 13px; }
+
+  .st .form-footer { margin-top: 16px; padding-top: 16px; }
+  .st .form-footer .btn { width: 100%; min-height: 46px; }
+}
+
+/* ---- Small phones ---- */
+@media (max-width: 400px) {
+  .st .panel { padding: 16px; }
+  .st .profile-summary { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---- Very wide screens: a touch more breathing room ---- */
+@media (min-width: 1280px) {
+  .st .panel { padding: 26px; }
+}
+
+/* ---- Touch devices: comfortable hit areas, no sticky hover ---- */
+@media (hover: none) {
+  .st .toggle-lg { min-width: 42px; }
+  .st .faq-item:hover { border-color: var(--border); }
+  .st .faq-item[open]:hover { border-color: var(--gold); }
+}
+
+/* Keep the bottom of the page clear of the iOS home indicator */
+@supports (padding: max(0px)) {
+  .st { padding-bottom: env(safe-area-inset-bottom, 0px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st, .st .st-panel { animation: none; }
+}

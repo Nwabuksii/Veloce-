@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, FormEvent, ReactElement } from "react";
+import { useEffect, useRef, useState, FormEvent, KeyboardEvent, ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser, saveUser, StoredUser } from "@/lib/client-session";
 import AdminPageHeader from "@/app/components/AdminPageHeader";
 import { AIcon } from "@/app/components/AdminIcons";
 import "@/app/admin/admin.css";
+import "./settings.css";
 import { SkeletonCard } from "@/app/components/Skeleton";
 import { toggleTheme } from "@/app/components/toggle-theme";
 import AvatarPicker from "@/app/components/AvatarPicker";
@@ -45,6 +46,7 @@ export default function SettingsPage() {
   const [user, setUser] = useState<StoredUser | null>(null);
   const [tab, setTab] = useState<Tab>("about");
   const [isDark, setIsDark] = useState(false);
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   useEffect(() => {
     setIsDark(document.documentElement.getAttribute("data-theme") === "dark");
@@ -139,7 +141,17 @@ export default function SettingsPage() {
     }
   }
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <div className="page-wrap">
+        <div className="st">
+          <SkeletonCard height="7rem" />
+          <div style={{ height: 16 }} />
+          <SkeletonCard height="16rem" />
+        </div>
+      </div>
+    );
+  }
 
   const mailtoHref = adminEmail
     ? `mailto:${adminEmail}?subject=${encodeURIComponent("Veloce support request")}&body=${encodeURIComponent(
@@ -155,25 +167,59 @@ export default function SettingsPage() {
     { key: "display", label: "Display", icon: AIcon.moon() },
   ];
 
+  function selectTab(key: Tab) {
+    setTab(key);
+    // Keep the active pill in view on narrow screens.
+    requestAnimationFrame(() =>
+      tabRefs.current[key]?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" })
+    );
+  }
+
+  function onTabKeyDown(e: KeyboardEvent<HTMLButtonElement>, index: number) {
+    let next = index;
+    if (e.key === "ArrowRight") next = (index + 1) % TABS.length;
+    else if (e.key === "ArrowLeft") next = (index - 1 + TABS.length) % TABS.length;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = TABS.length - 1;
+    else return;
+    e.preventDefault();
+    selectTab(TABS[next].key);
+    tabRefs.current[TABS[next].key]?.focus();
+  }
+
   return (
     <div className="page-wrap">
-      <div className="narrow">
+      <div className="st">
         <AdminPageHeader section="Account" title="Your" serif="settings" subtitle="Manage your account, preferences, and everything else from one place.">
           <button className="btn btn-ghost" onClick={() => router.push("/dashboard")}>
             {AIcon.back()} Catalog
           </button>
         </AdminPageHeader>
 
-        <div className="tabs mb-24">
-          {TABS.map((t) => (
-            <button key={t.key} className={`tab${tab === t.key ? " is-active" : ""}`} onClick={() => setTab(t.key)}>
+        <div className="tabs st-tabs" role="tablist" aria-label="Settings sections">
+          {TABS.map((t, i) => (
+            <button
+              key={t.key}
+              ref={(el) => {
+                tabRefs.current[t.key] = el;
+              }}
+              id={`st-tab-${t.key}`}
+              role="tab"
+              type="button"
+              aria-selected={tab === t.key}
+              aria-controls={`st-panel-${t.key}`}
+              tabIndex={tab === t.key ? 0 : -1}
+              className={`tab${tab === t.key ? " is-active" : ""}`}
+              onClick={() => selectTab(t.key)}
+              onKeyDown={(e) => onTabKeyDown(e, i)}
+            >
               {t.icon} {t.label}
             </button>
           ))}
         </div>
 
         {tab === "about" && (
-          <div className="panel">
+          <div className="panel st-panel" role="tabpanel" id="st-panel-about" aria-labelledby="st-tab-about">
             <h2 className="panel-title">{AIcon.spark()} About Veloce</h2>
             <p className="panel-desc">
               A marketplace where students turn the notes they&apos;ve already taken into something other students can buy — organized by course and block.
@@ -190,7 +236,7 @@ export default function SettingsPage() {
         )}
 
         {tab === "faq" && (
-          <div className="panel">
+          <div className="panel st-panel" role="tabpanel" id="st-panel-faq" aria-labelledby="st-tab-faq">
             <h2 className="panel-title">{AIcon.list()} Frequently asked</h2>
             <p className="panel-desc">Everything students and scribes ask us most often.</p>
             <div className="faq-list">
@@ -205,7 +251,7 @@ export default function SettingsPage() {
         )}
 
         {tab === "contact" && (
-          <div className="panel">
+          <div className="panel st-panel" role="tabpanel" id="st-panel-contact" aria-labelledby="st-tab-contact">
             <h2 className="panel-title">{AIcon.mail()} Contact your admin</h2>
             <p className="panel-desc">Questions, refund requests, or anything else — reach your university&apos;s admin directly.</p>
             {contactLoading && <SkeletonCard height="4.5rem" />}
@@ -230,7 +276,7 @@ export default function SettingsPage() {
         )}
 
         {tab === "account" && (
-          <div className="panel">
+          <div className="panel st-panel" role="tabpanel" id="st-panel-account" aria-labelledby="st-tab-account">
             <h2 className="panel-title">{AIcon.gear()} Account</h2>
             <p className="panel-desc">Change your email or password. Your name can&apos;t be changed here.</p>
 
@@ -243,16 +289,16 @@ export default function SettingsPage() {
 
             <form onSubmit={handleAccountSubmit}>
               <div className="form-field">
-                <label className="form-label">Email</label>
-                <input className="input" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+                <label className="form-label" htmlFor="st-email">Email</label>
+                <input id="st-email" className="input" type="email" autoComplete="email" inputMode="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
               </div>
               <div className="form-field">
-                <label className="form-label">New password</label>
-                <input className="input" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Leave blank to keep current — at least 8 characters" />
+                <label className="form-label" htmlFor="st-new-password">New password</label>
+                <input id="st-new-password" className="input" type="password" autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Leave blank to keep current — at least 8 characters" />
               </div>
               <div className="form-field">
-                <label className="form-label">Current password <span className="text-danger">*</span></label>
-                <input className="input" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Required to save any change" />
+                <label className="form-label" htmlFor="st-current-password">Current password <span className="text-danger">*</span></label>
+                <input id="st-current-password" className="input" type="password" autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Required to save any change" />
               </div>
 
               {accountStatus && <div className={`form-status${accountStatus === "Saved." ? " is-ok" : ""}`}>{accountStatus}</div>}
@@ -267,7 +313,7 @@ export default function SettingsPage() {
         )}
 
         {tab === "display" && (
-          <div className="panel">
+          <div className="panel st-panel" role="tabpanel" id="st-panel-display" aria-labelledby="st-tab-display">
             <h2 className="panel-title">{AIcon.moon()} Display</h2>
             <p className="panel-desc">Choose how Veloce looks, and how you show up around the app.</p>
 
