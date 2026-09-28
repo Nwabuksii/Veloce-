@@ -101,33 +101,38 @@ export default function FollowingPage() {
   }
 
   return (
-    <div className="page-wrap">
-      <div className="app-container" style={{ maxWidth: 560 }}>
-        <PageHeader title="Following" subtitle="Scribes you follow.">
+    <div className="page-wrap student-page student-following-page">
+      <div className="app-container student-app-container">
+        <PageHeader eyebrow="Your Network" title="Scribes you" accent="follow" subtitle="Get notified the moment they publish. Follow the people whose notes actually helped you.">
           <button className="btn" onClick={() => router.push("/purchases")}>
               <i className="fas fa-arrow-left"></i> My Library
             </button>
         </PageHeader>
 
         {/* Search to follow */}
-        <h3 style={{ marginTop: "1.5rem", fontSize: "1.05rem" }}>
+        <div className="student-following-layout">
+        <section className="student-follow-panel">
+        <h3 className="student-section-title">
           <i className="fas fa-search" style={{ color: "var(--text-info)" }}></i> Find scribes to follow
         </h3>
+        <div className="student-follow-search">
+        <i className="fas fa-search"></i>
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by name..."
-          style={{ width: "100%", padding: "0.7rem", borderRadius: "8px", border: "1px solid var(--border-blue)", marginTop: "0.6rem" }}
         />
+        </div>
 
-        {searching && <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: "0.5rem" }}>Searching...</p>}
+        {searching && <p className="student-follow-empty">Searching...</p>}
 
         {results.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginTop: "0.7rem" }}>
+          <div className="student-follow-list">
             {results.map((s) => (
               <div
                 key={s.id}
+                className="student-scribe-card"
                 style={{
                   background: "var(--surface)",
                   border: "1px solid var(--border-blue)",
@@ -160,16 +165,18 @@ export default function FollowingPage() {
             ))}
           </div>
         )}
+        </section>
 
+        <section className="student-follow-panel">
         {/* Currently following */}
-        <h3 style={{ marginTop: "1.8rem", fontSize: "1.05rem" }}>
+        <h3 className="student-section-title">
           <i className="fas fa-user-check" style={{ color: "var(--text-info)" }}></i> Scribes you follow
         </h3>
 
         {loading && <SkeletonList rows={3} />}
         {error && <div className="auth-error" style={{ marginTop: "0.6rem" }}>{error}</div>}
         {!loading && !error && following.length === 0 && (
-          <p style={{ color: "var(--text-secondary)", marginTop: "0.6rem" }}>
+          <p className="student-follow-empty">
             You're not following anyone yet — search above to find scribes.
           </p>
         )}
@@ -179,6 +186,7 @@ export default function FollowingPage() {
             <button
               key={s.id}
               onClick={() => router.push(`/scribe/${s.id}`)}
+              className="student-scribe-card"
               style={{
                 background: "var(--surface)",
                 border: "1px solid var(--border-blue)",
@@ -196,6 +204,8 @@ export default function FollowingPage() {
             </button>
           ))}
         </div>
+        </section>
+      </div>
       </div>
     </div>
   );

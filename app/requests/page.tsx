@@ -184,18 +184,20 @@ export default function RequestsPage() {
   }
 
   return (
-    <div className="page-wrap">
-      <div className="app-container">
-        <PageHeader title="Request a block" subtitle="Ask scribes to cover something that isn't in the catalog.">
+    <div className="page-wrap student-page student-requests-page">
+      <div className="app-container student-app-container">
+        <PageHeader eyebrow="Demand Feed" title="Request a" accent="block" subtitle="Ask scribes to cover something that isn't in the catalog. Students who vote get the fulfilled note at a discounted price.">
           <button className="btn" onClick={() => router.push("/requests/mine")}>
             <i className="fas fa-list"></i> My requests
           </button>
         </PageHeader>
 
-        <div style={{ marginTop: "1.5rem", maxWidth: 480 }}>
-          <h2>
-            <i className="fas fa-hand-point-up" style={{ color: "var(--text-info)" }}></i> What do you need?
+        <div className="student-request-layout">
+          <div className="student-request-panel">
+          <h2 className="student-panel-title">
+            <i className="fas fa-hand-point-up"></i> What do you need?
           </h2>
+          <p className="student-panel-desc">Pick the course block, describe what you need covered, and submit. Other students can vote and scribes can see the demand.</p>
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem" }}>
             {courses.length > 0 && (
@@ -273,10 +275,12 @@ export default function RequestsPage() {
           </form>
         </div>
 
-        <div style={{ marginTop: "2rem" }}>
-          <h2>
-            <i className="fas fa-fire" style={{ color: "var(--text-info)" }}></i> Open requests
-          </h2>
+          <div className="student-open-panel">
+          <div className="student-open-heading">
+            <h2 className="student-panel-title"><i className="fas fa-fire"></i> Open requests</h2>
+            <span className="badge">{requests.length}</span>
+          </div>
+          <p className="student-panel-desc">Vote on what matters. Popular requests help scribes prioritize what to cover.</p>
           {loadingFeed && <SkeletonList rows={3} />}
 
           <div style={{ display: "flex", flexDirection: "column", gap: "0.9rem", marginTop: "0.8rem" }}>
@@ -301,6 +305,7 @@ export default function RequestsPage() {
                 </div>
               </div>
             ))}
+          </div>
           </div>
         </div>
       </div>

@@ -41,9 +41,9 @@ export default function MyRequestsPage() {
   }, [router]);
 
   return (
-    <div className="page-wrap">
-      <div className="app-container">
-        <PageHeader title="My requests" subtitle="Blocks you've asked for and where they stand.">
+    <div className="page-wrap student-page student-my-requests-page">
+      <div className="app-container student-app-container">
+        <PageHeader eyebrow="Your Activity" title="My" accent="requests" subtitle="Blocks you've asked for and where they stand. You'll be notified the moment a scribe fulfills one.">
           <button className="btn" onClick={() => router.push("/requests")}>
             <i className="fas fa-plus"></i> Request a block
           </button>
@@ -57,10 +57,11 @@ export default function MyRequestsPage() {
           </p>
         )}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem", marginTop: "1rem" }}>
+        <div className="student-request-list">
           {requests.map((r) => (
             <div
               key={r.id}
+              className="student-request-card"
               style={{
                 background: "var(--surface)",
                 border: "1px solid var(--border-blue)",
@@ -74,10 +75,9 @@ export default function MyRequestsPage() {
               }}
             >
               <div>
-                <strong>{r.requestedTitle}</strong>
-                <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                  {r.courseCode} — {r.courseName}
-                </div>
+                <div className="student-request-code">{r.courseCode}</div>
+                <div className="student-request-title">{r.requestedTitle}</div>
+                <div className="student-request-course">{r.courseName}</div>
                 <div style={{ fontSize: "0.8rem", color: "var(--text-info)", marginTop: "0.2rem" }}>
                   <i className="fas fa-fire"></i> {r.voteCount} student{r.voteCount === 1 ? "" : "s"} want this
                 </div>
@@ -86,6 +86,7 @@ export default function MyRequestsPage() {
               {r.status === "FULFILLED" && r.fulfilledBlock ? (
                 <div style={{ textAlign: "right" }}>
                   <span
+                    className="student-status fulfilled"
                     style={{
                       display: "inline-block",
                       background: "var(--bg-success)",
@@ -116,6 +117,7 @@ export default function MyRequestsPage() {
                 </div>
               ) : (
                 <span
+                  className="student-status open"
                   style={{
                     background: "var(--bg-warning)",
                     color: "var(--text-warning)",

@@ -251,7 +251,7 @@ function CatalogPage() {
   const totalScribes = new Set(blocks.map((b) => b.scribeId).filter(Boolean)).size;
 
   return (
-    <div className="page-wrap">
+    <div className="page-wrap student-page student-dashboard-page">
       <div className="page-header">
         <div className="page-header-left">
           <span className="eyebrow">{CAMPUS.name} · Catalogue</span>

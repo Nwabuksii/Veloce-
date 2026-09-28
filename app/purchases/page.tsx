@@ -148,16 +148,16 @@ export default function PurchasesPage() {
   }, [purchases, search, sortBy]);
 
   return (
-    <div className="page-wrap">
-      <div className="app-container">
-        <PageHeader title="My Library" subtitle="Notes you've unlocked.">
+    <div className="page-wrap student-page student-library-page">
+      <div className="app-container student-app-container">
+        <PageHeader eyebrow="Your Collection" title="My" accent="library" subtitle="Every note you've bought, watermarked to you and available offline in the reader.">
           <button className="btn" onClick={() => router.push("/following")}>
               <i className="fas fa-user-check"></i> Following
             </button>
         </PageHeader>
 
-        <div style={{ display: "flex", gap: "0.8rem", margin: "1.2rem 0", flexWrap: "wrap" }}>
-          <div style={{ position: "relative", flex: "1 1 260px" }}>
+        <div className="library-toolbar">
+          <div className="library-search">
             <i
               className="fas fa-search"
               style={{ position: "absolute", left: "0.9rem", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }}
@@ -176,6 +176,7 @@ export default function PurchasesPage() {
             />
           </div>
           <select
+            className="library-sort"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
             style={{
@@ -203,27 +204,15 @@ export default function PurchasesPage() {
           <p style={{ marginTop: "1rem", color: "var(--text-secondary)" }}>No purchases match your search.</p>
         )}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem" }}>
+        <div className="library-grid">
           {visiblePurchases.map((p) => {
             const draft = drafts[p.purchaseId] || { rating: 0, comment: "" };
             return (
-              <div key={p.purchaseId} className="ledger-row" style={{ maxWidth: 480 }}>
+              <div key={p.purchaseId} className="ledger-row">
                 <div className="badge">{p.courseCode}</div>
                 <button
                   onClick={() => router.push(`/blocks/${p.blockId}?note=${p.noteId}`)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    padding: 0,
-                    cursor: "pointer",
-                    display: "block",
-                    textAlign: "left",
-                    fontSize: "1rem",
-                    fontWeight: 600,
-                    letterSpacing: "-0.01em",
-                    lineHeight: 1.4,
-                    color: "var(--text-info)",
-                  }}
+                  className="library-note-title text-link"
                   title="Open this note in its block page"
                 >
                   {p.blockTitle}
@@ -232,7 +221,7 @@ export default function PurchasesPage() {
                   {p.courseName} · by{" "}
                   <button
                     onClick={() => router.push(`/scribe/${p.scribeId}`)}
-                    style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "var(--text-info)" }}
+                    className="library-scribe-link text-link"
                   >
                     {p.scribeName}
                   </button>
@@ -245,7 +234,7 @@ export default function PurchasesPage() {
                     <i className="fas fa-ban"></i> Refunded — access removed
                   </div>
                 ) : (
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap", marginTop: "0.6rem" }}>
+                  <div className="library-action-row">
                     <button
                       onClick={() => router.push(`/notes/${p.noteId}/read`)}
                       className="btn btn-primary"
@@ -281,7 +270,7 @@ export default function PurchasesPage() {
                     )}
                   </div>
                 ) : (
-                  <div style={{ marginTop: "0.8rem" }}>
+                  <div className="library-review-box">
                     <div style={{ display: "flex", gap: "0.3rem", marginBottom: "0.5rem" }}>
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button
@@ -330,7 +319,7 @@ export default function PurchasesPage() {
                   const windowOpen = minutesSince <= REFUND_WINDOW_MINUTES;
 
                   return (
-                    <div style={{ marginTop: "0.7rem", borderTop: "1px solid var(--border-blue)", paddingTop: "0.6rem" }}>
+                    <div className="library-refund-box">
                       {p.refundRequestStatus === "PENDING" ? (
                         <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
                           <i className="fas fa-clock"></i> Refund request pending review
