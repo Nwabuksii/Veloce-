@@ -6,7 +6,7 @@ import { computeTrustLevel } from "@/lib/trust-level";
 export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
   const follows = await prisma.follow.findMany({
     where: { followerId: user.sub },
-    include: { scribe: { select: { id: true, fullName: true } } },
+    include: { scribe: { select: { id: true, fullName: true, avatarUrl: true, avatarDisplay: true } } },
     orderBy: { createdAt: "desc" },
   });
 
@@ -50,6 +50,7 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
     return {
       id: f.scribe.id,
       fullName: f.scribe.fullName,
+      avatarUrl: f.scribe.avatarDisplay === "custom" ? f.scribe.avatarUrl : null,
       trustLevel: trust.level,
       trustLabel: trust.label,
       followedAt: f.createdAt,

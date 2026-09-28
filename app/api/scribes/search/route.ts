@@ -21,7 +21,7 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
       fullName: { contains: q, mode: "insensitive" },
       bannedAt: null, // banned accounts shouldn't be discoverable to follow at all
     },
-    select: { id: true, fullName: true },
+    select: { id: true, fullName: true, avatarUrl: true, avatarDisplay: true },
     take: 20,
   });
 
@@ -70,6 +70,7 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
     return {
       id: s.id,
       fullName: s.fullName,
+      avatarUrl: s.avatarDisplay === "custom" ? s.avatarUrl : null,
       trustLevel: trust.level,
       trustLabel: trust.label,
       isFollowing: followingIds.has(s.id),

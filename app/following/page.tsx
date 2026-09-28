@@ -7,6 +7,7 @@ import { SkeletonList } from "@/app/components/Skeleton";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
 import { Icon } from "@/app/components/icons";
+import Avatar from "@/app/components/Avatar";
 
 interface ScribeSummary {
   id: string;
@@ -14,6 +15,7 @@ interface ScribeSummary {
   trustLevel: string;
   trustLabel: string;
   isFollowing?: boolean;
+  avatarUrl?: string | null;
 }
 
 function toneFor(name: string): string {
@@ -94,7 +96,7 @@ export default function FollowingPage() {
     return (
       <div className="scribe-card" key={s.id}>
         <button className="scribe-avatar scribe-name-button" onClick={() => router.push(`/scribe/${s.id}`)} aria-label={`Open ${s.fullName}`}>
-          {initialsOf(s.fullName)}
+          <Avatar name={s.fullName} imageUrl={s.avatarUrl} size="md" enlargeOnTap={false} />
         </button>
         <div className="scribe-info">
           <div className="scribe-name-row">
