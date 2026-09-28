@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import PageHeader from "@/app/components/PageHeader";
+import AdminPageHeader from "@/app/components/AdminPageHeader";
+import { AIcon } from "@/app/components/AdminIcons";
+import Avatar from "@/app/components/Avatar";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 
@@ -92,90 +94,80 @@ export default function AdminPayoutsPage() {
 
   return (
     <div className="page-wrap">
-      <div className="app-container">
-        <PageHeader title="Payouts" subtitle="Scribe earnings owed and paid.">
-          <button className="btn" onClick={() => router.push("/admin")}>
-              <i className="fas fa-arrow-left"></i> Admin
-            </button>
-        </PageHeader>
+      <AdminPageHeader
+        section="Money out"
+        serif="Payouts"
+        subtitle={
+          <>
+            Money moves manually for now — Paystack Transfers needs a Registered Business account first. <strong>Approve</strong> accepts the
+            request; you then send the money yourself using the account details shown, and click <strong>Mark as paid</strong> once it&apos;s sent.
+          </>
+        }
+      >
+        <button className="btn btn-ghost" onClick={() => router.push("/admin/finance")}>
+          {AIcon.chart()} Financial ledger
+        </button>
+        <button className="btn btn-ghost" onClick={() => router.push("/admin")}>
+          {AIcon.back()} Admin
+        </button>
+      </AdminPageHeader>
 
-        <div style={{ marginTop: "1.5rem" }}>
-          <h2>
-            <i className="fas fa-money-bill-wave" style={{ color: "var(--text-info)" }}></i> Withdrawal requests
-          </h2>
-          <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginTop: "0.4rem" }}>
-            Money moves manually for now — Paystack Transfers needs your account upgraded to a Registered
-            Business first. <strong>Approve</strong> just accepts the request; you then send the money yourself
-            using the account details shown, and click <strong>Mark as paid</strong> once it's actually sent.
-          </p>
+      {loading && <SkeletonList rows={3} />}
+      {error && <div className="auth-error">{error}</div>}
+      {actionMessage && <div className="notice">{actionMessage}</div>}
 
-          {loading && <SkeletonList rows={3} />}
-          {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}
-          {actionMessage && <p style={{ marginTop: "1rem", color: "var(--text-success)" }}>{actionMessage}</p>}
-          {!loading && !error && payouts.length === 0 && (
-            <p style={{ marginTop: "1rem", color: "var(--text-secondary)" }}>No withdrawal requests waiting on you.</p>
-          )}
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem", marginTop: "1rem" }}>
-            {payouts.map((p) => (
-              <div
-                key={p.id}
-                style={{
-                  background: "var(--surface)",
-                  border: p.status === "PROCESSING" ? "2px solid var(--text-info)" : "1px solid var(--border-blue)",
-                  borderRadius: "12px",
-                  padding: "1rem",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  gap: "0.6rem",
-                }}
-              >
-                <div>
-                  {p.status === "PROCESSING" && (
-                    <div style={{ fontSize: "0.75rem", color: "var(--text-info)", fontWeight: 600, marginBottom: "0.2rem" }}>
-                      <i className="fas fa-hand-holding-dollar"></i> Waiting for you to send this
-                    </div>
-                  )}
-                  <strong>{p.scribe.fullName}</strong> — ₦{p.amount.toLocaleString()}
-                  <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-                    {p.scribe.email} · Requested {new Date(p.requestedAt).toLocaleDateString()}
-                  </div>
-                  <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-                    {p.scribe.bankName} · {p.scribe.accountName} · {p.scribe.accountNumber}
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: "0.6rem" }}>
-                  {p.status === "PENDING" ? (
-                    <>
-                      <button
-                        className="btn"
-                        style={{ background: "var(--text-success)", borderColor: "var(--text-success)", color: "white" }}
-                        onClick={() => handleApprove(p.id)}
-                        disabled={busyId === p.id}
-                      >
-                        <i className="fas fa-check"></i> {busyId === p.id ? "Approving..." : "Approve"}
-                      </button>
-                      <button className="btn" onClick={() => handleReject(p.id)}>
-                        <i className="fas fa-times"></i> Reject
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      className="btn"
-                      style={{ background: "var(--text-success)", borderColor: "var(--text-success)", color: "white" }}
-                      onClick={() => handleMarkPaid(p.id)}
-                      disabled={busyId === p.id}
-                    >
-                      <i className="fas fa-check-double"></i> {busyId === p.id ? "Saving..." : "Mark as paid"}
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+      {!loading && !error && payouts.length === 0 && (
+        <div className="empty-state">
+          <div className="empty-icon">{AIcon.coin()}</div>
+          <h3 className="empty-title">Nothing to pay out</h3>
+          <p className="empty-desc">No withdrawal requests are waiting on you.</p>
         </div>
+      )}
+
+      <div className="stack-10">
+        {payouts.map((p) => (
+          <div key={p.id} className={`person-card${p.status === "PROCESSING" ? " is-active" : ""}`}>
+            <Avatar name={p.scribe.fullName} />
+            <div className="person-info">
+              <div className="person-name-row">
+                <span className="person-name">{p.scribe.fullName}</span>
+                {p.status === "PROCESSING" ? <span className="status info">Waiting for you to send</span> : <span className="status plum">Pending</span>}
+              </div>
+              <div className="person-stats">
+                <span>
+                  {AIcon.coin()} <strong>₦{p.amount.toLocaleString()}</strong>
+                </span>
+                <span>
+                  {AIcon.mail()} {p.scribe.email}
+                </span>
+                <span>
+                  {AIcon.clock()} Requested {new Date(p.requestedAt).toLocaleDateString()}
+                </span>
+              </div>
+              <div className="person-stats" style={{ marginTop: 6 }}>
+                <span>
+                  {p.scribe.bankName} · {p.scribe.accountName} · {p.scribe.accountNumber}
+                </span>
+              </div>
+            </div>
+            <div className="request-actions">
+              {p.status === "PENDING" ? (
+                <>
+                  <button className="btn btn-sm btn-danger" onClick={() => handleReject(p.id)}>
+                    Reject
+                  </button>
+                  <button className="btn btn-sm btn-primary" onClick={() => handleApprove(p.id)} disabled={busyId === p.id}>
+                    {busyId === p.id ? "Approving..." : "Approve"}
+                  </button>
+                </>
+              ) : (
+                <button className="btn btn-sm btn-success" onClick={() => handleMarkPaid(p.id)} disabled={busyId === p.id}>
+                  {AIcon.check()} {busyId === p.id ? "Saving..." : "Mark as paid"}
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

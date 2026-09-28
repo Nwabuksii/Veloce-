@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import PageHeader from "@/app/components/PageHeader";
+import AdminPageHeader from "@/app/components/AdminPageHeader";
+import { AIcon } from "@/app/components/AdminIcons";
 import { SkeletonStatRow, SkeletonList } from "@/app/components/Skeleton";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
@@ -49,36 +50,28 @@ export default function AdminFinancePage() {
 
   return (
     <div className="page-wrap">
-      <div className="app-container">
-        <PageHeader title="Financial ledger" subtitle="Payments, payouts and refunds across the platform.">
-          <button className="btn" onClick={() => router.push("/admin/finance/advanced")}>
-            <i className="fas fa-chart-line"></i> Advanced analytics
-          </button>
-          <button className="btn" onClick={() => router.push("/admin")}>
-            <i className="fas fa-arrow-left"></i> Admin
-          </button>
-        </PageHeader>
+      <AdminPageHeader section="Ledger" title="Financial" serif="ledger" subtitle="Payments, payouts and refunds across the platform.">
+        <button className="btn btn-ghost" onClick={() => router.push("/admin/finance/advanced")}>
+          {AIcon.trend()} Advanced analytics
+        </button>
+        <button className="btn btn-ghost" onClick={() => router.push("/admin")}>
+          {AIcon.back()} Admin
+        </button>
+      </AdminPageHeader>
 
-        {loading && (
-          <>
-            <SkeletonStatRow count={3} />
-            <h2 style={{ marginTop: "2rem" }}>
-              <i className="fas fa-receipt" style={{ color: "var(--text-info)" }}></i> Recent transactions
-            </h2>
-            <div style={{ marginTop: "1rem" }}>
-              <SkeletonList rows={5} />
-            </div>
-          </>
-        )}
-
-        {error && !loading && (
-          <div className="auth-error" style={{ marginTop: "1rem" }}>
-            {error}
+      {loading && (
+        <>
+          <SkeletonStatRow count={3} />
+          <div className="section-head">
+            <h2 className="panel-title">{AIcon.list()} Recent transactions</h2>
           </div>
-        )}
+          <SkeletonList rows={5} />
+        </>
+      )}
 
-        {data && <FinanceOverview data={data} />}
-      </div>
+      {error && !loading && <div className="auth-error">{error}</div>}
+
+      {data && <FinanceOverview data={data} />}
     </div>
   );
 }

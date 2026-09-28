@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import PageHeader from "@/app/components/PageHeader";
+import AdminPageHeader from "@/app/components/AdminPageHeader";
+import { AIcon } from "@/app/components/AdminIcons";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
@@ -203,276 +204,207 @@ export default function AdminReportsPage() {
 
   return (
     <div className="page-wrap">
-      <div className="app-container">
-        <PageHeader title="Reports" subtitle="Content reports and refund requests from students.">
-          <button className="btn" onClick={() => router.push("/admin")}>
-              <i className="fas fa-arrow-left"></i> Admin
-            </button>
-          <button className="btn" onClick={() => router.push("/admin/appeals")}>
-                <i className="fas fa-undo"></i> Appeals
-              </button>
-        </PageHeader>
+      <AdminPageHeader
+        section="Complaints"
+        serif="Reports"
+        subtitle="Content reports and refund requests from students. Reports about the same block, note version, or user are combined into one card — every action resolves every pending report in it and notifies the reporter(s)."
+      >
+        <button className="btn btn-ghost" onClick={() => router.push("/admin/appeals")}>
+          {AIcon.warn()} Appeals
+        </button>
+        <button className="btn btn-ghost" onClick={() => router.push("/admin")}>
+          {AIcon.back()} Admin
+        </button>
+      </AdminPageHeader>
 
-        <div style={{ marginTop: "1.5rem" }}>
-          <h2>
-            <i className="fas fa-flag" style={{ color: "var(--text-info)" }}></i> Reports
-          </h2>
-          <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginTop: "0.4rem" }}>
-            Reports about the same block, note version, or user are combined into one card. Every action here —
-            refund, remove the version, or dismiss — resolves every pending report in the card and notifies the
-            reporter(s) automatically. For anything else, use the Moderation queue or Manage Scribes page.
-          </p>
+      {loading && <SkeletonList rows={3} />}
+      {error && <div className="auth-error" style={{ marginBottom: "1rem" }}>{error}</div>}
+      {!loading && !error && groups.length === 0 && (
+        <div className="empty-state">
+          <div className="empty-icon">{AIcon.check()}</div>
+          <h3 className="empty-title">No open reports</h3>
+          <p className="empty-desc">Everything&apos;s been resolved.</p>
+        </div>
+      )}
 
-          {loading && <SkeletonList rows={3} />}
-          {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}
-          {!loading && !error && groups.length === 0 && (
-            <p style={{ marginTop: "1rem", color: "var(--text-secondary)" }}>No pending reports right now.</p>
-          )}
+      <div className="stack-10">
+        {groups.map((g) => {
+          const isUser = !g.note && !g.block && !!g.reportedUser;
+          const label = isUser ? "User report" : "Block report";
+          const count = g.reports.length;
+          const isExpanded = expanded.has(g.key);
+          const unrefundedClaims = g.reports.filter((r) => r.type === "REFUND" && r.purchase && !r.purchase.refundedAt);
+          const allReporters = g.reports.map((r) => r.reporter);
+          const isGroupReplyOpen = replyTarget?.kind === "group" && replyTarget.key === g.key;
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem", marginTop: "1rem" }}>
-            {groups.map((g) => {
-              const isUser = !g.note && !g.block && !!g.reportedUser;
-              const label = isUser ? "User report" : "Block report";
-              const count = g.reports.length;
-              const isExpanded = expanded.has(g.key);
-              const unrefundedClaims = g.reports.filter((r) => r.type === "REFUND" && r.purchase && !r.purchase.refundedAt);
-              const allReporters = g.reports.map((r) => r.reporter);
-              const isGroupReplyOpen = replyTarget?.kind === "group" && replyTarget.key === g.key;
-
-              return (
-                <div
-                  key={g.key}
-                  style={{
-                    background: "var(--surface)",
-                    border: "1px solid var(--border-blue)",
-                    borderRadius: "12px",
-                    padding: "1rem",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.6rem",
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.6rem" }}>
-                    <div style={{ flex: "1 1 300px" }}>
-                      <span
-                        style={{
-                          background: isUser ? "var(--bg-danger)" : "var(--bg-info)",
-                          color: isUser ? "var(--text-danger)" : "var(--text-info)",
-                          padding: "0.15rem 0.7rem",
-                          borderRadius: "8px",
-                          fontSize: "0.75rem",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {label}
-                      </span>
-                      <span
-                        style={{
-                          marginLeft: "0.5rem",
-                          background: "var(--bg-danger)",
-                          color: "var(--text-danger)",
-                          padding: "0.15rem 0.6rem",
-                          borderRadius: "8px",
-                          fontSize: "0.75rem",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {count === 1 ? "1 report" : `${count} reports`}
-                      </span>
-
-                      <div style={{ marginTop: "0.5rem", fontSize: "0.9rem" }}>
-                        {g.block && (
-                          <>
-                            <strong>{g.block.title}</strong> ({g.block.course.code} · {g.block.course.name})
-                          </>
-                        )}
-                        {isUser && g.reportedUser && (
-                          <>
-                            <strong>{g.reportedUser.fullName}</strong> ({g.reportedUser.email} · {g.reportedUser.role})
-                          </>
-                        )}
-                      </div>
-
-                      {g.note && (
-                        <div style={{ fontSize: "0.82rem", color: "var(--text-info)", marginTop: "0.2rem" }}>
-                          <i className="fas fa-user-pen"></i> Reported version: {g.note.scribe.fullName}
-                        </div>
-                      )}
-
-                      {g.note ? (
-                        <button
-                          onClick={() => window.open(`/notes/${g.note!.id}/read`, "_blank")}
-                          style={{ background: "none", border: "none", padding: 0, marginTop: "0.3rem", cursor: "pointer", fontSize: "0.8rem", color: "var(--text-secondary)", textDecoration: "underline" }}
-                        >
-                          <i className="fas fa-book-open"></i> View reported version &rarr;
-                        </button>
-                      ) : (
-                        g.block && (
-                          <button
-                            onClick={() => window.open(`/blocks/${g.block!.id}`, "_blank")}
-                            style={{ background: "none", border: "none", padding: 0, marginTop: "0.3rem", cursor: "pointer", fontSize: "0.8rem", color: "var(--text-secondary)", textDecoration: "underline" }}
-                          >
-                            View block &rarr;
-                          </button>
-                        )
-                      )}
-
-                      <div>
-                        <button
-                          onClick={() => toggleExpanded(g.key)}
-                          style={{ background: "none", border: "none", padding: 0, marginTop: "0.5rem", cursor: "pointer", fontSize: "0.8rem", color: "var(--text-info)" }}
-                        >
-                          <i className={`fas fa-chevron-${isExpanded ? "up" : "down"}`}></i>{" "}
-                          {isExpanded ? "Hide" : "View"} claim{count === 1 ? "" : "s"} ({count})
-                        </button>
-                      </div>
-                    </div>
-
-                    <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
-                      {unrefundedClaims.length === 1 && (
-                        <button
-                          className="btn press-on-tap"
-                          style={{ background: "var(--accent)", borderColor: "var(--accent)", color: "white" }}
-                          disabled={refunding === unrefundedClaims[0].purchase!.id}
-                          onClick={() => handleRefund(unrefundedClaims[0].purchase!.id)}
-                        >
-                          <i className="fas fa-hand-holding-dollar"></i>{" "}
-                          {refunding === unrefundedClaims[0].purchase!.id ? "Refunding..." : "Refund"}
-                        </button>
-                      )}
-                      {g.note && (
-                        <button
-                          className="btn press-on-tap"
-                          style={{ background: "var(--text-danger)", borderColor: "var(--text-danger)", color: "white" }}
-                          onClick={() => setRemovingNoteId((cur) => (cur === g.note!.id ? null : g.note!.id))}
-                        >
-                          <i className="fas fa-trash"></i> Remove this version
-                        </button>
-                      )}
-                      <button className="btn" disabled={dismissing === g.key} onClick={() => handleDismissGroup(g)}>
-                        <i className="fas fa-times"></i> {dismissing === g.key ? "Dismissing..." : "Dismiss all"}
-                      </button>
-                      <button className="btn" onClick={() => startReply({ kind: "group", key: g.key })}>
-                        <i className="fas fa-reply-all"></i> Reply to all
-                      </button>
-                    </div>
+          return (
+            <div key={g.key} className="request-item is-column">
+              <div className="request-top">
+                <div className="request-body" style={{ flex: "1 1 300px" }}>
+                  <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.6rem" }}>
+                    <span className={`status ${isUser ? "danger" : "info"}`}>{label}</span>
+                    <span className="status danger">{count === 1 ? "1 report" : `${count} reports`}</span>
                   </div>
 
-                  {isGroupReplyOpen && (
-                    <ReplyBox
-                      value={replyText}
-                      onChange={setReplyText}
-                      onCancel={() => setReplyTarget(null)}
-                      onSend={() => sendReply(allReporters)}
-                      sending={replySending}
-                      placeholder={`Message all ${count} reporter${count === 1 ? "" : "s"}...`}
-                    />
+                  {g.block && (
+                    <>
+                      <div className="request-code">
+                        {g.block.course.code} · {g.block.course.name}
+                      </div>
+                      <div className="request-topic">{g.block.title}</div>
+                    </>
+                  )}
+                  {isUser && g.reportedUser && (
+                    <>
+                      <div className="request-code">
+                        {g.reportedUser.email} · {g.reportedUser.role}
+                      </div>
+                      <div className="request-topic">{g.reportedUser.fullName}</div>
+                    </>
                   )}
 
-                  {isExpanded && (
-                    <div style={{ borderTop: "1px solid var(--border-blue)", paddingTop: "0.6rem", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-                      {g.reports.map((r) => {
-                        const isClaimReplyOpen = replyTarget?.kind === "claim" && replyTarget.reportId === r.id;
-                        return (
-                          <div key={r.id} style={{ background: "var(--bg-info)", borderRadius: "8px", padding: "0.7rem" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem", flexWrap: "wrap" }}>
-                              <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                                {r.reporter.fullName} ({r.reporter.email}) · {new Date(r.createdAt).toLocaleDateString()}
-                                {r.type === "REFUND" && r.purchase && (
-                                  <>
-                                    {" "}
-                                    · wants a refund for{" "}
-                                    {r.purchase.amountPaid === 0
-                                      ? `a ₦${r.purchase.creditApplied.toLocaleString()} credit purchase`
-                                      : `₦${r.purchase.amountPaid.toLocaleString()}${r.purchase.creditApplied > 0 ? ` (+₦${r.purchase.creditApplied.toLocaleString()} credit)` : ""}`}{" "}
-                                    paid{" "}
-                                    {new Date(r.purchase.purchasedAt).toLocaleDateString()}
-                                    {r.purchase.refundedAt && <span style={{ color: "var(--text-danger)" }}> · already refunded</span>}
-                                  </>
-                                )}
-                              </div>
-                              <div style={{ display: "flex", gap: "0.4rem" }}>
-                                {r.type === "REFUND" && r.purchase && !r.purchase.refundedAt && (
-                                  <button
-                                    className="btn press-on-tap"
-                                    style={{ padding: "0.25rem 0.7rem", fontSize: "0.78rem", background: "var(--accent)", borderColor: "var(--accent)", color: "white" }}
-                                    disabled={refunding === r.purchase.id}
-                                    onClick={() => handleRefund(r.purchase!.id)}
-                                  >
-                                    <i className="fas fa-hand-holding-dollar"></i> {refunding === r.purchase.id ? "Refunding..." : "Refund"}
-                                  </button>
-                                )}
-                                <button
-                                  className="btn"
-                                  style={{ padding: "0.25rem 0.7rem", fontSize: "0.78rem" }}
-                                  onClick={() => startReply({ kind: "claim", reportId: r.id })}
-                                >
-                                  <i className="fas fa-reply"></i> Reply
-                                </button>
-                              </div>
-                            </div>
-                            <p style={{ fontSize: "0.85rem", color: "var(--text-primary)", marginTop: "0.4rem", whiteSpace: "pre-wrap" }}>
-                              &ldquo;{r.reason}&rdquo;
-                            </p>
-                            {isClaimReplyOpen && (
-                              <ReplyBox
-                                value={replyText}
-                                onChange={setReplyText}
-                                onCancel={() => setReplyTarget(null)}
-                                onSend={() => sendReply([r.reporter])}
-                                sending={replySending}
-                                placeholder={`Message ${r.reporter.fullName}...`}
-                              />
+                  {g.note && (
+                    <div className="request-meta">
+                      <span>
+                        {AIcon.user()} Reported version: {g.note.scribe.fullName}
+                      </span>
+                    </div>
+                  )}
+
+                  <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "0.6rem" }}>
+                    {g.note ? (
+                      <button className="text-btn" onClick={() => window.open(`/notes/${g.note!.id}/read`, "_blank")}>
+                        {AIcon.eye()} View reported version
+                      </button>
+                    ) : (
+                      g.block && (
+                        <button className="text-btn" onClick={() => window.open(`/blocks/${g.block!.id}`, "_blank")}>
+                          {AIcon.eye()} View block
+                        </button>
+                      )
+                    )}
+                    <button className="text-btn" onClick={() => toggleExpanded(g.key)}>
+                      {isExpanded ? AIcon.chevronUp() : AIcon.chevronDown()} {isExpanded ? "Hide" : "View"} claim{count === 1 ? "" : "s"} ({count})
+                    </button>
+                  </div>
+                </div>
+
+                <div className="request-actions">
+                  {unrefundedClaims.length === 1 && (
+                    <button
+                      className="btn btn-sm btn-primary"
+                      disabled={refunding === unrefundedClaims[0].purchase!.id}
+                      onClick={() => handleRefund(unrefundedClaims[0].purchase!.id)}
+                    >
+                      {refunding === unrefundedClaims[0].purchase!.id ? "Refunding..." : "Refund"}
+                    </button>
+                  )}
+                  {g.note && (
+                    <button className="btn btn-sm btn-danger" onClick={() => setRemovingNoteId((cur) => (cur === g.note!.id ? null : g.note!.id))}>
+                      {AIcon.trash()} Remove version
+                    </button>
+                  )}
+                  <button className="btn btn-sm btn-ghost" disabled={dismissing === g.key} onClick={() => handleDismissGroup(g)}>
+                    {dismissing === g.key ? "Dismissing..." : "Dismiss all"}
+                  </button>
+                  <button className="btn btn-sm btn-ghost" onClick={() => startReply({ kind: "group", key: g.key })}>
+                    {AIcon.reply()} Reply to all
+                  </button>
+                </div>
+              </div>
+
+              {isGroupReplyOpen && (
+                <ReplyBox
+                  value={replyText}
+                  onChange={setReplyText}
+                  onCancel={() => setReplyTarget(null)}
+                  onSend={() => sendReply(allReporters)}
+                  sending={replySending}
+                  placeholder={`Message all ${count} reporter${count === 1 ? "" : "s"}...`}
+                />
+              )}
+
+              {isExpanded && (
+                <div className="request-extra">
+                  {g.reports.map((r) => {
+                    const isClaimReplyOpen = replyTarget?.kind === "claim" && replyTarget.reportId === r.id;
+                    return (
+                      <div key={r.id} className="claim">
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem", flexWrap: "wrap" }}>
+                          <div className="claim-meta">
+                            {r.reporter.fullName} ({r.reporter.email}) · {new Date(r.createdAt).toLocaleDateString()}
+                            {r.type === "REFUND" && r.purchase && (
+                              <>
+                                {" "}
+                                · wants a refund for{" "}
+                                {r.purchase.amountPaid === 0
+                                  ? `a ₦${r.purchase.creditApplied.toLocaleString()} credit purchase`
+                                  : `₦${r.purchase.amountPaid.toLocaleString()}${r.purchase.creditApplied > 0 ? ` (+₦${r.purchase.creditApplied.toLocaleString()} credit)` : ""}`}{" "}
+                                paid {new Date(r.purchase.purchasedAt).toLocaleDateString()}
+                                {r.purchase.refundedAt && <span style={{ color: "var(--text-danger)" }}> · already refunded</span>}
+                              </>
                             )}
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {g.note && removingNoteId === g.note.id && (
-                    <div style={{ borderTop: "1px solid var(--border-blue)", paddingTop: "0.8rem", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-                      <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                        Why is {g.note.scribe.fullName}&apos;s version being removed? This is sent to them directly, and
-                        counts against their trust level.
-                      </label>
-                      <textarea
-                        value={removeReason}
-                        onChange={(e) => setRemoveReason(e.target.value)}
-                        rows={2}
-                        placeholder="e.g. Contains pages from a different course entirely..."
-                        style={{
-                          padding: "0.5rem",
-                          borderRadius: "8px",
-                          border: "1px solid var(--border-blue)",
-                          fontFamily: "inherit",
-                          fontSize: "0.85rem",
-                          background: "var(--surface)",
-                          color: "var(--text-primary)",
-                        }}
-                      />
-                      <div style={{ display: "flex", gap: "0.6rem" }}>
-                        <button className="btn btn-primary press-on-tap" disabled={removeSubmitting} onClick={() => handleRemoveVersion(g.note!.id)}>
-                          {removeSubmitting ? "Removing..." : "Confirm removal"}
-                        </button>
-                        <button
-                          className="btn"
-                          type="button"
-                          onClick={() => {
-                            setRemovingNoteId(null);
-                            setRemoveReason("");
-                          }}
-                        >
-                          Cancel
-                        </button>
+                          <div style={{ display: "flex", gap: "0.4rem" }}>
+                            {r.type === "REFUND" && r.purchase && !r.purchase.refundedAt && (
+                              <button className="btn btn-sm btn-primary" disabled={refunding === r.purchase.id} onClick={() => handleRefund(r.purchase!.id)}>
+                                {refunding === r.purchase.id ? "Refunding..." : "Refund"}
+                              </button>
+                            )}
+                            <button className="btn btn-sm btn-ghost" onClick={() => startReply({ kind: "claim", reportId: r.id })}>
+                              {AIcon.reply()} Reply
+                            </button>
+                          </div>
+                        </div>
+                        <p className="claim-text">&ldquo;{r.reason}&rdquo;</p>
+                        {isClaimReplyOpen && (
+                          <ReplyBox
+                            value={replyText}
+                            onChange={setReplyText}
+                            onCancel={() => setReplyTarget(null)}
+                            onSend={() => sendReply([r.reporter])}
+                            sending={replySending}
+                            placeholder={`Message ${r.reporter.fullName}...`}
+                          />
+                        )}
                       </div>
-                    </div>
-                  )}
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
-        </div>
+              )}
+
+              {g.note && removingNoteId === g.note.id && (
+                <div className="request-extra">
+                  <label className="form-label" style={{ textTransform: "none", letterSpacing: 0, fontSize: "0.8rem", fontWeight: 500 }}>
+                    Why is {g.note.scribe.fullName}&apos;s version being removed? This is sent to them directly, and counts against their trust level.
+                  </label>
+                  <textarea
+                    className="textarea"
+                    value={removeReason}
+                    onChange={(e) => setRemoveReason(e.target.value)}
+                    rows={2}
+                    placeholder="e.g. Contains pages from a different course entirely..."
+                  />
+                  <div className="form-actions">
+                    <button className="btn btn-primary" disabled={removeSubmitting} onClick={() => handleRemoveVersion(g.note!.id)}>
+                      {removeSubmitting ? "Removing..." : "Confirm removal"}
+                    </button>
+                    <button
+                      className="btn btn-ghost"
+                      type="button"
+                      onClick={() => {
+                        setRemovingNoteId(null);
+                        setRemoveReason("");
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -494,27 +426,13 @@ function ReplyBox({
   placeholder: string;
 }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.5rem" }}>
-      <textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        rows={2}
-        placeholder={placeholder}
-        style={{
-          padding: "0.5rem",
-          borderRadius: "8px",
-          border: "1px solid var(--border-blue)",
-          fontFamily: "inherit",
-          fontSize: "0.85rem",
-          background: "var(--surface)",
-          color: "var(--text-primary)",
-        }}
-      />
-      <div style={{ display: "flex", gap: "0.6rem" }}>
-        <button className="btn btn-primary press-on-tap" disabled={sending} onClick={onSend}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginTop: "0.6rem" }}>
+      <textarea className="textarea" value={value} onChange={(e) => onChange(e.target.value)} rows={2} placeholder={placeholder} />
+      <div className="form-actions">
+        <button className="btn btn-primary btn-sm" disabled={sending} onClick={onSend}>
           {sending ? "Sending..." : "Send"}
         </button>
-        <button className="btn" type="button" onClick={onCancel}>
+        <button className="btn btn-ghost btn-sm" type="button" onClick={onCancel}>
           Cancel
         </button>
       </div>

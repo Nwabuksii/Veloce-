@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import PageHeader from "@/app/components/PageHeader";
+import AdminPageHeader from "@/app/components/AdminPageHeader";
+import { AIcon } from "@/app/components/AdminIcons";
 import { friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
 
@@ -85,153 +86,128 @@ export default function AdminAdvancedAnalyticsPage() {
 
   return (
     <div className="page-wrap">
-      <div className="app-container">
-        <PageHeader title="Advanced analytics" subtitle="Poll results and respondent breakdown across your audience.">
-          <button className="btn" onClick={() => router.push("/admin")}>          <i className="fas fa-arrow-left"></i> Admin
-          </button>
-        </PageHeader>
+      <AdminPageHeader section="Polls" title="Advanced" serif="analytics" subtitle="Poll results and respondent breakdown across your audience.">
+        <button className="btn btn-ghost" onClick={() => router.push("/admin")}>
+          {AIcon.back()} Admin
+        </button>
+      </AdminPageHeader>
 
-        <div style={{ marginTop: "1.25rem", display: "grid", gap: "1rem" }}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-              gap: "0.75rem",
-              padding: "1rem",
-              background: "var(--surface)",
-              border: "1px solid var(--border-blue)",
-              borderRadius: "16px",
-            }}
-          >
-            <label style={{ display: "grid", gap: "0.4rem" }}>
-              <span style={{ color: "var(--text-secondary)", fontSize: "0.8rem" }}>Search</span>
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Poll, label or user"
-                style={{ padding: "0.7rem 0.8rem", borderRadius: "10px", border: "1px solid var(--border-blue)" }}
-              />
-            </label>
-
-            <label style={{ display: "grid", gap: "0.4rem" }}>
-              <span style={{ color: "var(--text-secondary)", fontSize: "0.8rem" }}>Department</span>
-              <select
-                value={department}
-                onChange={(e) => setDepartment(e.target.value)}
-                style={{ padding: "0.7rem 0.8rem", borderRadius: "10px", border: "1px solid var(--border-blue)" }}
-              >
-                <option value="all">All departments</option>
-                {departmentOptions.map((value) => (
-                  <option key={value} value={value}>{value}</option>
-                ))}
-              </select>
-            </label>
-
-            <label style={{ display: "grid", gap: "0.4rem" }}>
-              <span style={{ color: "var(--text-secondary)", fontSize: "0.8rem" }}>Course / level</span>
-              <select
-                value={course}
-                onChange={(e) => setCourse(e.target.value)}
-                style={{ padding: "0.7rem 0.8rem", borderRadius: "10px", border: "1px solid var(--border-blue)" }}
-              >
-                <option value="all">All courses</option>
-                {courseOptions.map((value) => (
-                  <option key={value} value={value}>{value}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          {loading ? (
-            <p style={{ color: "var(--text-secondary)" }}>Loading poll analytics…</p>
-          ) : error ? (
-            <div className="auth-error">{error}</div>
-          ) : summary && rows.length > 0 ? (
-            <>
-              <div className="stat-row">
-                <div className="stat-card">
-                  <div className="stat-label">Total votes</div>
-                  <div className="stat-number">{summary.totalVotes}</div>
-                  <div className="stat-subtitle">Across {summary.totalPolls} poll{summary.totalPolls === 1 ? "" : "s"}</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-label">Unique voters</div>
-                  <div className="stat-number">{summary.uniqueRespondents}</div>
-                  <div className="stat-subtitle">Distinct respondents</div>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-label">Leading option</div>
-                  <div className="stat-number" style={{ fontSize: "1.2rem" }}>{summary.leadingOption}</div>
-                  <div className="stat-subtitle">Current front-runner</div>
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gap: "1.5rem" }}>
-                <section>
-                  <h2 style={{ marginBottom: "0.7rem" }}><i className="fas fa-chart-bar" style={{ color: "var(--text-info)" }}></i> Option breakdown</h2>
-                  <div style={{ display: "grid", gap: "0.6rem" }}>
-                    {summary.optionBreakdown.map((option) => (
-                      <div key={option.label}>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.2rem", gap: "0.75rem" }}>
-                          <strong>{option.label}</strong>
-                          <span>{option.votes} votes · {option.percentage}%</span>
-                        </div>
-                        <div style={{ height: 10, background: "rgba(130, 160, 255, 0.15)", borderRadius: 999 }}>
-                          <div style={{ width: `${Math.max(option.percentage, 4)}%`, height: "100%", background: "linear-gradient(90deg, var(--accent), var(--text-info))", borderRadius: 999 }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                <section>
-                  <h2 style={{ marginBottom: "0.7rem" }}><i className="fas fa-building-columns" style={{ color: "var(--text-warning)" }}></i> Department mix</h2>
-                  <div style={{ display: "grid", gap: "0.45rem" }}>
-                    {summary.departmentMix.map((group) => (
-                      <div key={group.department} style={{ display: "flex", justifyContent: "space-between", gap: "1rem" }}>
-                        <span>{group.department}</span>
-                        <strong>{group.votes}</strong>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              </div>
-
-              <section style={{ marginTop: "1.5rem" }}>
-                <h2 style={{ marginBottom: "0.7rem" }}><i className="fas fa-user-check" style={{ color: "var(--text-success)" }}></i> Respondent list</h2>
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.92rem" }}>
-                    <thead>
-                      <tr style={{ textAlign: "left", color: "var(--text-secondary)" }}>
-                        <th style={{ padding: "0.7rem 0.5rem" }}>User</th>
-                        <th style={{ padding: "0.7rem 0.5rem" }}>Department</th>
-                        <th style={{ padding: "0.7rem 0.5rem" }}>Course / level</th>
-                        <th style={{ padding: "0.7rem 0.5rem" }}>Poll</th>
-                        <th style={{ padding: "0.7rem 0.5rem" }}>Choice</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map((row) => (
-                        <tr key={`${row.messageId}-${row.userId}-${row.optionId}`} style={{ borderTop: "1px solid var(--border-blue)" }}>
-                          <td style={{ padding: "0.7rem 0.5rem" }}>{row.userName}</td>
-                          <td style={{ padding: "0.7rem 0.5rem" }}>{row.department}</td>
-                          <td style={{ padding: "0.7rem 0.5rem" }}>{row.course ?? "—"}</td>
-                          <td style={{ padding: "0.7rem 0.5rem" }}>{row.messageSubject}</td>
-                          <td style={{ padding: "0.7rem 0.5rem" }}>{row.optionLabel}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            </>
-          ) : (
-            <div className="auth-empty" style={{ marginTop: "1rem" }}>
-              No poll responses match the current filters yet.
-            </div>
-          )}
+      <div className="filter-panel">
+        <div className="form-field">
+          <label className="form-label" htmlFor="aa-search">Search</label>
+          <input id="aa-search" className="input" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Poll, label or user" />
+        </div>
+        <div className="form-field">
+          <label className="form-label" htmlFor="aa-dept">Department</label>
+          <select id="aa-dept" className="select" value={department} onChange={(e) => setDepartment(e.target.value)}>
+            <option value="all">All departments</option>
+            {departmentOptions.map((value) => (
+              <option key={value} value={value}>{value}</option>
+            ))}
+          </select>
+        </div>
+        <div className="form-field">
+          <label className="form-label" htmlFor="aa-course">Course / level</label>
+          <select id="aa-course" className="select" value={course} onChange={(e) => setCourse(e.target.value)}>
+            <option value="all">All courses</option>
+            {courseOptions.map((value) => (
+              <option key={value} value={value}>{value}</option>
+            ))}
+          </select>
         </div>
       </div>
+
+      {loading ? (
+        <p style={{ color: "var(--text-secondary)" }}>Loading poll analytics…</p>
+      ) : error ? (
+        <div className="auth-error">{error}</div>
+      ) : summary && rows.length > 0 ? (
+        <>
+          <div className="three-col mb-24">
+            <div className="stat-tile">
+              <div className="label">Total votes</div>
+              <div className="value">{summary.totalVotes}</div>
+              <div className="sub">Across {summary.totalPolls} poll{summary.totalPolls === 1 ? "" : "s"}</div>
+            </div>
+            <div className="stat-tile">
+              <div className="label">Unique voters</div>
+              <div className="value">{summary.uniqueRespondents}</div>
+              <div className="sub">Distinct respondents</div>
+            </div>
+            <div className="stat-tile">
+              <div className="label">Leading option</div>
+              <div className="value" style={{ fontSize: "22px", lineHeight: 1.15 }}>{summary.leadingOption}</div>
+              <div className="sub">Current front-runner</div>
+            </div>
+          </div>
+
+          <div className="two-col mb-24">
+            <div className="panel">
+              <h2 className="panel-title">{AIcon.chart()} Option breakdown</h2>
+              <p className="panel-desc">How the votes split across the options.</p>
+              {summary.optionBreakdown.map((option) => (
+                <div className="poll-option" key={option.label}>
+                  <div className="poll-top">
+                    <span>{option.label}</span>
+                    <strong>{option.percentage}% · {option.votes}</strong>
+                  </div>
+                  <div className="poll-track">
+                    <div className="poll-fill" style={{ width: `${Math.max(option.percentage, 4)}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="panel">
+              <h2 className="panel-title">{AIcon.grid()} Department mix</h2>
+              <p className="panel-desc">Votes by respondent department.</p>
+              <div className="info-list">
+                {summary.departmentMix.map((group) => (
+                  <div className="info-row" key={group.department}>
+                    <span className="k">{group.department}</span>
+                    <span className="v">{group.votes}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="panel">
+            <h2 className="panel-title">{AIcon.user()} Respondent list</h2>
+            <p className="panel-desc">Every vote matching the current filters.</p>
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Department</th>
+                    <th>Course / level</th>
+                    <th>Poll</th>
+                    <th>Choice</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr key={`${row.messageId}-${row.userId}-${row.optionId}`}>
+                      <td>{row.userName}</td>
+                      <td>{row.department}</td>
+                      <td>{row.course ?? "—"}</td>
+                      <td>{row.messageSubject}</td>
+                      <td>{row.optionLabel}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="empty-state">
+          <div className="empty-icon">{AIcon.chart()}</div>
+          <h3 className="empty-title">No responses yet</h3>
+          <p className="empty-desc">No poll responses match the current filters yet.</p>
+        </div>
+      )}
     </div>
   );
 }

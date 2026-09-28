@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import PageHeader from "@/app/components/PageHeader";
+import AdminPageHeader from "@/app/components/AdminPageHeader";
+import { AIcon } from "@/app/components/AdminIcons";
+import Avatar from "@/app/components/Avatar";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { friendlyErrorMessage } from "@/lib/api-client";
 
@@ -68,58 +70,55 @@ export default function AdminApplicationsPage() {
 
   return (
     <div className="page-wrap">
-      <div className="app-container">
-        <PageHeader title="Scribe applications" subtitle="Review and decide on pending applications.">
-          <button className="btn" onClick={() => router.push("/admin")}>
-            <i className="fas fa-arrow-left"></i> Admin
-          </button>
-        </PageHeader>
+      <AdminPageHeader section="People" title="Scribe" serif="applications" subtitle="Review and decide on pending applications. Approving sends a welcome message automatically.">
+        <button className="btn btn-ghost" onClick={() => router.push("/admin")}>
+          {AIcon.back()} Admin
+        </button>
+      </AdminPageHeader>
 
-        <div style={{ marginTop: "1.5rem" }}>
-          <h2>
-            <i className="fas fa-user-cog" style={{ color: "var(--text-info)" }}></i> Scribe application review queue
-          </h2>
+      {loading && <SkeletonList rows={3} />}
+      {error && <div className="auth-error">{error}</div>}
+      {actionMessage && <div className="notice">{actionMessage}</div>}
 
-          {loading && <SkeletonList rows={3} />}
-          {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}
-          {actionMessage && <p style={{ marginTop: "1rem", color: "var(--text-success)" }}>{actionMessage}</p>}
-          {!loading && !error && applications.length === 0 && (
-            <p style={{ marginTop: "1rem", color: "var(--text-secondary)" }}>No pending applications right now.</p>
-          )}
-
-          <div className="ledger-list" style={{ marginTop: "1rem" }}>
-            {applications.map((app) => (
-              <div key={app.id} className="ledger-row" style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-start" }}>
-                <div style={{ flex: "1 1 260px" }}>
-                  <strong>{app.user.fullName}</strong>
-                  <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-                    {app.user.email}
-                    {app.user.level ? ` — ${app.user.level}` : ""}
-                  </div>
-                  <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "0.5rem", whiteSpace: "pre-wrap" }}>
-                    &ldquo;{app.reason}&rdquo;
-                  </p>
-                </div>
-                <div style={{ display: "flex", gap: "0.6rem" }}>
-                  <button
-                    className="btn"
-                    style={{ background: "var(--text-success)", borderColor: "var(--text-success)", color: "white" }}
-                    onClick={() => handleDecision(app.id, "approve")}
-                  >
-                    <i className="fas fa-check"></i> Approve
-                  </button>
-                  <button
-                    className="btn"
-                    style={{ background: "var(--text-danger)", borderColor: "var(--text-danger)", color: "white" }}
-                    onClick={() => handleDecision(app.id, "reject")}
-                  >
-                    <i className="fas fa-times"></i> Reject
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+      {!loading && !error && applications.length === 0 && (
+        <div className="empty-state">
+          <div className="empty-icon">{AIcon.check()}</div>
+          <h3 className="empty-title">No pending applications</h3>
+          <p className="empty-desc">Nobody is waiting to become a scribe right now.</p>
         </div>
+      )}
+
+      <div className="stack-10">
+        {applications.map((app) => (
+          <div key={app.id} className="person-card" style={{ alignItems: "flex-start" }}>
+            <Avatar name={app.user.fullName} />
+            <div className="person-info">
+              <div className="person-name-row">
+                <span className="person-name">{app.user.fullName}</span>
+                <span className="status plum">Pending</span>
+              </div>
+              <div className="person-stats">
+                <span>
+                  {AIcon.mail()} {app.user.email}
+                </span>
+                {app.user.level && (
+                  <span>
+                    {AIcon.book()} <strong>{app.user.level}</strong>
+                  </span>
+                )}
+              </div>
+              <p className="person-note">&ldquo;{app.reason}&rdquo;</p>
+            </div>
+            <div className="request-actions">
+              <button className="btn btn-sm btn-danger" onClick={() => handleDecision(app.id, "reject")}>
+                Reject
+              </button>
+              <button className="btn btn-sm btn-success" onClick={() => handleDecision(app.id, "approve")}>
+                {AIcon.check()} Approve
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

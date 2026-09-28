@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import PageHeader from "@/app/components/PageHeader";
+import AdminPageHeader from "@/app/components/AdminPageHeader";
+import { AIcon } from "@/app/components/AdminIcons";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { friendlyErrorMessage } from "@/lib/api-client";
 
@@ -67,67 +68,60 @@ export default function ModerationPage() {
     }
   }
 
+  const pct = (v: number | null) => (v != null ? `${Math.round(v * 100)}%` : "—");
+
   return (
     <div className="page-wrap">
-      <div className="app-container">
-        <PageHeader title="Content moderation queue" subtitle="Notes waiting on review.">
-          <button className="btn" onClick={() => router.push("/admin")}>
-              <i className="fas fa-arrow-left"></i> Admin
-            </button>
-        </PageHeader>
+      <AdminPageHeader section="Quality" title="Content" serif="moderation" subtitle="Notes waiting on review before they go live in the catalogue.">
+        <button className="btn btn-ghost" onClick={() => router.push("/admin")}>
+          {AIcon.back()} Admin
+        </button>
+      </AdminPageHeader>
 
-        <div style={{ marginTop: "1.5rem" }}>
-          {loading && <SkeletonList rows={3} />}
-          {error && <div className="auth-error">{error}</div>}
-          {actionMessage && <p style={{ color: "var(--text-success)" }}>{actionMessage}</p>}
-          {!loading && !error && notes.length === 0 && (
-            <p style={{ color: "var(--text-secondary)" }}>Nothing flagged right now.</p>
-          )}
+      {loading && <SkeletonList rows={3} />}
+      {error && <div className="auth-error">{error}</div>}
+      {actionMessage && <p style={{ color: "var(--text-success)", marginBottom: "0.8rem", fontSize: "0.85rem" }}>{actionMessage}</p>}
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem", marginTop: "1rem" }}>
-            {notes.map((n) => (
-              <div key={n.id} style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "1rem" }}>
-                <strong>
-                  {n.block.course.code} — {n.block.title}
-                </strong>
-                <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)", margin: "0.3rem 0" }}>
-                  By {n.scribe.fullName} ({n.scribe.email})
-                </div>
-                <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                  Similarity: {n.similarityScore != null ? `${Math.round(n.similarityScore * 100)}%` : "—"} · Quality:{" "}
-                  {n.qualityScore != null ? `${Math.round(n.qualityScore * 100)}%` : "—"}
-                </div>
-                {n.flagReason && (
-                  <div style={{ fontSize: "0.8rem", color: "var(--text-warning)", marginTop: "0.3rem" }}>
-                    <i className="fas fa-flag"></i> {n.flagReason}
-                  </div>
-                )}
-                <div style={{ display: "flex", gap: "0.6rem", marginTop: "0.8rem" }}>
-                  <button
-                    className="btn"
-                    onClick={() => router.push(`/notes/${n.id}/read`)}
-                  >
-                    <i className="fas fa-eye"></i> Preview
-                  </button>
-                  <button
-                    className="btn"
-                    style={{ background: "var(--text-success)", borderColor: "var(--text-success)", color: "white" }}
-                    onClick={() => handleDecision(n.id, "approve")}
-                  >
-                    <i className="fas fa-check"></i> Approve
-                  </button>
-                  <button
-                    className="btn"
-                    style={{ background: "var(--text-danger)", borderColor: "var(--text-danger)", color: "white" }}
-                    onClick={() => handleDecision(n.id, "reject")}
-                  >
-                    <i className="fas fa-times"></i> Reject
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+      {!loading && !error && notes.length === 0 && (
+        <div className="empty-state">
+          <div className="empty-icon">{AIcon.check()}</div>
+          <h3 className="empty-title">Queue is clear</h3>
+          <p className="empty-desc">Nothing flagged right now. Nice work.</p>
         </div>
+      )}
+
+      <div className="stack-10">
+        {notes.map((n) => (
+          <div key={n.id} className="request-item">
+            <div className="request-body">
+              <div className="request-code">{n.block.course.code}</div>
+              <div className="request-topic">{n.block.title}</div>
+              <div className="request-meta">
+                <span>
+                  {AIcon.user()} {n.scribe.fullName} ({n.scribe.email})
+                </span>
+                <span>Similarity {pct(n.similarityScore)}</span>
+                <span>Quality {pct(n.qualityScore)}</span>
+                {n.flagReason && (
+                  <span className="is-warn">
+                    {AIcon.warn()} {n.flagReason}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="request-actions">
+              <button className="btn btn-sm btn-ghost" onClick={() => router.push(`/notes/${n.id}/read`)}>
+                {AIcon.eye()} Preview
+              </button>
+              <button className="btn btn-sm btn-danger" onClick={() => handleDecision(n.id, "reject")}>
+                Reject
+              </button>
+              <button className="btn btn-sm btn-success" onClick={() => handleDecision(n.id, "approve")}>
+                Approve
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

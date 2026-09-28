@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import PageHeader from "@/app/components/PageHeader";
+import AdminPageHeader from "@/app/components/AdminPageHeader";
+import { AIcon } from "@/app/components/AdminIcons";
+import Avatar from "@/app/components/Avatar";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { friendlyErrorMessage } from "@/lib/api-client";
 
@@ -65,80 +67,68 @@ export default function AdminAppealsPage() {
 
   return (
     <div className="page-wrap">
-      <div className="app-container">
-        <PageHeader title="Reinstatement appeals" subtitle="Review scribes asking to be reinstated.">
-          <button className="btn" onClick={() => router.push("/admin")}>
-              <i className="fas fa-arrow-left"></i> Admin
-            </button>
-          <button className="btn" onClick={() => router.push("/admin/reports")}>
-                <i className="fas fa-exclamation-triangle"></i> Reports
-              </button>
-        </PageHeader>
+      <AdminPageHeader
+        section="People"
+        title="Reinstatement"
+        serif="appeals"
+        subtitle="From scribes previously demoted, asking to be reinstated. Approving flips them back to Scribe and sends a welcome-back message; rejecting starts their 30-day cooldown before they can appeal again."
+      >
+        <button className="btn btn-ghost" onClick={() => router.push("/admin/reports")}>
+          {AIcon.flag()} Reports
+        </button>
+        <button className="btn btn-ghost" onClick={() => router.push("/admin")}>
+          {AIcon.back()} Admin
+        </button>
+      </AdminPageHeader>
 
-        <div style={{ marginTop: "1.5rem" }}>
-          <h2>
-            <i className="fas fa-undo" style={{ color: "var(--text-info)" }}></i> Scribe reinstatement appeals
-          </h2>
-          <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginTop: "0.4rem" }}>
-            These are from users previously demoted from Scribe, asking to be reinstated. Approving flips them
-            back to Scribe and sends them a welcome-back message; rejecting starts their 30-day cooldown before
-            they can appeal again.
-          </p>
+      {loading && <SkeletonList rows={3} />}
+      {error && <div className="auth-error">{error}</div>}
+      {actionMessage && <div className="notice">{actionMessage}</div>}
 
-          {loading && <SkeletonList rows={3} />}
-          {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}
-          {actionMessage && <p style={{ marginTop: "1rem", color: "var(--text-success)" }}>{actionMessage}</p>}
-          {!loading && !error && appeals.length === 0 && (
-            <p style={{ marginTop: "1rem", color: "var(--text-secondary)" }}>No pending appeals right now.</p>
-          )}
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem", marginTop: "1rem" }}>
-            {appeals.map((a) => (
-              <div
-                key={a.id}
-                style={{
-                  background: "var(--surface)",
-                  border: "1px solid var(--border-blue)",
-                  borderRadius: "12px",
-                  padding: "1rem",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  flexWrap: "wrap",
-                  gap: "0.6rem",
-                }}
-              >
-                <div style={{ flex: "1 1 260px" }}>
-                  <strong>{a.user.fullName}</strong>
-                  <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-                    {a.user.email}
-                    {a.user.level ? ` · ${a.user.level}` : ""}
-                    {a.user.demotedAt && ` · Demoted ${new Date(a.user.demotedAt).toLocaleDateString()}`}
-                  </div>
-                  <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "0.5rem", whiteSpace: "pre-wrap" }}>
-                    &ldquo;{a.reason}&rdquo;
-                  </p>
-                </div>
-                <div style={{ display: "flex", gap: "0.6rem" }}>
-                  <button
-                    className="btn"
-                    style={{ background: "var(--text-success)", borderColor: "var(--text-success)", color: "white" }}
-                    onClick={() => handleDecision(a.id, "approve")}
-                  >
-                    <i className="fas fa-check"></i> Reinstate
-                  </button>
-                  <button
-                    className="btn"
-                    style={{ background: "var(--text-danger)", borderColor: "var(--text-danger)", color: "white" }}
-                    onClick={() => handleDecision(a.id, "reject")}
-                  >
-                    <i className="fas fa-times"></i> Reject
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+      {!loading && !error && appeals.length === 0 && (
+        <div className="empty-state">
+          <div className="empty-icon">{AIcon.check()}</div>
+          <h3 className="empty-title">No pending appeals</h3>
+          <p className="empty-desc">No demoted scribes are waiting on a decision.</p>
         </div>
+      )}
+
+      <div className="stack-10">
+        {appeals.map((a) => (
+          <div key={a.id} className="person-card" style={{ alignItems: "flex-start" }}>
+            <Avatar name={a.user.fullName} />
+            <div className="person-info">
+              <div className="person-name-row">
+                <span className="person-name">{a.user.fullName}</span>
+                <span className="status warn">Appeal</span>
+              </div>
+              <div className="person-stats">
+                <span>
+                  {AIcon.mail()} {a.user.email}
+                </span>
+                {a.user.level && (
+                  <span>
+                    {AIcon.book()} <strong>{a.user.level}</strong>
+                  </span>
+                )}
+                {a.user.demotedAt && (
+                  <span>
+                    {AIcon.clock()} Demoted {new Date(a.user.demotedAt).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+              <p className="person-note">&ldquo;{a.reason}&rdquo;</p>
+            </div>
+            <div className="request-actions">
+              <button className="btn btn-sm btn-danger" onClick={() => handleDecision(a.id, "reject")}>
+                Reject
+              </button>
+              <button className="btn btn-sm btn-success" onClick={() => handleDecision(a.id, "approve")}>
+                {AIcon.check()} Reinstate
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

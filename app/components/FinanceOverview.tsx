@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Avatar from "@/app/components/Avatar";
+import { AIcon } from "@/app/components/AdminIcons";
 
 export interface Transaction {
   id: string;
@@ -35,10 +35,10 @@ const VISIBLE_TRANSACTIONS = 8;
 
 export function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="stat-card card-hover">
-      <div className="stat-label">{label}</div>
-      <div className="stat-value">{value}</div>
-      {sub && <div className="stat-sub">{sub}</div>}
+    <div className="stat-tile">
+      <div className="label">{label}</div>
+      <div className="value">{value}</div>
+      {sub && <div className="sub">{sub}</div>}
     </div>
   );
 }
@@ -54,50 +54,34 @@ function TransactionRow({ t }: { t: Transaction }) {
   }, []);
 
   return (
-    <div className="tx-row card-hover">
-      <Avatar name={t.buyerName} />
-      <div className="tx-row-main">
-        <div className="tx-row-title">
+    <div className="data-row ledger-tx">
+      <div style={{ minWidth: 0 }}>
+        <div className="row-title">
           {t.courseCode} — {t.blockTitle}
         </div>
-        <div className="tx-row-meta">
-          {t.buyerName} bought from {t.scribeName}
+        <div className="row-code">
+          {t.buyerName} bought from {t.scribeName} · {new Date(t.purchasedAt).toLocaleDateString()}
         </div>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: "0.7rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
-        {t.discountApplied && (
-          <span
-            className="pill pill-info"
-            style={{
-              whiteSpace: "nowrap",
-              padding: isMobile ? "0.18rem 0.5rem" : "0.25rem 0.7rem",
-              fontSize: isMobile ? "0.62rem" : "0.68rem",
-              lineHeight: 1.2,
-            }}
-          >
-            {isMobile ? "FRP" : "Request-discounted"}
-          </span>
-        )}
+
+      <div className="hide-sm" style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap" }}>
+        {t.discountApplied && <span className="status info">{isMobile ? "FRP" : "Request-discounted"}</span>}
         {t.disputed ? (
-          <span className="pill" style={{ background: "var(--bg-danger)", color: "var(--text-danger)" }}>
-            <i className="fas fa-triangle-exclamation"></i> Disputed
-          </span>
+          <span className="status danger">Disputed</span>
         ) : t.refunded ? (
-          <span className="pill" style={{ background: "var(--bg-danger)", color: "var(--text-danger)" }}>Refunded</span>
+          <span className="status danger">Refunded</span>
         ) : t.redeemedWithCoupon ? (
-          <span className="pill" style={{ background: "var(--bg-pro)", color: "var(--text-pro)" }}>
-            <i className="fas fa-ticket"></i> {t.amountPaid === 0 ? "Credit" : `Credit + ₦${t.amountPaid.toLocaleString()}`}
-          </span>
+          <span className="status plum">{t.amountPaid === 0 ? "Credit" : `Credit + ₦${t.amountPaid.toLocaleString()}`}</span>
         ) : (
-          <span className="pill pill-success">Paid</span>
+          <span className="status success">Paid</span>
         )}
-        <div className="tx-row-amount">
-          <div className="amount">₦{t.amountPaid.toLocaleString()}</div>
-          {t.creditApplied > 0 && (
-            <div style={{ fontSize: "0.7rem", color: "var(--text-pro)" }}>+₦{t.creditApplied.toLocaleString()} credit</div>
-          )}
-          <div className="date">{new Date(t.purchasedAt).toLocaleDateString()}</div>
-        </div>
+      </div>
+
+      <div className="row-stat" style={{ minWidth: 92 }}>
+        <span className={t.refunded || t.disputed ? "money-neg" : "money-pos"}>
+          {t.refunded || t.disputed ? "−" : "+"}₦{t.amountPaid.toLocaleString()}
+        </span>
+        {t.creditApplied > 0 && <div style={{ fontSize: 11, color: "var(--text-pro)", marginTop: 3 }}>+₦{t.creditApplied.toLocaleString()} credit</div>}
       </div>
     </div>
   );
@@ -115,34 +99,16 @@ export default function FinanceOverview({ data, children }: { data: FinanceOverv
 
   return (
     <>
-      {/* Hierarchy: one hero number, three quieter secondary cards */}
-      <div className="stat-row">
-        <div className="stat-hero card-hover">
-          <div className="stat-label">Gross revenue</div>
-          <div className="stat-value">₦{data.grossRevenue.toLocaleString()}</div>
-          <div className="stat-sub">
-            <span>{data.transactionCount} transactions total</span>
-          </div>
-        </div>
-
-        <div className="stat-secondary-group">
-          <StatCard
-            label="Platform fee"
-            value={`₦${data.platformRevenue.toLocaleString()}`}
-            sub="₦400 for normal sales · ₦300 for request-discounted sales"
-          />
-          <StatCard
-            label="Scribe payout"
-            value={`₦${data.scribePool.toLocaleString()}`}
-            sub="₦600 per confirmed sale, split across scribes"
-          />
-        </div>
+      <div className="three-col">
+        <StatCard label="Gross revenue" value={`₦${data.grossRevenue.toLocaleString()}`} sub={`${data.transactionCount} transactions total`} />
+        <StatCard label="Platform fee" value={`₦${data.platformRevenue.toLocaleString()}`} sub="₦400 for normal sales · ₦300 for request-discounted sales" />
+        <StatCard label="Scribe payout" value={`₦${data.scribePool.toLocaleString()}`} sub="₦600 per confirmed sale, split across scribes" />
       </div>
 
-      <h2 style={{ marginTop: "2rem" }}>
-        <i className="fas fa-ticket" style={{ color: "var(--star)" }}></i> Refund credit
-      </h2>
-      <div className="stat-row" style={{ marginTop: "0.8rem" }}>
+      <div className="section-head">
+        <h2 className="panel-title">{AIcon.coin()} Refund credit</h2>
+      </div>
+      <div className="three-col">
         <StatCard label="Issued" value={`₦${data.creditIssued.toLocaleString()}`} sub="granted across all refunds" />
         <StatCard label="Redeemed" value={`₦${data.creditRedeemed.toLocaleString()}`} sub="applied toward purchases" />
         <StatCard label="Outstanding" value={`₦${data.creditOutstanding.toLocaleString()}`} sub="real money, sitting unspent" />
@@ -150,22 +116,26 @@ export default function FinanceOverview({ data, children }: { data: FinanceOverv
 
       {children}
 
-      <h2 style={{ marginTop: "2rem" }}>
-        <i className="fas fa-receipt" style={{ color: "var(--text-info)" }}></i> Recent transactions
-      </h2>
+      <div className="section-head">
+        <h2 className="panel-title">{AIcon.list()} Recent transactions</h2>
+      </div>
 
       {data.recentTransactions.length === 0 ? (
-        <p style={{ color: "var(--text-secondary)", marginTop: "1rem" }}>No purchases yet.</p>
+        <div className="empty-state">
+          <div className="empty-icon">{AIcon.coin()}</div>
+          <h3 className="empty-title">No purchases yet</h3>
+          <p className="empty-desc">Sales will show up here as they happen.</p>
+        </div>
       ) : (
         <>
-          <div className="tx-list">
+          <div className="stack-10">
             {visibleTransactions.map((t) => (
               <TransactionRow key={t.id} t={t} />
             ))}
           </div>
 
           {!showAll && data.recentTransactions.length > VISIBLE_TRANSACTIONS && (
-            <button className="btn press-on-tap" style={{ marginTop: "1rem" }} onClick={() => setShowAll(true)}>
+            <button className="btn btn-ghost" style={{ marginTop: "1rem" }} onClick={() => setShowAll(true)}>
               View all {data.recentTransactions.length} transactions
             </button>
           )}
