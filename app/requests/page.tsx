@@ -3,10 +3,10 @@
 import { useEffect, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import PageHeader from "@/app/components/PageHeader";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
+import { Icon } from "@/app/components/icons";
 
 interface CourseOption {
   id: string;
@@ -28,14 +28,12 @@ interface RequestView {
   requestedByMe: boolean;
 }
 
-const inputStyle: React.CSSProperties = {
-  display: "block",
-  width: "100%",
-  padding: "0.6rem",
-  marginTop: "0.4rem",
-  borderRadius: "8px",
-  border: "1px solid var(--border-blue)",
-};
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
 
 export default function RequestsPage() {
   const router = useRouter();
@@ -88,7 +86,6 @@ export default function RequestsPage() {
 
   async function handleToggleVote(requestId: string, currentlyRequested: boolean) {
     setToggling(requestId);
-    // Optimistic update — flip it immediately, same as the Follow button.
     setRequests((prev) =>
       prev.map((r) =>
         r.id === requestId
@@ -104,7 +101,6 @@ export default function RequestsPage() {
         prev.map((r) => (r.id === requestId ? { ...r, requestedByMe: data.requestedByMe, voteCount: data.voteCount } : r))
       );
     } catch (err) {
-      // Roll back on failure.
       setRequests((prev) =>
         prev.map((r) =>
           r.id === requestId
@@ -131,7 +127,6 @@ export default function RequestsPage() {
       setError("Choose the department for this course.");
       return null;
     }
-
     if (!newCourseName.trim() || !newCourseCode.trim()) {
       setError("Enter both a course name and a course code.");
       return null;
@@ -140,7 +135,11 @@ export default function RequestsPage() {
     const res = await fetch("/api/scribe/courses", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newCourseName.trim(), code: newCourseCode.trim(), departmentId: newCourseDepartmentId }),
+      body: JSON.stringify({
+        name: newCourseName.trim(),
+        code: newCourseCode.trim(),
+        departmentId: newCourseDepartmentId,
+      }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -175,7 +174,7 @@ export default function RequestsPage() {
 
       setMessage(`Request submitted — ${data.request.voteCount} student${data.request.voteCount === 1 ? "" : "s"} want this now.`);
       setRequestedTitle("");
-      loadFeed();
+      await loadFeed();
     } catch (err) {
       setError(friendlyErrorMessage(err));
     } finally {
@@ -184,130 +183,165 @@ export default function RequestsPage() {
   }
 
   return (
-    <div className="page-wrap student-page student-requests-page">
+    <div className="page-wrap student-page">
       <div className="app-container student-app-container">
-        <PageHeader eyebrow="Demand Feed" title="Request a" accent="block" subtitle="Ask scribes to cover something that isn't in the catalog. Students who vote get the fulfilled note at a discounted price.">
-          <button className="btn" onClick={() => router.push("/requests/mine")}>
-            <i className="fas fa-list"></i> My requests
-          </button>
-        </PageHeader>
-
-        <div className="student-request-layout">
-          <div className="student-request-panel">
-          <h2 className="student-panel-title">
-            <i className="fas fa-hand-point-up"></i> What do you need?
-          </h2>
-          <p className="student-panel-desc">Pick the course block, describe what you need covered, and submit. Other students can vote and scribes can see the demand.</p>
-
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem" }}>
-            {courses.length > 0 && (
-              <div style={{ display: "flex", gap: "0.6rem" }}>
-                <button
-                  type="button"
-                  className={`btn ${courseMode === "existing" ? "btn-primary" : ""}`}
-                  onClick={() => setCourseMode("existing")}
-                >
-                  Existing course
-                </button>
-                <button
-                  type="button"
-                  className={`btn ${courseMode === "new" ? "btn-primary" : ""}`}
-                  onClick={() => setCourseMode("new")}
-                >
-                  New course
+        <section className="page-view is-active">
+          <div className="page-header">
+            <div className="page-header-left">
+              <span className="eyebrow">Demand Feed</span>
+              <h1>
+                Request a <span className="serif">block</span>
+              </h1>
+              <p>
+                Ask scribes to cover something that isn't in the catalog. Students who vote get the fulfilled note at a discounted price.
+              </p>
+            </div>
+            <div className="page-header-right">
+              <div className="header-actions">
+                <button className="btn btn-ghost" onClick={() => router.push("/requests/mine")}>
+                  {Icon.list()} My requests
                 </button>
               </div>
-            )}
-
-            {courseMode === "existing" ? (
-              <select value={selectedCourseId} onChange={(e) => setSelectedCourseId(e.target.value)} style={inputStyle}>
-                <option value="">Select a course...</option>
-                {courses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.code} — {c.name}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
-                <select value={newCourseDepartmentId} onChange={(e) => setNewCourseDepartmentId(e.target.value)} style={inputStyle}>
-                  <option value="">Select a department/course area...</option>
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  type="text"
-                  value={newCourseName}
-                  onChange={(e) => setNewCourseName(e.target.value)}
-                  placeholder="Course name"
-                  style={inputStyle}
-                />
-                <input
-                  type="text"
-                  value={newCourseCode}
-                  onChange={(e) => setNewCourseCode(e.target.value)}
-                  placeholder="Course code, e.g. COS 201"
-                  style={inputStyle}
-                />
-              </div>
-            )}
-
-            <label style={{ fontSize: "0.85rem", fontWeight: 500 }}>
-              What do you want covered?
-              <input
-                type="text"
-                value={requestedTitle}
-                onChange={(e) => setRequestedTitle(e.target.value)}
-                placeholder="e.g. Recursion and backtracking"
-                style={inputStyle}
-              />
-            </label>
-
-            {error && <div className="auth-error">{error}</div>}
-            {message && <p style={{ color: "var(--text-success)" }}>{message}</p>}
-
-            <button className="btn btn-primary" type="submit" disabled={submitting}>
-              {submitting ? "Submitting..." : "Submit request"}
-            </button>
-          </form>
-        </div>
-
-          <div className="student-open-panel">
-          <div className="student-open-heading">
-            <h2 className="student-panel-title"><i className="fas fa-fire"></i> Open requests</h2>
-            <span className="badge">{requests.length}</span>
+            </div>
           </div>
-          <p className="student-panel-desc">Vote on what matters. Popular requests help scribes prioritize what to cover.</p>
-          {loadingFeed && <SkeletonList rows={3} />}
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.9rem", marginTop: "0.8rem" }}>
-            {requests.map((r) => (
-              <div key={r.id} className="ledger-row" style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
-                <div>
-                  <span className="seal mono" style={{ marginBottom: "0.4rem", display: "inline-block" }}>{r.courseCode}</span>
-                  <div className="ledger-row-title">{r.requestedTitle}</div>
-                  <div className="ledger-row-meta">{r.courseName}</div>
+          <div className="two-col">
+            <div className="panel">
+              <h2 className="panel-title">
+                {Icon.plus()} What do you need?
+              </h2>
+              <p className="panel-desc">
+                Pick the course block, describe what you need covered, and submit. Other students can vote and scribes can see the demand.
+              </p>
+
+              <form onSubmit={handleSubmit}>
+                {courses.length > 0 && (
+                  <div className="form-field">
+                    <label className="form-label">Course source</label>
+                    <div className="tabs" style={{ width: "fit-content" }}>
+                      <button
+                        type="button"
+                        className={`tab${courseMode === "existing" ? " is-active" : ""}`}
+                        onClick={() => setCourseMode("existing")}
+                      >
+                        Existing course
+                      </button>
+                      <button
+                        type="button"
+                        className={`tab${courseMode === "new" ? " is-active" : ""}`}
+                        onClick={() => setCourseMode("new")}
+                      >
+                        New course
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {courseMode === "existing" ? (
+                  <div className="form-field">
+                    <label className="form-label">Course block</label>
+                    <select className="select" value={selectedCourseId} onChange={(e) => setSelectedCourseId(e.target.value)}>
+                      <option value="">Select a course…</option>
+                      {courses.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.code} — {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <>
+                    <div className="form-field">
+                      <label className="form-label">Department / course area</label>
+                      <select className="select" value={newCourseDepartmentId} onChange={(e) => setNewCourseDepartmentId(e.target.value)}>
+                        <option value="">Select a department…</option>
+                        {departments.map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-field">
+                      <label className="form-label">Course name</label>
+                      <input className="input" value={newCourseName} onChange={(e) => setNewCourseName(e.target.value)} placeholder="e.g. Operating Systems" />
+                    </div>
+                    <div className="form-field">
+                      <label className="form-label">Course code</label>
+                      <input className="input" value={newCourseCode} onChange={(e) => setNewCourseCode(e.target.value)} placeholder="e.g. COS 201" />
+                    </div>
+                  </>
+                )}
+
+                <div className="form-field">
+                  <label className="form-label">What do you want covered?</label>
+                  <input
+                    className="input"
+                    value={requestedTitle}
+                    onChange={(e) => setRequestedTitle(e.target.value)}
+                    placeholder="e.g. Recursion and backtracking"
+                    maxLength={120}
+                  />
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <button
-                    className="pill pill-info"
-                    style={{ border: "none", cursor: "pointer" }}
-                    onClick={() => handleToggleVote(r.id, r.requestedByMe)}
-                    disabled={toggling === r.id}
-                  >
-                    <i className="fas fa-thumbs-up" style={{ marginRight: "0.35rem" }}></i>
-                    {r.voteCount} want this
+
+                {error && <div className="auth-error">{error}</div>}
+                {message && <div className="callout" style={{ background: "var(--bg-success)", borderColor: "var(--wallet-border)", color: "var(--text-success)" }}>{message}</div>}
+
+                <div className="flex-end">
+                  <button type="button" className="btn btn-quiet" onClick={() => { setRequestedTitle(""); setError(""); setMessage(""); }}>
+                    Clear
                   </button>
-                  {r.requestedByMe && <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginTop: "0.35rem" }}>You requested this</div>}
+                  <button className="btn btn-primary" type="submit" disabled={submitting}>
+                    {submitting ? "Submitting…" : "Submit request"} {Icon.arrow()}
+                  </button>
                 </div>
-              </div>
-            ))}
+              </form>
+            </div>
+
+            <div>
+              <h2 className="panel-title" style={{ marginBottom: 6 }}>
+                {Icon.up()} Open requests <span className="badge">{requests.length}</span>
+              </h2>
+              <p className="panel-desc">Vote on what matters. Popular requests help scribes prioritize what to cover.</p>
+
+              {loadingFeed && <SkeletonList rows={3} />}
+              {!loadingFeed && requests.length === 0 && (
+                <div className="empty-state" style={{ padding: "40px 20px" }}>
+                  <div className="empty-icon">{Icon.up()}</div>
+                  <h3 className="empty-title">No open requests</h3>
+                  <p className="empty-desc">Be the first student to ask for a block.</p>
+                </div>
+              )}
+
+              {!loadingFeed && requests.length > 0 && (
+                <div className="request-list">
+                  {requests.map((r) => (
+                    <div key={r.id} className="request-item">
+                      <button
+                        type="button"
+                        className={`vote-block${r.requestedByMe ? " voted" : ""}`}
+                        onClick={() => handleToggleVote(r.id, r.requestedByMe)}
+                        disabled={toggling === r.id}
+                        aria-label={r.requestedByMe ? `Remove vote from ${r.requestedTitle}` : `Vote for ${r.requestedTitle}`}
+                      >
+                        {Icon.up()}
+                        <span className="count">{r.voteCount}</span>
+                      </button>
+                      <div className="request-body">
+                        <div className="request-code">{r.courseCode}</div>
+                        <div className="request-topic">{r.requestedTitle}</div>
+                        <div className="request-meta">
+                          <span>{Icon.book()} {r.courseName}</span>
+                          {r.requestedByMe && <span>{Icon.check()} You voted</span>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-          </div>
-        </div>
+        </section>
       </div>
     </div>
   );

@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import PageHeader from "@/app/components/PageHeader";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
+import { Icon } from "@/app/components/icons";
 
 interface ScribeSummary {
   id: string;
@@ -16,29 +16,20 @@ interface ScribeSummary {
   isFollowing?: boolean;
 }
 
-const TRUST_STYLES: Record<string, { bg: string; color: string }> = {
-  NEW: { bg: "var(--bg-info)", color: "var(--text-secondary)" },
-  RISING: { bg: "var(--bg-warning)", color: "var(--text-warning)" },
-  TRUSTED: { bg: "var(--bg-success)", color: "var(--text-success)" },
-  ELITE: { bg: "var(--bg-pro)", color: "var(--text-pro)" },
-};
-
-function TrustBadge({ level, label }: { level: string; label: string }) {
-  const style = TRUST_STYLES[level] || TRUST_STYLES.NEW;
-  return (
-    <span
-      style={{
-        background: style.bg,
-        color: style.color,
-        padding: "0.15rem 0.7rem",
-        borderRadius: "8px",
-        fontSize: "0.75rem",
-        fontWeight: 600,
-      }}
-    >
-      {label}
-    </span>
-  );
+function toneFor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return `a${(Math.abs(hash) % 5) + 1}`;
+}
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+function trustClass(level: string): string {
+  const map: Record<string, string> = { ELITE: "elite", TRUSTED: "trusted", RISING: "trusted", NEW: "new" };
+  return map[level] || "new";
 }
 
 export default function FollowingPage() {
@@ -46,7 +37,6 @@ export default function FollowingPage() {
   const [following, setFollowing] = useState<ScribeSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ScribeSummary[]>([]);
   const [searching, setSearching] = useState(false);
@@ -63,8 +53,8 @@ export default function FollowingPage() {
 
   function loadFollowing() {
     setLoading(true);
-    apiFetch("/api/student/following")
-      .then((data) => setFollowing(data.scribes))
+    apiFetch<{ scribes: ScribeSummary[] }>("/api/student/following")
+      .then((data) => setFollowing(data.scribes || []))
       .catch((err) => setError(friendlyErrorMessage(err)))
       .finally(() => setLoading(false));
   }
@@ -72,15 +62,16 @@ export default function FollowingPage() {
   useEffect(() => {
     if (query.trim().length < 2) {
       setResults([]);
+      setSearching(false);
       return;
     }
     setSearching(true);
     const handle = setTimeout(() => {
-      apiFetch(`/api/scribes/search?q=${encodeURIComponent(query.trim())}`)
-        .then((data) => setResults(data.scribes))
+      apiFetch<{ scribes: ScribeSummary[] }>(`/api/scribes/search?q=${encodeURIComponent(query.trim())}`)
+        .then((data) => setResults(data.scribes || []))
         .catch(() => setResults([]))
         .finally(() => setSearching(false));
-    }, 300); // debounce so we're not firing a request on every keystroke
+    }, 300);
 
     return () => clearTimeout(handle);
   }, [query]);
@@ -89,9 +80,7 @@ export default function FollowingPage() {
     setToggling(scribeId);
     try {
       await apiFetch(`/api/scribe/${scribeId}/follow`, { method: "POST" });
-      setResults((prev) =>
-        prev.map((s) => (s.id === scribeId ? { ...s, isFollowing: !currentlyFollowing } : s))
-      );
+      setResults((prev) => prev.map((s) => (s.id === scribeId ? { ...s, isFollowing: !currentlyFollowing } : s)));
       loadFollowing();
     } catch (err) {
       toast.error(friendlyErrorMessage(err));
@@ -100,112 +89,111 @@ export default function FollowingPage() {
     }
   }
 
-  return (
-    <div className="page-wrap student-page student-following-page">
-      <div className="app-container student-app-container">
-        <PageHeader eyebrow="Your Network" title="Scribes you" accent="follow" subtitle="Get notified the moment they publish. Follow the people whose notes actually helped you.">
-          <button className="btn" onClick={() => router.push("/purchases")}>
-              <i className="fas fa-arrow-left"></i> My Library
+  function card(s: ScribeSummary, action: "follow" | "open") {
+    const tone = toneFor(s.fullName);
+    return (
+      <div className="scribe-card" key={s.id}>
+        <button className="scribe-avatar scribe-name-button" onClick={() => router.push(`/scribe/${s.id}`)} aria-label={`Open ${s.fullName}`}>
+          {initialsOf(s.fullName)}
+        </button>
+        <div className="scribe-info">
+          <div className="scribe-name-row">
+            <button className="scribe-name scribe-name-button" onClick={() => router.push(`/scribe/${s.id}`)}>
+              {s.fullName}
             </button>
-        </PageHeader>
-
-        {/* Search to follow */}
-        <div className="student-following-layout">
-        <section className="student-follow-panel">
-        <h3 className="student-section-title">
-          <i className="fas fa-search" style={{ color: "var(--text-info)" }}></i> Find scribes to follow
-        </h3>
-        <div className="student-follow-search">
-        <i className="fas fa-search"></i>
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by name..."
-        />
+            <span className={`trust ${trustClass(s.trustLevel)}`}>{s.trustLabel}</span>
+          </div>
+          <div className="scribe-stats">
+            <span>{Icon.user()} {action === "follow" && s.isFollowing ? "Already following" : action === "open" ? "Following" : "Scribe profile"}</span>
+          </div>
         </div>
 
-        {searching && <p className="student-follow-empty">Searching...</p>}
+        {action === "follow" ? (
+          <button
+            className={`btn btn-sm ${s.isFollowing ? "btn-ghost" : "btn-primary"}`}
+            onClick={() => handleToggleFollow(s.id, Boolean(s.isFollowing))}
+            disabled={toggling === s.id}
+          >
+            {s.isFollowing ? "Following" : "Follow"}
+          </button>
+        ) : (
+          <button className="btn btn-sm btn-ghost" onClick={() => router.push(`/scribe/${s.id}`)}>
+            View profile {Icon.arrow()}
+          </button>
+        )}
+      </div>
+    );
+  }
 
-        {results.length > 0 && (
-          <div className="student-follow-list">
-            {results.map((s) => (
-              <div
-                key={s.id}
-                className="student-scribe-card"
-                style={{
-                  background: "var(--surface)",
-                  border: "1px solid var(--border-blue)",
-                  borderRadius: "12px",
-                  padding: "0.8rem 1rem",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <div>
-                  <button
-                    onClick={() => router.push(`/scribe/${s.id}`)}
-                    style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontWeight: 600, color: "var(--text-primary)" }}
-                  >
-                    {s.fullName}
-                  </button>
-                  <div style={{ marginTop: "0.3rem" }}>
-                    <TrustBadge level={s.trustLevel} label={s.trustLabel} />
-                  </div>
+  const followCount = following.length;
+
+  return (
+    <div className="page-wrap student-page">
+      <div className="app-container student-app-container">
+        <section className="page-view is-active">
+          <div className="page-header">
+            <div className="page-header-left">
+              <span className="eyebrow">Your Network</span>
+              <h1>
+                Scribes you <span className="serif">follow</span>
+              </h1>
+              <p>Get notified the moment they publish. Follow the people whose notes actually helped you.</p>
+            </div>
+            <div className="page-header-right">
+              <div className="stat-strip">
+                <div className="stat">
+                  <div className="stat-num">{followCount}</div>
+                  <div className="stat-label">Following</div>
                 </div>
-                <button
-                  className={`btn ${s.isFollowing ? "" : "btn-primary"}`}
-                  onClick={() => handleToggleFollow(s.id, Boolean(s.isFollowing))}
-                  disabled={toggling === s.id}
-                >
-                  {s.isFollowing ? "Following" : "Follow"}
+                <div className="stat">
+                  <div className="stat-num">{results.length || "—"}</div>
+                  <div className="stat-label">Search results</div>
+                </div>
+              </div>
+              <div className="header-actions">
+                <button className="btn btn-ghost" onClick={() => router.push("/purchases")}>
+                  {Icon.back()} My Library
                 </button>
               </div>
-            ))}
+            </div>
           </div>
-        )}
+
+          <div className="follow-search-bar">
+            <div className="search-field">
+              {Icon.search()}
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search scribes by name…" aria-label="Search scribes" />
+            </div>
+          </div>
+
+          {query.trim().length >= 2 && (
+            <section className="follow-panel">
+              <div className="follow-panel-heading">
+                <h2 className="panel-title">{Icon.search()} Find scribes</h2>
+              </div>
+              {searching && <SkeletonList rows={2} />}
+              {!searching && results.length === 0 && <div className="empty-state" style={{ padding: "36px 20px" }}><div className="empty-icon">{Icon.search()}</div><h3 className="empty-title">No scribes found</h3><p className="empty-desc">Try a different name.</p></div>}
+              {!searching && results.length > 0 && <div className="scribe-list">{results.map((s) => card(s, "follow"))}</div>}
+            </section>
+          )}
+
+          <section className="follow-panel">
+            <div className="follow-panel-heading">
+              <h2 className="panel-title">{Icon.user()} Scribes you follow</h2>
+              <span className="badge">{followCount}</span>
+            </div>
+
+            {loading && <SkeletonList rows={3} />}
+            {error && <div className="auth-error">{error}</div>}
+            {!loading && !error && following.length === 0 && (
+              <div className="empty-state" style={{ padding: "40px 20px" }}>
+                <div className="empty-icon">{Icon.user()}</div>
+                <h3 className="empty-title">Not following anyone yet</h3>
+                <p className="empty-desc">Search above to find scribes and follow the ones whose notes you want to keep up with.</p>
+              </div>
+            )}
+            {!loading && !error && following.length > 0 && <div className="scribe-list">{following.map((s) => card(s, "open"))}</div>}
+          </section>
         </section>
-
-        <section className="student-follow-panel">
-        {/* Currently following */}
-        <h3 className="student-section-title">
-          <i className="fas fa-user-check" style={{ color: "var(--text-info)" }}></i> Scribes you follow
-        </h3>
-
-        {loading && <SkeletonList rows={3} />}
-        {error && <div className="auth-error" style={{ marginTop: "0.6rem" }}>{error}</div>}
-        {!loading && !error && following.length === 0 && (
-          <p className="student-follow-empty">
-            You're not following anyone yet — search above to find scribes.
-          </p>
-        )}
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginTop: "0.7rem" }}>
-          {following.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => router.push(`/scribe/${s.id}`)}
-              className="student-scribe-card"
-              style={{
-                background: "var(--surface)",
-                border: "1px solid var(--border-blue)",
-                borderRadius: "12px",
-                padding: "0.8rem 1rem",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                cursor: "pointer",
-                textAlign: "left",
-              }}
-            >
-              <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>{s.fullName}</span>
-              <TrustBadge level={s.trustLevel} label={s.trustLabel} />
-            </button>
-          ))}
-        </div>
-        </section>
-      </div>
       </div>
     </div>
   );

@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import PageHeader from "@/app/components/PageHeader";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
 import { REFUND_WINDOW_MINUTES } from "@/lib/pricing";
+import { Icon } from "@/app/components/icons";
 
 interface PurchaseView {
   purchaseId: string;
@@ -26,6 +26,13 @@ interface PurchaseView {
   redeemedWithCoupon: boolean;
   refundRequestStatus: "PENDING" | "DISMISSED" | "ACTIONED" | null;
   unopened: boolean;
+}
+
+function spineTone(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  const tones = ["#4a2420", "#2c3a2a", "#243248", "#5c3d24", "#3a2036"];
+  return tones[Math.abs(hash) % tones.length];
 }
 
 export default function PurchasesPage() {
@@ -49,7 +56,6 @@ export default function PurchasesPage() {
 
   useEffect(() => {
     const user = getStoredUser();
-
     if (!user) {
       router.push("/login");
       return;
@@ -59,22 +65,29 @@ export default function PurchasesPage() {
       .then(async (res) => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to load purchases");
-        setPurchases(data.purchases);
+        setPurchases(data.purchases || []);
       })
       .catch((err) => setError(friendlyErrorMessage(err)))
       .finally(() => setLoading(false));
   }, [router]);
 
   function setDraftRating(purchaseId: string, rating: number) {
-    setDrafts((prev) => ({ ...prev, [purchaseId]: { rating, comment: prev[purchaseId]?.comment || "" } }));
+    setDrafts((prev) => ({
+      ...prev,
+      [purchaseId]: { rating, comment: prev[purchaseId]?.comment || "" },
+    }));
   }
+
   function setDraftComment(purchaseId: string, comment: string) {
-    setDrafts((prev) => ({ ...prev, [purchaseId]: { rating: prev[purchaseId]?.rating || 0, comment } }));
+    setDrafts((prev) => ({
+      ...prev,
+      [purchaseId]: { rating: prev[purchaseId]?.rating || 0, comment },
+    }));
   }
 
   async function submitReview(purchaseId: string) {
     const draft = drafts[purchaseId];
-    if (!draft || !draft.rating) return;
+    if (!draft?.rating) return;
 
     setSubmitting(purchaseId);
     try {
@@ -85,12 +98,10 @@ export default function PurchasesPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not submit review");
-
       setPurchases((prev) =>
-        prev.map((p) =>
-          p.purchaseId === purchaseId ? { ...p, review: { rating: draft.rating, comment: draft.comment || null } } : p
-        )
+        prev.map((p) => (p.purchaseId === purchaseId ? { ...p, review: { rating: draft.rating, comment: draft.comment || null } } : p))
       );
+      toast.success("Review submitted");
     } catch (err) {
       toast.error(friendlyErrorMessage(err));
     } finally {
@@ -113,11 +124,8 @@ export default function PurchasesPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not submit refund request");
-
       toast.success("Refund request sent — an admin will take a look.");
-      setPurchases((prev) =>
-        prev.map((p) => (p.purchaseId === purchaseId ? { ...p, refundRequestStatus: "PENDING" } : p))
-      );
+      setPurchases((prev) => prev.map((p) => (p.purchaseId === purchaseId ? { ...p, refundRequestStatus: "PENDING" } : p)));
       setRefundingId(null);
       setRefundReason("");
     } catch (err) {
@@ -139,237 +147,216 @@ export default function PurchasesPage() {
         )
       : purchases;
 
-    // The API already returns purchasedAt desc, so "recent" needs no
-    // re-sort — only the other options do.
     if (sortBy === "oldest") return [...filtered].reverse();
     if (sortBy === "title") return [...filtered].sort((a, b) => a.blockTitle.localeCompare(b.blockTitle));
     if (sortBy === "scribe") return [...filtered].sort((a, b) => a.scribeName.localeCompare(b.scribeName));
     return filtered;
   }, [purchases, search, sortBy]);
 
+  const totalSpent = purchases.reduce((sum, p) => sum + p.amountPaid, 0);
+
   return (
-    <div className="page-wrap student-page student-library-page">
+    <div className="page-wrap student-page">
       <div className="app-container student-app-container">
-        <PageHeader eyebrow="Your Collection" title="My" accent="library" subtitle="Every note you've bought, watermarked to you and available offline in the reader.">
-          <button className="btn" onClick={() => router.push("/following")}>
-              <i className="fas fa-user-check"></i> Following
-            </button>
-        </PageHeader>
-
-        <div className="library-toolbar">
-          <div className="library-search">
-            <i
-              className="fas fa-search"
-              style={{ position: "absolute", left: "0.9rem", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }}
-            ></i>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search your purchases..."
-              style={{
-                width: "100%",
-                padding: "0.55rem 0.9rem 0.55rem 2.2rem",
-                borderRadius: "8px",
-                border: "1px solid var(--border-blue)",
-                fontSize: "0.85rem",
-              }}
-            />
-          </div>
-          <select
-            className="library-sort"
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-            style={{
-              padding: "0.55rem 1rem",
-              borderRadius: "8px",
-              border: "1px solid var(--border-blue)",
-              fontSize: "0.85rem",
-              background: "var(--surface)",
-              color: "var(--text-primary)",
-            }}
-          >
-            <option value="recent">Most recent</option>
-            <option value="oldest">Oldest first</option>
-            <option value="title">Title (A–Z)</option>
-            <option value="scribe">Scribe (A–Z)</option>
-          </select>
-        </div>
-
-        {loading && <SkeletonList rows={3} />}
-        {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}
-        {!loading && !error && purchases.length === 0 && (
-          <p style={{ marginTop: "1rem", color: "var(--text-secondary)" }}>You haven't purchased any course notes yet.</p>
-        )}
-        {!loading && !error && purchases.length > 0 && visiblePurchases.length === 0 && (
-          <p style={{ marginTop: "1rem", color: "var(--text-secondary)" }}>No purchases match your search.</p>
-        )}
-
-        <div className="library-grid">
-          {visiblePurchases.map((p) => {
-            const draft = drafts[p.purchaseId] || { rating: 0, comment: "" };
-            return (
-              <div key={p.purchaseId} className="ledger-row">
-                <div className="badge">{p.courseCode}</div>
-                <button
-                  onClick={() => router.push(`/blocks/${p.blockId}?note=${p.noteId}`)}
-                  className="library-note-title text-link"
-                  title="Open this note in its block page"
-                >
-                  {p.blockTitle}
-                </button>
-                <div className="meta">
-                  {p.courseName} · by{" "}
-                  <button
-                    onClick={() => router.push(`/scribe/${p.scribeId}`)}
-                    className="library-scribe-link text-link"
-                  >
-                    {p.scribeName}
-                  </button>
+        <section className="page-view is-active">
+          <div className="page-header">
+            <div className="page-header-left">
+              <span className="eyebrow">Your Collection</span>
+              <h1>
+                My <span className="serif">library</span>
+              </h1>
+              <p>Every note you've bought, watermarked to you and available offline in the reader.</p>
+            </div>
+            <div className="page-header-right">
+              <div className="stat-strip">
+                <div className="stat">
+                  <div className="stat-num">{purchases.length}</div>
+                  <div className="stat-label">Notes owned</div>
                 </div>
+                <div className="stat">
+                  <div className="stat-num">₦{totalSpent.toLocaleString()}</div>
+                  <div className="stat-label">Total spent</div>
+                </div>
+              </div>
+              <div className="header-actions">
+                <button className="btn btn-ghost" onClick={() => router.push("/following")}>
+                  {Icon.user()} Following
+                </button>
+              </div>
+            </div>
+          </div>
 
-                {p.refunded ? (
-                  <div
-                    style={{ marginTop: "0.6rem", padding: "0.5rem 0.8rem", borderRadius: "8px", background: "var(--bg-danger)", color: "var(--text-danger)", fontSize: "0.85rem", width: "fit-content" }}
-                  >
-                    <i className="fas fa-ban"></i> Refunded — access removed
-                  </div>
-                ) : (
-                  <div className="library-action-row">
-                    <button
-                      onClick={() => router.push(`/notes/${p.noteId}/read`)}
-                      className="btn btn-primary"
-                      style={{ width: "fit-content" }}
-                    >
-                      <i className="fas fa-file-pdf"></i> Read note
-                    </button>
-                    {p.unopened && (
-                      <span className="pill pill-info">
-                        <i className="fas fa-circle-info" style={{ marginRight: "0.3rem" }}></i>
-                        Haven't started reading this yet
-                      </span>
-                    )}
-                  </div>
-                )}
-                {p.creditApplied > 0 && (
-                  <div style={{ fontSize: "0.75rem", color: "var(--text-pro)", marginTop: "0.3rem" }}>
-                    <i className="fas fa-ticket"></i>{" "}
-                    {p.amountPaid === 0
-                      ? `Unlocked with ₦${p.creditApplied.toLocaleString()} credit`
-                      : `₦${p.creditApplied.toLocaleString()} credit applied — you paid ₦${p.amountPaid.toLocaleString()}`}
-                  </div>
-                )}
+          <div className="library-toolbar">
+            <div className="library-search">
+              {Icon.search()}
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search your library by code, title, or scribe…" />
+            </div>
+            <select className="library-sort" value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} aria-label="Sort library">
+              <option value="recent">Most recent</option>
+              <option value="oldest">Oldest first</option>
+              <option value="title">Title A–Z</option>
+              <option value="scribe">Scribe A–Z</option>
+            </select>
+          </div>
 
-                {p.review ? (
-                  <div style={{ marginTop: "0.6rem" }}>
-                    <div style={{ color: "var(--star)" }}>
-                      {"★".repeat(p.review.rating)}
-                      {"☆".repeat(5 - p.review.rating)}
+          {loading && <SkeletonList rows={3} />}
+          {error && <div className="auth-error">{error}</div>}
+          {!loading && !error && purchases.length === 0 && (
+            <div className="empty-state">
+              <div className="empty-icon">{Icon.book()}</div>
+              <h3 className="empty-title">Nothing here yet</h3>
+              <p className="empty-desc">Notes you buy will appear here forever — re-open them any time.</p>
+              <button className="btn btn-primary" onClick={() => router.push("/dashboard")}>
+                Browse notes {Icon.arrow()}
+              </button>
+            </div>
+          )}
+          {!loading && !error && purchases.length > 0 && visiblePurchases.length === 0 && (
+            <div className="empty-state">
+              <div className="empty-icon">{Icon.search()}</div>
+              <h3 className="empty-title">No purchases match</h3>
+              <p className="empty-desc">Try a different course code, note title, or scribe name.</p>
+            </div>
+          )}
+
+          {!loading && !error && visiblePurchases.length > 0 && (
+            <div className="library-grid">
+              {visiblePurchases.map((p) => {
+                const draft = drafts[p.purchaseId] || { rating: 0, comment: "" };
+                const minutesSince = (now - new Date(p.purchasedAt).getTime()) / 60000;
+                const minutesLeft = Math.max(0, Math.ceil(REFUND_WINDOW_MINUTES - minutesSince));
+                const windowOpen = minutesSince <= REFUND_WINDOW_MINUTES;
+
+                return (
+                  <article className="purchase-card" key={p.purchaseId}>
+                    <div className="spine" style={{ "--spine-color": spineTone(p.blockTitle) } as React.CSSProperties}>
+                      <span className="spine-code">{p.courseCode}</span>
                     </div>
-                    {p.review.comment && (
-                      <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginTop: "0.3rem" }}>{p.review.comment}</p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="library-review-box">
-                    <div style={{ display: "flex", gap: "0.3rem", marginBottom: "0.5rem" }}>
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          onClick={() => setDraftRating(p.purchaseId, star)}
-                          style={{
-                            background: "none",
-                            border: "none",
-                            fontSize: "1.4rem",
-                            cursor: "pointer",
-                            color: star <= draft.rating ? "var(--star)" : "var(--border-blue)",
-                          }}
-                        >
-                          ★
+
+                    <div className="purchase-body">
+                      <div className="purchase-code">{p.courseCode}</div>
+                      <button className="purchase-title" onClick={() => router.push(`/blocks/${p.blockId}?note=${p.noteId}`)}>
+                        {p.blockTitle}
+                      </button>
+                      <div className="purchase-scribe">
+                        {Icon.user()} by{" "}
+                        <button className="scribe-name-button" onClick={() => router.push(`/scribe/${p.scribeId}`)}>
+                          <strong>{p.scribeName}</strong>
                         </button>
-                      ))}
-                    </div>
-                    <textarea
-                      value={draft.comment}
-                      onChange={(e) => setDraftComment(p.purchaseId, e.target.value)}
-                      placeholder="Optional comment..."
-                      rows={2}
-                      style={{
-                        width: "100%",
-                        padding: "0.5rem",
-                        borderRadius: "8px",
-                        border: "1px solid var(--border-blue)",
-                        fontFamily: "inherit",
-                      }}
-                    />
-                    <button
-                      className="btn press-on-tap"
-                      style={{ marginTop: "0.5rem" }}
-                      disabled={!draft.rating || submitting === p.purchaseId}
-                      onClick={() => submitReview(p.purchaseId)}
-                    >
-                      {submitting === p.purchaseId ? "Submitting..." : "Submit review"}
-                    </button>
-                  </div>
-                )}
+                      </div>
 
-                {!p.refunded && (() => {
-                  const minutesSince = (now - new Date(p.purchasedAt).getTime()) / 60000;
-                  const minutesLeft = Math.max(0, Math.ceil(REFUND_WINDOW_MINUTES - minutesSince));
-                  const windowOpen = minutesSince <= REFUND_WINDOW_MINUTES;
+                      <div className="purchase-foot">
+                        <span className="purchase-date">Purchased {new Date(p.purchasedAt).toLocaleDateString()}</span>
+                        {!p.refunded ? (
+                          <button className="read-btn" onClick={() => router.push(`/notes/${p.noteId}/read`)}>
+                            {Icon.eye()} Read note
+                          </button>
+                        ) : (
+                          <span className="status rejected">Refunded</span>
+                        )}
+                      </div>
 
-                  return (
-                    <div className="library-refund-box">
-                      {p.refundRequestStatus === "PENDING" ? (
-                        <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                          <i className="fas fa-clock"></i> Refund request pending review
-                        </p>
-                      ) : !windowOpen ? (
-                        <p style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-                          <i className="fas fa-lock"></i> Refund window closed ({REFUND_WINDOW_MINUTES} min after purchase)
-                        </p>
-                      ) : refundingId === p.purchaseId ? (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                          <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                            Why do you want a refund for this?
-                          </label>
-                          <textarea
-                            value={refundReason}
-                            onChange={(e) => setRefundReason(e.target.value)}
-                            rows={2}
-                            placeholder="Explain what went wrong..."
-                            style={{ padding: "0.5rem", borderRadius: "8px", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem", background: "var(--surface)", color: "var(--text-primary)" }}
-                          />
-                          <div style={{ display: "flex", gap: "0.6rem" }}>
-                            <button
-                              className="btn btn-primary press-on-tap"
-                              disabled={refundSubmitting}
-                              onClick={() => submitRefundRequest(p.purchaseId)}
-                            >
-                              {refundSubmitting ? "Sending..." : "Send request"}
-                            </button>
-                            <button className="btn" type="button" onClick={() => { setRefundingId(null); setRefundReason(""); }}>
-                              Cancel
-                            </button>
+                      {p.refunded ? (
+                        <div className="purchase-extra">
+                          <div className="callout" style={{ background: "var(--bg-danger)", borderColor: "var(--text-danger)", color: "var(--text-danger)" }}>
+                            {Icon.warn()} <span>Refunded — access removed.</span>
                           </div>
                         </div>
                       ) : (
-                        <button
-                          className="btn press-on-tap"
-                          style={{ fontSize: "0.8rem" }}
-                          onClick={() => setRefundingId(p.purchaseId)}
-                        >
-                          <i className="fas fa-hand-holding-dollar"></i> Request refund
-                          <span style={{ color: "var(--text-secondary)", fontWeight: 400 }}>&nbsp;({minutesLeft} min left)</span>
-                        </button>
+                        <>
+                          {(p.creditApplied > 0 || p.unopened) && (
+                            <div className="purchase-extra">
+                              {p.creditApplied > 0 && (
+                                <div className="credit-note">
+                                  {p.amountPaid === 0
+                                    ? `₦${p.creditApplied.toLocaleString()} credit used to unlock this note`
+                                    : `₦${p.creditApplied.toLocaleString()} credit applied — you paid ₦${p.amountPaid.toLocaleString()}`}
+                                </div>
+                              )}
+                              {p.unopened && <span className="status open" style={{ marginTop: 8 }}>Not started</span>}
+                            </div>
+                          )}
+
+                          <div className="purchase-extra">
+                            {p.review ? (
+                              <div className="existing-review">
+                                <div className="review-stars">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <span key={star} className={`review-star${star <= p.review!.rating ? " is-selected" : ""}`}>★</span>
+                                  ))}
+                                </div>
+                                {p.review.comment && <div className="review-comment-display">{p.review.comment}</div>}
+                              </div>
+                            ) : (
+                              <>
+                                <div className="review-stars" aria-label="Choose a rating">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                      key={star}
+                                      type="button"
+                                      className={`review-star${star <= draft.rating ? " is-selected" : ""}`}
+                                      onClick={() => setDraftRating(p.purchaseId, star)}
+                                      aria-label={`${star} star${star === 1 ? "" : "s"}`}
+                                    >
+                                      ★
+                                    </button>
+                                  ))}
+                                </div>
+                                <textarea
+                                  className="review-comment"
+                                  value={draft.comment}
+                                  onChange={(e) => setDraftComment(p.purchaseId, e.target.value)}
+                                  placeholder="Optional comment…"
+                                  rows={2}
+                                />
+                                <div className="review-actions">
+                                  <button className="btn btn-sm btn-primary" disabled={!draft.rating || submitting === p.purchaseId} onClick={() => submitReview(p.purchaseId)}>
+                                    {submitting === p.purchaseId ? "Submitting…" : "Submit review"}
+                                  </button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+
+                          <div className="refund-area">
+                            {p.refundRequestStatus === "PENDING" ? (
+                              <p className="refund-muted">{Icon.clock()} Refund request pending review.</p>
+                            ) : !windowOpen ? (
+                              <p className="refund-muted">{Icon.lock()} Refund window closed ({REFUND_WINDOW_MINUTES} min after purchase).</p>
+                            ) : refundingId === p.purchaseId ? (
+                              <>
+                                <label className="form-label">Why do you want a refund?</label>
+                                <textarea
+                                  className="refund-reason"
+                                  value={refundReason}
+                                  onChange={(e) => setRefundReason(e.target.value)}
+                                  placeholder="Explain what went wrong…"
+                                  rows={3}
+                                />
+                                <div className="refund-actions">
+                                  <button className="btn btn-sm btn-primary" disabled={refundSubmitting} onClick={() => submitRefundRequest(p.purchaseId)}>
+                                    {refundSubmitting ? "Sending…" : "Send request"}
+                                  </button>
+                                  <button className="btn btn-sm btn-ghost" type="button" onClick={() => { setRefundingId(null); setRefundReason(""); }}>
+                                    Cancel
+                                  </button>
+                                </div>
+                              </>
+                            ) : (
+                              <button className="btn btn-sm btn-ghost" onClick={() => setRefundingId(p.purchaseId)}>
+                                Request refund <span style={{ color: "var(--text-secondary)", fontWeight: 400 }}>({minutesLeft} min left)</span>
+                              </button>
+                            )}
+                          </div>
+                        </>
                       )}
                     </div>
-                  );
-                })()}
-              </div>
-            );
-          })}
-        </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );
