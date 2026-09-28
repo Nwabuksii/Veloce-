@@ -15,6 +15,9 @@ const TIER_THRESHOLDS = {
   ELITE: { sales: 50, rating: 4.5 },
 } as const;
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const GET = requireRole("SCRIBE", async (req: NextRequest, user) => {
   const holdCutoff = new Date(Date.now() - EARNINGS_HOLD_MINUTES * 60 * 1000);
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -74,19 +77,6 @@ export const GET = requireRole("SCRIBE", async (req: NextRequest, user) => {
   let salesLast30 = 0;
   let salesPrev30 = 0;
 
-  const monthKeys = Array.from({ length: 6 }, (_, offset) => {
-    const date = new Date();
-    date.setDate(1);
-    date.setMonth(date.getMonth() - (5 - offset));
-    return {
-      key: `${date.getFullYear()}-${date.getMonth()}`,
-      label: date.toLocaleString("en-US", { month: "short" }),
-    };
-  });
-  const monthlySales = monthKeys.map(({ label }) => ({ label, value: 0 }));
-  const monthlyEarnings = monthKeys.map(({ label }) => ({ label, value: 0 }));
-  const monthIndex = new Map(monthKeys.map(({ key }, index) => [key, index]));
-
   const cutFor = (p: { amountPaid: number; creditApplied: number }, isFulfillment: boolean) =>
     computeScribeCut(effectivePrice(p), isFulfillment);
 
@@ -100,16 +90,12 @@ export const GET = requireRole("SCRIBE", async (req: NextRequest, user) => {
 
       for (const p of n.purchases) {
         totalSales += 1;
-        const monthKey = `${p.purchasedAt.getFullYear()}-${p.purchasedAt.getMonth()}`;
-        const month = monthIndex.get(monthKey);
-        if (month !== undefined) monthlySales[month].value += 1;
         const cut = cutFor(p, isFulfillment);
         // Confirmed only once the hold has passed AND no refund request is
         // waiting on an admin — otherwise it's still pending here too.
         if (saleStatus(p, holdCutoff) === "confirmed") {
           totalEarnings += cut;
           earnings += cut;
-          if (month !== undefined) monthlyEarnings[month].value += cut;
         } else {
           pendingEarnings += cut;
           pending += cut;
@@ -181,10 +167,13 @@ export const GET = requireRole("SCRIBE", async (req: NextRequest, user) => {
     pendingEarnings,
     followerCount,
     byBlock,
-    monthlySales,
-    monthlyEarnings,
   });
 
-  response.headers.set("Cache-Control", "private, max-age=60, stale-while-revalidate=120");
+  // Analytics is user-specific and must never be served from a previous
+  // scribe session. In particular, logging out and signing into another
+  // scribe must not reuse the old user's GET response from the browser/CDN.
+  response.headers.set("Cache-Control", "private, no-store, no-cache, must-revalidate");
+  response.headers.set("Pragma", "no-cache");
+  response.headers.set("Expires", "0");
   return response;
 });
