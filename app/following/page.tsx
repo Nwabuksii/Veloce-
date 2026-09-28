@@ -106,7 +106,7 @@ export default function FollowingPage() {
             <span className={`trust ${trustClass(s.trustLevel)}`}>{s.trustLabel}</span>
           </div>
           <div className="scribe-stats">
-            <span>{Icon.user()} {action === "follow" && s.isFollowing ? "Already following" : action === "open" ? "Following" : "Scribe profile"}</span>
+            <span>{action === "follow" && s.isFollowing ? "Already following" : action === "open" ? "Following" : "Scribe profile"}</span>
           </div>
         </div>
 
