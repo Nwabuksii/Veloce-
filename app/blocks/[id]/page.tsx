@@ -614,7 +614,7 @@ function NoteReviews({
   }
 
   return (
-    <div style={{ borderTop: "1px solid var(--border-blue)", paddingTop: "0.7rem" }}>
+    <div className="block-note-reviews">
       {/* Second door to leave a review — the first is the Purchases page.
           Only the actual buyer sees this, and only until they've reviewed. */}
       {owned && purchaseId && (

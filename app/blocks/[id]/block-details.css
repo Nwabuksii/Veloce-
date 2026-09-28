@@ -61,7 +61,7 @@
 .block-kicker,
 .block-eyebrow,
 .block-version-number {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono), ui-monospace, monospace;
   text-transform: uppercase;
   letter-spacing: .1em;
   font-size: .68rem;
@@ -75,7 +75,7 @@
 .block-hero h1 {
   margin: .35rem 0 .8rem;
   max-width: 760px;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif), Georgia, "Times New Roman", serif;
   font-size: clamp(2rem, 4vw, 3.2rem);
   line-height: .98;
   letter-spacing: -.035em;
@@ -241,7 +241,7 @@
 .block-section-heading h2,
 .block-purchase-card h2 {
   margin: .25rem 0 0;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif), Georgia, "Times New Roman", serif;
   letter-spacing: -.02em;
   font-size: 1.45rem;
 }
@@ -275,7 +275,7 @@
 }
 
 .block-empty-mark {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif), Georgia, "Times New Roman", serif;
   font-size: 2rem;
   color: var(--bd-gold);
 }
@@ -541,7 +541,7 @@
 
 .block-starting-price strong {
   color: var(--bd-ink);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif), Georgia, "Times New Roman", serif;
   font-size: 1.7rem;
 }
 
@@ -578,7 +578,7 @@
 
 .block-about-card h3 {
   margin: .35rem 0 0;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif), Georgia, "Times New Roman", serif;
   font-size: 1.15rem;
 }
 
@@ -601,6 +601,21 @@
 
 .block-about-list strong {
   color: var(--bd-ink);
+}
+
+.block-note-reviews {
+  margin-top: 0;
+  padding: .75rem .95rem .9rem;
+  border-top: 1px solid var(--bd-border);
+}
+
+.block-note-reviews > div {
+  min-width: 0;
+}
+
+.block-note-reviews textarea {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .block-note-report {
@@ -647,7 +662,7 @@
 
 .block-error-card h2 {
   margin: 0;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif), Georgia, "Times New Roman", serif;
 }
 
 .block-error-card p {
