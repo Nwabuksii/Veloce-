@@ -2225,11 +2225,215 @@ html:not([data-theme="dark"]) .stat-hero { border-color: var(--ink); }
 @media (hover: none) {
   .request-item:hover, .data-row:hover, .hub-card:hover, .three-col > .stat-card:hover { transform: none; }
 }
+/* Student-facing pages — Veloce template reskin.
+   Shared by Browse, Requests, My Requests, Library and Following.
+   Typography intentionally uses the existing site font variables. */
 
-/* Analytics charts — template-style dual series */
-.chart-dual-bars { display: flex; align-items: flex-end; justify-content: center; gap: 3px; height: 130px; }
-.chart-dual-bars .chart-bar { width: 18px; margin: 0; }
-.chart-bar-secondary { background: linear-gradient(180deg, var(--ink), color-mix(in srgb, var(--ink) 35%, transparent)); }
-.chart-legend { display: flex; gap: 16px; margin-top: 8px; font-size: 10.5px; color: var(--text-secondary); font-family: var(--font-mono), ui-monospace, monospace; }
-.chart-key { width: 8px; height: 8px; display: inline-block; border-radius: 2px; background: var(--gold); margin-right: 5px; vertical-align: -1px; }
-.chart-key.secondary { background: var(--ink); }
+.student-page .student-app-container {
+  width: min(1180px, 100%);
+  margin-inline: auto;
+}
+
+.student-page .page-header { margin-bottom: 30px; }
+.student-page .page-header h1,
+.student-page .page-header h1 .serif { font-family: var(--font-inter), ui-sans-serif, sans-serif; }
+.student-page .page-header h1 .serif {
+  font-family: var(--font-serif), Georgia, serif;
+  font-style: italic;
+}
+
+/* ---------------- Browse ---------------- */
+.student-dashboard-page .catalog-grid { gap: 18px; }
+.student-dashboard-page .course-card { min-height: 100%; }
+.student-dashboard-page .filter-bar { margin-bottom: 18px; }
+.student-dashboard-page .result-meta { margin-bottom: 18px; }
+.student-dashboard-page .course-title {
+  font-family: var(--font-serif), Georgia, serif;
+  font-weight: 400;
+  font-size: 22px;
+  letter-spacing: -.2px;
+}
+.student-dashboard-page .course-dept { margin-top: 5px; }
+.student-dashboard-page .topics { margin-top: 15px; }
+.student-dashboard-page .card-foot { margin-top: auto; }
+.student-dashboard-page .scribe-link {
+  color: var(--text-secondary);
+  font-size: 12px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+}
+.student-dashboard-page .scribe-link:hover { color: var(--text-primary); }
+
+/* ---------------- Requests ---------------- */
+.student-requests-page .student-request-layout {
+  display: grid;
+  grid-template-columns: minmax(0, .95fr) minmax(0, 1.25fr);
+  gap: 24px;
+  align-items: start;
+}
+.student-requests-page .student-request-panel,
+.student-requests-page .student-open-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+}
+.student-requests-page .student-request-panel { padding: 22px; }
+.student-requests-page .student-open-panel { padding: 20px; }
+.student-requests-page .student-panel-title {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 18px; font-weight: 600; letter-spacing: -.2px;
+}
+.student-requests-page .student-panel-title i { color: var(--gold); }
+.student-requests-page .student-panel-desc {
+  color: var(--text-secondary); font-size: 13px; line-height: 1.65; margin-top: 7px; margin-bottom: 18px;
+}
+.student-requests-page form { gap: 14px !important; margin-top: 0 !important; }
+.student-requests-page form > div { gap: 8px !important; }
+.student-requests-page label { color: var(--text-primary); }
+.student-requests-page select,
+.student-requests-page input,
+.student-requests-page textarea {
+  width: 100% !important;
+  min-height: 42px;
+  padding: 10px 12px !important;
+  margin-top: 0.35rem !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
+  background: var(--surface) !important;
+  color: var(--text-primary) !important;
+  font-size: 13px;
+  outline: none;
+}
+.student-requests-page select:focus,
+.student-requests-page input:focus,
+.student-requests-page textarea:focus {
+  border-color: var(--gold) !important;
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.student-requests-page .student-mode-toggle {
+  display: flex !important; gap: 4px !important; padding: 3px;
+  width: fit-content; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg-page);
+}
+.student-requests-page .student-mode-toggle .btn { border: 0; }
+.student-requests-page .student-open-heading {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 5px;
+}
+.student-requests-page .student-open-heading .badge { font-family: var(--font-mono), monospace; }
+.student-requests-page .ledger-row {
+  border-radius: 10px;
+  padding: 16px 18px;
+  box-shadow: none;
+}
+.student-requests-page .ledger-row-title { font-family: var(--font-serif), Georgia, serif; font-size: 18px; font-weight: 400; }
+.student-requests-page .pill-info {
+  border: 1px solid var(--border) !important;
+  background: var(--bg-pill);
+  color: var(--accent-strong);
+  border-radius: 999px;
+  padding: 7px 11px;
+}
+.student-requests-page .student-request-meta-note { font-size: 11px !important; margin-top: 5px !important; }
+
+/* ---------------- My requests ---------------- */
+.student-my-requests-page .student-request-list {
+  display: flex; flex-direction: column; gap: 12px; margin-top: 2px;
+}
+.student-my-requests-page .student-request-card {
+  position: relative; display: grid; grid-template-columns: 58px minmax(0,1fr) auto;
+  align-items: center; gap: 16px; padding: 18px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: var(--card-shadow); overflow: hidden;
+}
+.student-my-requests-page .student-request-card::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
+  background: linear-gradient(180deg,var(--gold),transparent);
+}
+.student-my-requests-page .student-vote-block {
+  width: 48px; min-height: 54px; display: grid; place-items: center;
+  border: 1px solid var(--border); border-radius: 9px; background: var(--bg-page);
+  color: var(--gold); font-family: var(--font-mono), monospace; font-size: 14px; font-weight: 700;
+}
+.student-my-requests-page .student-request-code { font: 600 10px var(--font-mono),monospace; letter-spacing: 1px; color: var(--text-muted); text-transform: uppercase; }
+.student-my-requests-page .student-request-title { margin-top: 4px; font-family: var(--font-serif),Georgia,serif; font-size: 20px; font-weight: 400; }
+.student-my-requests-page .student-request-course { margin-top: 4px; color: var(--text-secondary); font-size: 12px; }
+.student-my-requests-page .student-request-actions { display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
+.student-my-requests-page .student-status {
+  display:inline-flex; align-items:center; gap:6px; padding:5px 9px; border-radius:999px;
+  font: 700 9px var(--font-inter),sans-serif; letter-spacing:1px; text-transform:uppercase;
+  border:1px solid var(--border);
+}
+.student-my-requests-page .student-status.fulfilled { color:var(--text-success); background:var(--bg-success); border-color:var(--wallet-border); }
+.student-my-requests-page .student-status.open { color:var(--text-warning); background:var(--bg-warning); }
+.student-my-requests-page .student-empty { padding: 54px 24px; text-align:center; border:1px solid var(--border); border-radius:12px; background:var(--surface); }
+.student-my-requests-page .student-empty h3 { font: 400 24px var(--font-serif),Georgia,serif; margin: 12px 0 7px; }
+.student-my-requests-page .student-empty p { color:var(--text-secondary); max-width:430px; margin:0 auto 18px; font-size:13px; }
+
+/* ---------------- Library ---------------- */
+.student-library-page .library-toolbar {
+  display:flex; gap:12px; margin:0 0 20px; flex-wrap:wrap; padding:12px;
+  border:1px solid var(--border); border-radius:10px; background:var(--surface); box-shadow:var(--card-shadow);
+}
+.student-library-page .library-search { flex:1 1 300px; }
+.student-library-page .library-search input,
+.student-library-page .library-sort {
+  height:40px !important; border:1px solid var(--border) !important; border-radius:8px !important;
+  background:var(--bg-page) !important; color:var(--text-primary) !important;
+}
+.student-library-page .library-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:16px; }
+.student-library-page .ledger-row {
+  max-width:none !important; padding:18px !important; border-radius:12px; gap:10px;
+}
+.student-library-page .ledger-row > .badge {
+  align-self:flex-start; font-family:var(--font-mono),monospace; letter-spacing:.5px;
+}
+.student-library-page .library-note-title {
+  color:var(--text-primary) !important; font-family:var(--font-serif),Georgia,serif; font-size:20px !important; font-weight:400 !important;
+}
+.student-library-page .library-scribe-link { color:var(--text-secondary) !important; }
+.student-library-page .library-action-row { display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-top:10px; }
+.student-library-page .library-review-box { margin-top:16px !important; padding-top:14px; border-top:1px solid var(--border); }
+.student-library-page .library-review-box textarea { padding:10px !important; border:1px solid var(--border) !important; border-radius:8px !important; background:var(--surface) !important; }
+.student-library-page .library-refund-box { margin-top:14px !important; padding-top:14px !important; border-top:1px solid var(--border) !important; }
+
+/* ---------------- Following ---------------- */
+.student-following-page .student-following-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:24px; align-items:start; }
+.student-following-page .student-follow-panel {
+  background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; box-shadow:var(--card-shadow);
+}
+.student-following-page .student-section-title { font-size:18px; font-weight:600; display:flex; gap:9px; align-items:center; margin-bottom:10px; }
+.student-following-page .student-section-title i { color:var(--gold); }
+.student-following-page .student-follow-search { position:relative; }
+.student-following-page .student-follow-search input { padding:10px 12px 10px 38px !important; min-height:42px; border:1px solid var(--border) !important; border-radius:8px !important; }
+.student-following-page .student-follow-results,
+.student-following-page .student-follow-list { display:flex; flex-direction:column; gap:9px; margin-top:12px; }
+.student-following-page .student-scribe-card {
+  display:flex; align-items:center; justify-content:space-between; gap:14px; padding:14px;
+  border:1px solid var(--border); border-radius:10px; background:var(--surface); transition:.2s ease;
+}
+.student-following-page .student-scribe-card:hover { border-color:var(--border-strong); box-shadow:var(--card-shadow-hover); transform:translateY(-1px); }
+.student-following-page .student-scribe-name { font-family:var(--font-serif),Georgia,serif; font-size:18px; color:var(--text-primary); }
+.student-following-page .student-scribe-trust { margin-top:5px; }
+.student-following-page .student-follow-empty { padding:28px 10px; color:var(--text-secondary); text-align:center; font-size:13px; }
+
+@media (max-width: 900px) {
+  .student-requests-page .student-request-layout,
+  .student-following-page .student-following-layout { grid-template-columns:1fr; }
+}
+@media (max-width: 700px) {
+  .student-page .student-app-container { width:100%; }
+  .student-my-requests-page .student-request-card { grid-template-columns:48px 1fr; }
+  .student-my-requests-page .student-request-actions { grid-column:1 / -1; flex-direction:row; justify-content:flex-end; align-items:center; }
+  .student-library-page .library-grid { grid-template-columns:1fr; }
+}
+@media (max-width: 560px) {
+  .student-page .page-header { margin-bottom:22px; }
+  .student-page .page-header-right .header-actions { width:100%; }
+  .student-requests-page .student-request-panel,
+  .student-requests-page .student-open-panel,
+  .student-following-page .student-follow-panel { padding:16px; }
+  .student-following-page .student-scribe-card { align-items:flex-start; }
+}
