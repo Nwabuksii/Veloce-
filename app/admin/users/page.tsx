@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import PageHeader from "@/app/components/PageHeader";
+import AdminPageHeader from "@/app/components/AdminPageHeader";
+import { AIcon } from "@/app/components/AdminIcons";
 import Avatar from "@/app/components/Avatar";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { formatDateDDMMYYYY } from "@/lib/date-format";
@@ -205,298 +206,235 @@ export default function AdminUsersPage() {
     }
   }
 
+  const date = (d: string | null, empty = "—") => (d ? new Date(d).toLocaleDateString() : empty);
+
   return (
     <div className="page-wrap">
-      <div className="app-container">
-        <PageHeader title="Manage users" subtitle="Every account on the platform.">
-          <button className="btn" onClick={() => router.push("/admin")}>
-              <i className="fas fa-arrow-left"></i> Admin
-            </button>
-        </PageHeader>
+      <AdminPageHeader section="People" title="Manage" serif="users" subtitle="Every account on the platform.">
+        <button className="btn btn-ghost" onClick={() => router.push("/admin")}>
+          {AIcon.back()} Admin
+        </button>
+      </AdminPageHeader>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "0.75rem", marginTop: "1rem" }}>
-          {[
-            { label: "Total users", value: stats.total },
-            { label: "Logged in", value: stats.loggedIn },
-            { label: "Students", value: stats.students },
-            { label: "Scribes", value: stats.scribes },
-            { label: "Admins", value: stats.admins },
-          ].map((card) => (
-            <div key={card.label} style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "0.9rem 1rem" }}>
-              <div style={{ color: "var(--text-secondary)", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>{card.label}</div>
-              <div style={{ fontSize: "1.5rem", fontWeight: 700, marginTop: "0.35rem" }}>{card.value}</div>
-            </div>
-          ))}
-        </div>
-
-        <div
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--border-blue)",
-            borderRadius: "12px",
-            padding: "1rem",
-            marginTop: "1rem",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "0.75rem",
-          }}
-        >
-          <div>
-            <div style={{ fontWeight: 700 }}>Start a new level</div>
-            <div style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>
-              Advances every student/scribe at your university one level (100L → 200L, etc.), and graduates anyone
-              already at 500L. Only available in May or July, once per window.
-              {levelStatus && !levelStatus.inWindow && " It isn't May or July right now."}
-              {levelStatus?.inWindow && levelStatus.lockedForThisWindow && " Already used for this window."}
-              {levelStatus?.lastLevelAdvanceAt &&
-                ` Last run: ${new Date(levelStatus.lastLevelAdvanceAt).toLocaleDateString()}.`}
-            </div>
+      <div className="three-col is-compact mb-24">
+        {[
+          { label: "Total users", value: stats.total },
+          { label: "Logged in", value: stats.loggedIn },
+          { label: "Students", value: stats.students },
+          { label: "Scribes", value: stats.scribes },
+          { label: "Admins", value: stats.admins },
+        ].map((card) => (
+          <div key={card.label} className="stat-tile">
+            <div className="label">{card.label}</div>
+            <div className="value">{card.value}</div>
           </div>
-          <button
-            className="btn btn-primary"
-            disabled={!levelStatus?.eligibleNow || levelBusy}
-            onClick={handleAdvanceLevel}
-          >
-            {levelBusy ? "Working…" : "Start new level"}
-          </button>
+        ))}
+      </div>
+
+      <div className="panel panel-row mb-24">
+        <div>
+          <div className="row-title">Start a new level</div>
+          <p className="panel-desc">
+            Advances every student/scribe at your university one level (100L → 200L, etc.), and graduates anyone already at 500L.
+            Only available in May or July, once per window.
+            {levelStatus && !levelStatus.inWindow && " It isn't May or July right now."}
+            {levelStatus?.inWindow && levelStatus.lockedForThisWindow && " Already used for this window."}
+            {levelStatus?.lastLevelAdvanceAt && ` Last run: ${new Date(levelStatus.lastLevelAdvanceAt).toLocaleDateString()}.`}
+          </p>
         </div>
-        {levelMessage && <p style={{ fontSize: "0.85rem", marginTop: "0.5rem" }}>{levelMessage}</p>}
+        <button className="btn btn-primary" disabled={!levelStatus?.eligibleNow || levelBusy} onClick={handleAdvanceLevel}>
+          {levelBusy ? "Working…" : "Start new level"}
+        </button>
+      </div>
+      {levelMessage && <div className="notice">{levelMessage}</div>}
 
-        <p style={{ color: "var(--text-secondary)", marginTop: "1rem", fontSize: "0.9rem" }}>
-          Search any student, scribe, or admin at your university to review their academic profile, login history, and activity. Admins cannot be banned or demoted here; those changes must be made directly in the database.
-        </p>
+      <p className="panel-desc">
+        Search any student, scribe, or admin at your university to review their academic profile, login history, and activity. Admins cannot be banned or demoted here; those changes must be made directly in the database.
+      </p>
 
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by name or email..."
-          style={{ width: "100%", maxWidth: 420, padding: "0.7rem", borderRadius: "8px", border: "1px solid var(--border-blue)", marginTop: "1rem" }}
-        />
-        {searching && <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: "0.5rem" }}>Searching...</p>}
-        {actionMessage && <p style={{ color: "var(--text-success)", marginTop: "0.6rem" }}>{actionMessage}</p>}
+      <div className="search-field mb-16" style={{ maxWidth: 420 }}>
+        {AIcon.search()}
+        <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or email..." />
+      </div>
+      {searching && <p className="panel-desc">Searching...</p>}
+      {actionMessage && <div className="notice">{actionMessage}</div>}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem", marginTop: "1rem" }}>
-          {results.map((u) => {
-            const isBanned = Boolean(u.bannedAt);
-            const online = isUserOnline(u.lastSeenAt);
-            return (
-              <div
-                key={u.id}
-                style={{
-                  background: "var(--surface)",
-                  border: isBanned ? "2px solid var(--text-danger)" : online ? "1px solid #22c55e" : "1px solid var(--border-blue)",
-                  boxShadow: online ? "0 0 0 1px rgba(34,197,94,0.35), 0 0 12px rgba(34,197,94,0.22)" : "none",
-                  borderRadius: "12px",
-                  padding: "1rem",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.6rem" }}>
-                  <div style={{ display: "flex", gap: "0.6rem", alignItems: "flex-start" }}>
-                  <Avatar name={u.fullName} imageUrl={u.avatarUrl} size="sm" />
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", flexWrap: "wrap" }}>
-                      <strong>{u.fullName}</strong>
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "0.35rem",
-                          fontSize: "0.72rem",
-                          fontWeight: 700,
-                          color: online ? "#16a34a" : "var(--text-secondary)",
-                        }}
-                      >
-                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: online ? "#22c55e" : "#94a3b8", boxShadow: online ? "0 0 8px rgba(34,197,94,0.8)" : "none" }}></span>
-                        {online ? "Online" : "Offline"}
-                      </span>
-                      <span style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>({u.role})</span>
-                    </div>
-                    <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>{u.email}</div>
-                    <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
-                      {u.departmentName ? `${u.departmentName}` : "Department not set"}
-                      {u.level ? ` • ${u.level}` : " • level pending"}
-                    </div>
-                    <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
-                      Joined {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}
-                      {u.lastLoginAt ? ` • Last login ${new Date(u.lastLoginAt).toLocaleDateString()}` : " • Never logged in"}
-                      {u.lastSeenAt ? ` • Last seen ${new Date(u.lastSeenAt).toLocaleDateString()}` : ""}
-                    </div>
-                    <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", marginTop: "0.5rem", fontSize: "0.78rem", color: "var(--text-secondary)" }}>
-                      <span>Library: {u.noteCount}</span>
-                      <span>Requests: {u.requestCount}</span>
-                      <span>Purchases: {u.purchaseCount}</span>
-                      <span>Followers: {u.followingCount}</span>
-                      <span>Reports: {u.reportCount}</span>
-                    </div>
-                    {isBanned && (
-                      <div style={{ fontSize: "0.8rem", color: "var(--text-danger)", marginTop: "0.4rem" }}>
-                        Banned {u.banExpiresAt ? `until ${new Date(u.banExpiresAt).toLocaleDateString()}` : "until further notice"}
-                        {u.banReason && ` — "${u.banReason}"`}
-                      </div>
-                    )}
-                  </div>
-                  </div>
+      {!searching && results.length === 0 && (
+        <div className="empty-state">
+          <div className="empty-icon">{AIcon.search()}</div>
+          <h3 className="empty-title">No users found</h3>
+          <p className="empty-desc">Try a different name or email.</p>
+        </div>
+      )}
 
-                  <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
-                    <button className="btn" onClick={() => openUserDetails(u.id)}>
-                      <i className="fas fa-info-circle"></i> Details
-                    </button>
-                    {u.role === "ADMIN" ? (
-                      <span className="btn" style={{ opacity: 0.7, cursor: "not-allowed" }}>
-                        Admin protected
-                      </span>
-                    ) : isBanned ? (
-                      <button className="btn" style={{ background: "var(--text-success)", borderColor: "var(--text-success)", color: "white" }} onClick={() => handleUnban(u.id)} disabled={busyId === u.id}>
-                        <i className="fas fa-unlock"></i> Unban
-                      </button>
-                    ) : banningId === u.id ? null : (
-                      <button className="btn" style={{ background: "var(--text-danger)", borderColor: "var(--text-danger)", color: "white" }} onClick={() => setBanningId(u.id)}>
-                        <i className="fas fa-ban"></i> Ban
-                      </button>
-                    )}
-                  </div>
+      <div className="stack-10">
+        {results.map((u) => {
+          const isBanned = Boolean(u.bannedAt);
+          const online = isUserOnline(u.lastSeenAt);
+          return (
+            <div key={u.id} className={`person-card${isBanned ? " is-banned" : online ? " is-online" : ""}`}>
+              <Avatar name={u.fullName} imageUrl={u.avatarUrl} size="sm" />
+              <div className="person-info">
+                <div className="person-name-row">
+                  <span className="person-name">{u.fullName}</span>
+                  <span className="status">{u.role}</span>
+                  {isBanned && <span className="status danger">Banned</span>}
+                  <span className={`person-meta${online ? " is-on" : ""}`}>
+                    <span className={`dot${online ? " on" : ""}`}></span>
+                    {online ? "Online" : "Offline"}
+                  </span>
                 </div>
-
-                {banningId === u.id && (
-                  <div style={{ marginTop: "0.8rem", display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-                    <textarea
-                      value={banReason}
-                      onChange={(e) => setBanReason(e.target.value)}
-                      rows={2}
-                      placeholder="Reason (optional) — included in their email"
-                      style={{ padding: "0.5rem", borderRadius: "8px", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem" }}
-                    />
-                    <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                      Duration in days (leave blank for indefinite / until further notice)
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={banDurationDays}
-                      onChange={(e) => setBanDurationDays(e.target.value)}
-                      placeholder="e.g. 90"
-                      style={{ padding: "0.5rem", borderRadius: "8px", border: "1px solid var(--border-blue)", fontSize: "0.85rem" }}
-                    />
-                    <div style={{ display: "flex", gap: "0.6rem" }}>
-                      <button
-                        className="btn"
-                        style={{ background: "var(--text-danger)", borderColor: "var(--text-danger)", color: "white" }}
-                        onClick={() => handleBan(u.id)}
-                        disabled={busyId === u.id}
-                      >
-                        {busyId === u.id ? "Banning..." : "Confirm ban"}
-                      </button>
-                      <button className="btn" onClick={() => setBanningId(null)}>
-                        Cancel
-                      </button>
-                    </div>
+                <div className="person-sub">{u.email}</div>
+                <div className="person-sub">
+                  {u.departmentName ? u.departmentName : "Department not set"}
+                  {u.level ? ` • ${u.level}` : " • level pending"}
+                </div>
+                <div className="person-sub">
+                  Joined {date(u.createdAt)}
+                  {u.lastLoginAt ? ` • Last login ${date(u.lastLoginAt)}` : " • Never logged in"}
+                  {u.lastSeenAt ? ` • Last seen ${date(u.lastSeenAt)}` : ""}
+                </div>
+                <div className="person-stats" style={{ marginTop: 8 }}>
+                  <span>Library: <strong>{u.noteCount}</strong></span>
+                  <span>Requests: <strong>{u.requestCount}</strong></span>
+                  <span>Purchases: <strong>{u.purchaseCount}</strong></span>
+                  <span>Followers: <strong>{u.followingCount}</strong></span>
+                  <span>Reports: <strong>{u.reportCount}</strong></span>
+                </div>
+                {isBanned && (
+                  <div className="person-sub text-danger" style={{ marginTop: 6 }}>
+                    Banned {u.banExpiresAt ? `until ${date(u.banExpiresAt)}` : "until further notice"}
+                    {u.banReason && ` — "${u.banReason}"`}
                   </div>
                 )}
               </div>
-            );
-          })}
-        </div>
 
-        {selectedUser && (
-          <div className="admin-user-modal-overlay" onClick={() => setSelectedUser(null)}>
-            <div className="admin-user-modal" onClick={(e) => e.stopPropagation()}>
-              <div className="admin-user-modal-header">
-                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
-                  <h3 style={{ margin: 0 }}>{selectedUser.fullName}</h3>
-                  <span style={{ fontSize: "0.72rem", color: "var(--text-secondary)" }}>({selectedUser.role})</span>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", fontSize: "0.72rem", color: selectedUser.isOnline ? "#16a34a" : "var(--text-secondary)", fontWeight: 700 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: selectedUser.isOnline ? "#22c55e" : "#94a3b8" }}></span>
-                    {selectedUser.isOnline ? "Online now" : "Offline"}
-                  </span>
-                </div>
-                <div style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>{selectedUser.email}</div>
-                <button className="btn admin-user-modal-close" onClick={() => setSelectedUser(null)}>Close</button>
+              <div className="request-actions">
+                <button className="btn btn-ghost" onClick={() => openUserDetails(u.id)}>
+                  {AIcon.eye()} Details
+                </button>
+                {u.role === "ADMIN" ? (
+                  <span className="status">Admin protected</span>
+                ) : isBanned ? (
+                  <button className="btn btn-success" onClick={() => handleUnban(u.id)} disabled={busyId === u.id}>
+                    Unban
+                  </button>
+                ) : banningId === u.id ? null : (
+                  <button className="btn btn-danger" onClick={() => setBanningId(u.id)}>
+                    Ban
+                  </button>
+                )}
               </div>
 
-              <div className="admin-user-stat-grid">
-                {[
-                  { label: "Department", value: selectedUser.departmentName || "Not set" },
-                  { label: "Level", value: selectedUser.level || "Pending" },
-                  { label: "Joined", value: selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleDateString() : "—" },
-                  { label: "Last login", value: selectedUser.lastLoginAt ? new Date(selectedUser.lastLoginAt).toLocaleDateString() : "Never" },
-                  { label: "Last seen", value: selectedUser.lastSeenAt ? new Date(selectedUser.lastSeenAt).toLocaleDateString() : "Never" },
-                  { label: "Status", value: selectedUser.bannedAt ? "Banned" : "Active" },
-                ].map((item) => (
-                  <div key={item.label} className="admin-user-stat-card">
-                    <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{item.label}</div>
-                    <div style={{ marginTop: "0.35rem", fontWeight: 700 }}>{item.value}</div>
+              {banningId === u.id && (
+                <div className="request-extra">
+                  <textarea
+                    className="textarea"
+                    value={banReason}
+                    onChange={(e) => setBanReason(e.target.value)}
+                    rows={2}
+                    placeholder="Reason (optional) — included in their email"
+                  />
+                  <div className="form-field" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Duration in days (leave blank for indefinite / until further notice)</label>
+                    <input className="input" type="number" min={1} value={banDurationDays} onChange={(e) => setBanDurationDays(e.target.value)} placeholder="e.g. 90" />
+                  </div>
+                  <div className="form-actions">
+                    <button className="btn btn-danger" onClick={() => handleBan(u.id)} disabled={busyId === u.id}>
+                      {busyId === u.id ? "Banning..." : "Confirm ban"}
+                    </button>
+                    <button className="btn btn-ghost" onClick={() => setBanningId(null)}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {selectedUser && (
+        <div className="admin-user-modal-overlay" onClick={() => setSelectedUser(null)}>
+          <div className="admin-user-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="admin-user-modal-header">
+              <div className="person-name-row">
+                <h3 className="panel-title" style={{ margin: 0 }}>{selectedUser.fullName}</h3>
+                <span className="status">{selectedUser.role}</span>
+                <span className={`person-meta${selectedUser.isOnline ? " is-on" : ""}`}>
+                  <span className={`dot${selectedUser.isOnline ? " on" : ""}`}></span>
+                  {selectedUser.isOnline ? "Online now" : "Offline"}
+                </span>
+              </div>
+              <div className="person-sub">{selectedUser.email}</div>
+              <button className="btn btn-ghost admin-user-modal-close" onClick={() => setSelectedUser(null)}>Close</button>
+            </div>
+
+            <div className="admin-user-stat-grid">
+              {[
+                { label: "Department", value: selectedUser.departmentName || "Not set" },
+                { label: "Level", value: selectedUser.level || "Pending" },
+                { label: "Joined", value: date(selectedUser.createdAt) },
+                { label: "Last login", value: date(selectedUser.lastLoginAt, "Never") },
+                { label: "Last seen", value: date(selectedUser.lastSeenAt, "Never") },
+                { label: "Status", value: selectedUser.bannedAt ? "Banned" : "Active" },
+              ].map((item) => (
+                <div key={item.label} className="admin-user-stat-card">
+                  <div className="k">{item.label}</div>
+                  <div className="v">{item.value}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="admin-user-detail-grid">
+              <div className="detail-card">
+                <h4>Purchases</h4>
+                {selectedUser.purchases.length === 0 ? <div className="person-sub">No purchases yet.</div> : selectedUser.purchases.map((p) => (
+                  <div key={p.id} className="detail-item">
+                    <div className="t">{p.title}</div>
+                    <div className="s">{p.courseCode} • {p.courseName}</div>
+                    <div className="s">Paid ₦{p.amountPaid.toLocaleString()} • {date(p.purchasedAt)}</div>
                   </div>
                 ))}
               </div>
 
-              <div className="admin-user-detail-grid">
-                <div style={{ background: "var(--surface-strong)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "0.9rem" }}>
-                  <h4 style={{ margin: "0 0 0.75rem", fontSize: "1rem" }}>Purchases</h4>
-                  {selectedUser.purchases.length === 0 ? <div style={{ color: "var(--text-secondary)" }}>No purchases yet.</div> : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-                      {selectedUser.purchases.map((p) => (
-                        <div key={p.id} style={{ borderBottom: "1px solid var(--border-blue)", paddingBottom: "0.5rem" }}>
-                          <div style={{ fontWeight: 700 }}>{p.title}</div>
-                          <div style={{ color: "var(--text-secondary)", fontSize: "0.8rem" }}>{p.courseCode} • {p.courseName}</div>
-                          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>Paid ₦{p.amountPaid.toLocaleString()} • {new Date(p.purchasedAt).toLocaleDateString()}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+              <div className="detail-card">
+                <h4>Requests</h4>
+                {selectedUser.requests.length === 0 ? <div className="person-sub">No requests yet.</div> : selectedUser.requests.map((r) => (
+                  <div key={r.id} className="detail-item">
+                    <div className="t">{r.requestedTitle}</div>
+                    <div className="s">{r.status} • {r.voteCount} vote{r.voteCount === 1 ? "" : "s"}</div>
+                    <div className="s">{date(r.createdAt)}</div>
+                  </div>
+                ))}
+              </div>
 
-                <div style={{ background: "var(--surface-strong)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "0.9rem" }}>
-                  <h4 style={{ margin: "0 0 0.75rem", fontSize: "1rem" }}>Requests</h4>
-                  {selectedUser.requests.length === 0 ? <div style={{ color: "var(--text-secondary)" }}>No requests yet.</div> : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-                      {selectedUser.requests.map((r) => (
-                        <div key={r.id} style={{ borderBottom: "1px solid var(--border-blue)", paddingBottom: "0.5rem" }}>
-                          <div style={{ fontWeight: 700 }}>{r.requestedTitle}</div>
-                          <div style={{ color: "var(--text-secondary)", fontSize: "0.75rem" }}>{r.status} • {r.voteCount} vote{r.voteCount === 1 ? "" : "s"}</div>
-                          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{new Date(r.createdAt).toLocaleDateString()}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+              <div className="detail-card">
+                <h4>Library</h4>
+                {selectedUser.notes.length === 0 ? <div className="person-sub">No uploaded notes.</div> : selectedUser.notes.map((n) => (
+                  <div key={n.id} className="detail-item">
+                    <div className="t">{n.title}</div>
+                    <div className="s">{n.courseCode || "General"} • {n.status}</div>
+                    <div className="s">{date(n.createdAt)}</div>
+                  </div>
+                ))}
+              </div>
 
-                <div style={{ background: "var(--surface-strong)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "0.9rem" }}>
-                  <h4 style={{ margin: "0 0 0.75rem", fontSize: "1rem" }}>Library</h4>
-                  {selectedUser.notes.length === 0 ? <div style={{ color: "var(--text-secondary)" }}>No uploaded notes.</div> : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-                      {selectedUser.notes.map((n) => (
-                        <div key={n.id} style={{ borderBottom: "1px solid var(--border-blue)", paddingBottom: "0.5rem" }}>
-                          <div style={{ fontWeight: 700 }}>{n.title}</div>
-                          <div style={{ color: "var(--text-secondary)", fontSize: "0.75rem" }}>{n.courseCode || "General"} • {n.status}</div>
-                          <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{new Date(n.createdAt).toLocaleDateString()}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ background: "var(--surface-strong)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "0.9rem" }}>
-                  <h4 style={{ margin: "0 0 0.75rem", fontSize: "1rem" }}>Following</h4>
-                  {selectedUser.following.length === 0 ? <div style={{ color: "var(--text-secondary)" }}>Not following anyone yet.</div> : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                      {selectedUser.following.map((person) => (
-                        <div key={person.id} style={{ fontSize: "0.85rem" }}>{person.fullName} ({person.role})</div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+              <div className="detail-card">
+                <h4>Following</h4>
+                {selectedUser.following.length === 0 ? <div className="person-sub">Not following anyone yet.</div> : selectedUser.following.map((person) => (
+                  <div key={person.id} className="detail-item">
+                    <div className="t">{person.fullName}</div>
+                    <div className="s">{person.role}</div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {detailsLoading && (
-          <div style={{ marginTop: "1rem", color: "var(--text-secondary)" }}>Loading details…</div>
-        )}
-      </div>
+      {detailsLoading && <p className="panel-desc" style={{ marginTop: 16 }}>Loading details…</p>}
     </div>
   );
 }

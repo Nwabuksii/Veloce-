@@ -3,9 +3,11 @@
 import { useEffect, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser, saveUser, StoredUser } from "@/lib/client-session";
-import PageHeader from "@/app/components/PageHeader";
+import AdminPageHeader from "@/app/components/AdminPageHeader";
+import { AIcon } from "@/app/components/AdminIcons";
+import "@/app/admin/admin.css";
 import { SkeletonCard } from "@/app/components/Skeleton";
-import ThemeToggle from "@/app/components/ThemeToggle";
+import { toggleTheme } from "@/app/components/toggle-theme";
 import AvatarPicker from "@/app/components/AvatarPicker";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 
@@ -42,6 +44,11 @@ export default function SettingsPage() {
   const router = useRouter();
   const [user, setUser] = useState<StoredUser | null>(null);
   const [tab, setTab] = useState<Tab>("about");
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    setIsDark(document.documentElement.getAttribute("data-theme") === "dark");
+  }, []);
 
   // Contact tab
   const [adminEmail, setAdminEmail] = useState<string | null>(null);
@@ -142,182 +149,133 @@ export default function SettingsPage() {
 
   return (
     <div className="page-wrap">
-      <div className="app-container" style={{ maxWidth: 640 }}>
-        <PageHeader title="Settings" subtitle="Manage your account and preferences.">
-          <button className="btn" onClick={() => router.push("/dashboard")}>
-              <i className="fas fa-arrow-left"></i> Catalog
-            </button>
-        </PageHeader>
+      <div className="narrow">
+        <AdminPageHeader section="Account" title="Your" serif="settings" subtitle="Manage your account and preferences.">
+          <button className="btn btn-ghost" onClick={() => router.push("/dashboard")}>
+            {AIcon.back()} Catalog
+          </button>
+        </AdminPageHeader>
 
-        <div style={{ display: "flex", gap: "0.5rem", marginTop: "1.5rem", flexWrap: "wrap" }}>
+        <div className="tabs mb-24" style={{ width: "fit-content", maxWidth: "100%" }}>
           {([
-            { key: "about", label: "About", icon: "fa-circle-info" },
-            { key: "faq", label: "FAQ", icon: "fa-circle-question" },
-            { key: "contact", label: "Contact admin", icon: "fa-envelope" },
-            { key: "account", label: "Account", icon: "fa-user-gear" },
-            { key: "display", label: "Display", icon: "fa-moon" },
-          ] as { key: Tab; label: string; icon: string }[]).map((t) => (
-            <button
-              key={t.key}
-              className={`btn ${tab === t.key ? "btn-primary" : ""}`}
-              onClick={() => setTab(t.key)}
-            >
-              <i className={`fas ${t.icon}`}></i> {t.label}
+            { key: "about", label: "About" },
+            { key: "faq", label: "FAQ" },
+            { key: "contact", label: "Contact admin" },
+            { key: "account", label: "Account" },
+            { key: "display", label: "Display" },
+          ] as { key: Tab; label: string }[]).map((t) => (
+            <button key={t.key} className={`tab${tab === t.key ? " is-active" : ""}`} onClick={() => setTab(t.key)}>
+              {t.label}
             </button>
           ))}
         </div>
 
-        <div style={{ marginTop: "1.5rem" }}>
-          {tab === "about" && (
-            <div style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "1.2rem", lineHeight: 1.7, color: "var(--text-secondary)" }}>
-              <h2 style={{ marginBottom: "0.6rem" }}>About Veloce</h2>
-              <p>
-                Veloce is a marketplace where students turn the notes they've already taken into something other
-                students can buy — organized by course and block, so anyone can find exactly the topic they're
-                stuck on.
-              </p>
-              <p style={{ marginTop: "0.8rem" }}>
-                Built for students, by a student who got tired of scrambling for good notes before exams —
-                Veloce started as a way to make that easier for everyone else too.
-              </p>
-              <p style={{ marginTop: "0.8rem" }}>
-                Have feedback or an idea for what's next? Use the Contact tab — we read every message.
-              </p>
+        {tab === "about" && (
+          <div className="panel prose">
+            <h2 className="panel-title">{AIcon.spark()} About Veloce</h2>
+            <p>
+              Veloce is a marketplace where students turn the notes they've already taken into something other
+              students can buy — organized by course and block, so anyone can find exactly the topic they're
+              stuck on.
+            </p>
+            <p>
+              Built for students, by a student who got tired of scrambling for good notes before exams —
+              Veloce started as a way to make that easier for everyone else too.
+            </p>
+            <p>Have feedback or an idea for what's next? Use the Contact tab — we read every message.</p>
+          </div>
+        )}
+
+        {tab === "faq" && (
+          <div className="stack-10">
+            {FAQ_ITEMS.map((item, i) => (
+              <details key={i} className="faq">
+                <summary>{item.q}</summary>
+                <p>{item.a}</p>
+              </details>
+            ))}
+          </div>
+        )}
+
+        {tab === "contact" && (
+          <div className="panel">
+            <h2 className="panel-title">{AIcon.mail()} Contact your admin</h2>
+            {contactLoading && <SkeletonCard height="4.5rem" />}
+            {!contactLoading && adminEmail && (
+              <>
+                <p className="panel-desc">Questions, refund requests, or anything else — reach your university's admin directly.</p>
+                <a className="btn btn-primary" href={mailtoHref}>
+                  {AIcon.mail()} Email {adminEmail}
+                </a>
+              </>
+            )}
+            {!contactLoading && !adminEmail && (
+              <p className="panel-desc">No admin is set up for your university yet — check back later.</p>
+            )}
+          </div>
+        )}
+
+        {tab === "account" && (
+          <div className="panel">
+            <h2 className="panel-title">{AIcon.user()} Account</h2>
+            <p className="panel-desc">Change your email or password. Your name can't be changed here.</p>
+
+            <div className="info-list mb-16">
+              <div className="info-row"><span className="k">Name</span><span className="v">{user.fullName}</span></div>
+              <div className="info-row"><span className="k">School</span><span className="v">{profileInfo?.universityName || "—"}</span></div>
+              <div className="info-row"><span className="k">Department</span><span className="v">{profileInfo?.departmentName || "Not set"}</span></div>
+              <div className="info-row"><span className="k">Level</span><span className="v">{profileInfo?.level || "Not set"}</span></div>
             </div>
-          )}
 
-          {tab === "faq" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.7rem" }}>
-              {FAQ_ITEMS.map((item, i) => (
-                <details
-                  key={i}
-                  style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "8px", padding: "0.9rem 1rem" }}
-                >
-                  <summary style={{ cursor: "pointer", fontWeight: 600, color: "var(--text-primary)" }}>{item.q}</summary>
-                  <p style={{ marginTop: "0.6rem", color: "var(--text-secondary)", fontSize: "0.9rem", lineHeight: 1.6 }}>{item.a}</p>
-                </details>
-              ))}
-            </div>
-          )}
+            <form onSubmit={handleAccountSubmit}>
+              <div className="form-field">
+                <label className="form-label">Email</label>
+                <input className="input" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
+              </div>
 
-          {tab === "contact" && (
-            <div style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "1.2rem" }}>
-              <h2 style={{ marginBottom: "0.6rem" }}>Contact your admin</h2>
-              {contactLoading && <div style={{ marginTop: "1rem" }}><SkeletonCard height="4.5rem" /></div>}
-              {!contactLoading && adminEmail && (
-                <>
-                  <p style={{ color: "var(--text-secondary)", marginBottom: "1rem" }}>
-                    Questions, refund requests, or anything else — reach your university's admin directly.
-                  </p>
-                  <a className="btn btn-primary" href={mailtoHref}>
-                    <i className="fas fa-envelope"></i> Email {adminEmail}
-                  </a>
-                </>
-              )}
-              {!contactLoading && !adminEmail && (
-                <p style={{ color: "var(--text-secondary)" }}>
-                  No admin is set up for your university yet — check back later.
-                </p>
-              )}
-            </div>
-          )}
+              <div className="form-field">
+                <label className="form-label">New password (leave blank to keep current)</label>
+                <input className="input" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="At least 8 characters" />
+              </div>
 
-          {tab === "account" && (
-            <div style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "1.2rem" }}>
-              <h2 style={{ marginBottom: "0.3rem" }}>Account</h2>
-              <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "1rem" }}>
-                Change your email or password. Your name can't be changed here.
-              </p>
+              <div className="form-field">
+                <label className="form-label">Current password (required to save any change)</label>
+                <input className="input" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+              </div>
 
-              {user && (
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-                    gap: "0.75rem",
-                    background: "var(--surface-strong)",
-                    border: "1px solid var(--border-blue)",
-                    borderRadius: "10px",
-                    padding: "0.85rem 1rem",
-                    marginBottom: "1.25rem",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Name</div>
-                    <div style={{ fontWeight: 600, marginTop: "0.2rem" }}>{user.fullName}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>School</div>
-                    <div style={{ fontWeight: 600, marginTop: "0.2rem" }}>{profileInfo?.universityName || "—"}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Department</div>
-                    <div style={{ fontWeight: 600, marginTop: "0.2rem" }}>{profileInfo?.departmentName || "Not set"}</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Level</div>
-                    <div style={{ fontWeight: 600, marginTop: "0.2rem" }}>{profileInfo?.level || "Not set"}</div>
-                  </div>
-                </div>
-              )}
+              {accountStatus && <div className={`form-status${accountStatus === "Saved." ? " is-ok" : ""}`}>{accountStatus}</div>}
 
-              <form onSubmit={handleAccountSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                <label style={{ display: "flex", flexDirection: "column", gap: "0.3rem", fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-                  Email
-                  <input
-                    type="email"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
-                    style={{ padding: "0.6rem", borderRadius: "8px", border: "1px solid var(--border-blue)" }}
-                  />
-                </label>
-
-                <label style={{ display: "flex", flexDirection: "column", gap: "0.3rem", fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-                  New password (leave blank to keep current)
-                  <input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="At least 8 characters"
-                    style={{ padding: "0.6rem", borderRadius: "8px", border: "1px solid var(--border-blue)" }}
-                  />
-                </label>
-
-                <label style={{ display: "flex", flexDirection: "column", gap: "0.3rem", fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-                  Current password (required to save any change)
-                  <input
-                    type="password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    style={{ padding: "0.6rem", borderRadius: "8px", border: "1px solid var(--border-blue)" }}
-                  />
-                </label>
-
-                {accountStatus && (
-                  <p style={{ color: accountStatus === "Saved." ? "var(--text-success)" : "var(--text-danger)", fontSize: "0.85rem" }}>
-                    {accountStatus}
-                  </p>
-                )}
-
+              <div className="flex-end">
                 <button className="btn btn-primary" type="submit" disabled={accountSubmitting}>
                   {accountSubmitting ? "Saving..." : "Save changes"}
                 </button>
-              </form>
-            </div>
-          )}
-          {tab === "display" && (
-            <div style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "1.2rem" }}>
-              <h2 style={{ marginBottom: "0.3rem" }}>Display</h2>
-              <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginBottom: "1rem" }}>
-                Choose how Veloce looks, and how you show up around the app.
-              </p>
-              <AvatarPicker />
-              <div style={{ marginTop: "1rem" }}>
-                <ThemeToggle />
               </div>
-            </div>
-          )}
-        </div>
+            </form>
+          </div>
+        )}
+
+        {tab === "display" && (
+          <div className="panel">
+              <h2 className="panel-title">{AIcon.spark()} Appearance</h2>
+              <p className="panel-desc">Choose how Veloce looks, and how you show up around the app.</p>
+              <AvatarPicker />
+              <div className="info-list">
+                <div className="info-row">
+                  <span className="k">Dark mode — a darker, high-contrast look across the whole app</span>
+                  <button
+                    role="switch"
+                    aria-checked={isDark}
+                    aria-label="Toggle dark mode"
+                    className="toggle-switch press-on-tap"
+                    onClick={() => {
+                      toggleTheme();
+                      setIsDark((d) => !d);
+                    }}
+                  />
+                </div>
+              </div>
+          </div>
+        )}
       </div>
     </div>
   );

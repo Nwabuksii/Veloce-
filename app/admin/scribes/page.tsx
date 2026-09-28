@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import PageHeader from "@/app/components/PageHeader";
+import AdminPageHeader from "@/app/components/AdminPageHeader";
+import { AIcon } from "@/app/components/AdminIcons";
 import Avatar from "@/app/components/Avatar";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { friendlyErrorMessage } from "@/lib/api-client";
@@ -92,109 +93,93 @@ export default function ManageScribesPage() {
 
   return (
     <div className="page-wrap">
-      <div className="app-container">
-        <PageHeader title="Manage scribes" subtitle="Trust levels, suspensions and reinstatements.">
-          <button className="btn" onClick={() => router.push("/admin")}>
-              <i className="fas fa-arrow-left"></i> Admin
-            </button>
-          <button className="btn" onClick={() => router.push("/admin/appeals")}>
-                <i className="fas fa-undo"></i> Appeals
-              </button>
-          <button className="btn" onClick={() => router.push("/admin/reports")}>
-                <i className="fas fa-exclamation-triangle"></i> Reports
-              </button>
-        </PageHeader>
+      <AdminPageHeader
+        section="Trust"
+        title="Manage"
+        serif="scribes"
+        subtitle="Trust levels, suspensions and reinstatements. Demoting reverts them to Student on next login and opens an appeal window."
+      >
+        <button className="btn btn-ghost" onClick={() => router.push("/admin/appeals")}>
+          {AIcon.warn()} Appeals
+        </button>
+        <button className="btn btn-ghost" onClick={() => router.push("/admin/reports")}>
+          {AIcon.flag()} Reports
+        </button>
+        <button className="btn btn-ghost" onClick={() => router.push("/admin")}>
+          {AIcon.back()} Admin
+        </button>
+      </AdminPageHeader>
 
-        <p style={{ color: "var(--text-secondary)", marginTop: "1rem", fontSize: "0.9rem" }}>
-          Demoting a scribe reverts them to Student on their next login and lets them submit one reinstatement
-          appeal a month. Their existing uploads, sales, and reviews stay visible on their profile, just marked
-          as no longer active. Promoting a scribe makes them a full Admin for your university.
-        </p>
+      <p className="panel-desc">
+        Demoting a scribe reverts them to Student on their next login and lets them submit one reinstatement
+        appeal a month. Their existing uploads, sales, and reviews stay visible on their profile, just marked
+        as no longer active. Promoting a scribe makes them a full Admin for your university.
+      </p>
 
-        {loading && <SkeletonList rows={3} />}
-        {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}
-        {actionMessage && <p style={{ color: "var(--text-success)", marginTop: "1rem" }}>{actionMessage}</p>}
-        {!loading && !error && scribes.length === 0 && (
-          <p style={{ color: "var(--text-secondary)", marginTop: "1rem" }}>No active scribes right now.</p>
-        )}
+      {loading && <SkeletonList rows={3} />}
+      {error && <div className="auth-error">{error}</div>}
+      {actionMessage && <div className="notice">{actionMessage}</div>}
+      {!loading && !error && scribes.length === 0 && (
+        <div className="empty-state">
+          <div className="empty-icon">{AIcon.user()}</div>
+          <h3 className="empty-title">No active scribes</h3>
+          <p className="empty-desc">There are no active scribes right now.</p>
+        </div>
+      )}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem", marginTop: "1rem" }}>
-          {scribes.map((s) => (
-            <div
-              key={s.id}
-              style={{
-                background: "var(--surface)",
-                border: "1px solid var(--border-blue)",
-                borderRadius: "12px",
-                padding: "1rem",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: confirmingId === s.id ? "flex-start" : "center",
-                flexWrap: "wrap",
-                gap: "0.6rem",
-              }}
-            >
-              <div style={{ display: "flex", gap: "0.6rem", alignItems: "flex-start" }}>
-                <Avatar name={s.fullName} imageUrl={s.avatarUrl} size="sm" />
-                <div>
-                  <button
-                    onClick={() => router.push(`/scribe/${s.id}`)}
-                    style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontWeight: 600, color: "var(--text-primary)" }}
-                  >
-                    {s.fullName}
+      <div className="stack-10">
+        {scribes.map((s) => (
+          <div key={s.id} className="person-card">
+            <Avatar name={s.fullName} imageUrl={s.avatarUrl} size="sm" />
+            <div className="person-info">
+              <div className="person-name-row">
+                <button className="person-link person-name" onClick={() => router.push(`/scribe/${s.id}`)}>
+                  {s.fullName}
+                </button>
+              </div>
+              <div className="person-stats">
+                <span>{AIcon.mail()} {s.email}</span>
+                <span>{AIcon.book()} <strong>{s.uploadCount}</strong> upload{s.uploadCount === 1 ? "" : "s"}</span>
+              </div>
+            </div>
+
+            {confirmingId === s.id ? (
+              <div className="request-extra">
+                <textarea
+                  className="textarea"
+                  value={demoteReason}
+                  onChange={(e) => setDemoteReason(e.target.value)}
+                  rows={2}
+                  placeholder="Reason (optional) — shared with the scribe"
+                />
+                <div className="form-actions">
+                  <span className="person-sub text-danger" style={{ alignSelf: "center" }}>Demote for real?</span>
+                  <button className="btn btn-danger" onClick={() => handleDemote(s.id)}>
+                    Yes, demote
                   </button>
-                  <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-                    {s.email} · {s.uploadCount} upload{s.uploadCount === 1 ? "" : "s"}
-                  </div>
+                  <button
+                    className="btn btn-ghost"
+                    onClick={() => {
+                      setConfirmingId(null);
+                      setDemoteReason("");
+                    }}
+                  >
+                    Cancel
+                  </button>
                 </div>
               </div>
-
-              {confirmingId === s.id ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", width: "100%", maxWidth: 360 }}>
-                  <textarea
-                    value={demoteReason}
-                    onChange={(e) => setDemoteReason(e.target.value)}
-                    rows={2}
-                    placeholder="Reason (optional) — shared with the scribe"
-                    style={{ padding: "0.5rem", borderRadius: "8px", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem" }}
-                  />
-                  <div style={{ display: "flex", gap: "0.6rem", alignItems: "center" }}>
-                    <span style={{ fontSize: "0.85rem", color: "var(--text-danger)" }}>Demote for real?</span>
-                    <button
-                      className="btn"
-                      style={{ background: "var(--text-danger)", borderColor: "var(--text-danger)", color: "white" }}
-                      onClick={() => handleDemote(s.id)}
-                    >
-                      Yes, demote
-                    </button>
-                    <button
-                      className="btn"
-                      onClick={() => {
-                        setConfirmingId(null);
-                        setDemoteReason("");
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ display: "flex", gap: "0.6rem" }}>
-                  <button
-                    className="btn"
-                    onClick={() => handlePromote(s.id, s.fullName)}
-                    disabled={promotingId === s.id}
-                  >
-                    <i className="fas fa-user-shield"></i> {promotingId === s.id ? "Promoting..." : "Promote to Admin"}
-                  </button>
-                  <button className="btn" onClick={() => setConfirmingId(s.id)}>
-                    <i className="fas fa-user-minus"></i> Demote
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+            ) : (
+              <div className="request-actions">
+                <button className="btn btn-ghost" onClick={() => handlePromote(s.id, s.fullName)} disabled={promotingId === s.id}>
+                  {AIcon.shield()} {promotingId === s.id ? "Promoting..." : "Promote to Admin"}
+                </button>
+                <button className="btn btn-danger" onClick={() => setConfirmingId(s.id)}>
+                  Demote
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

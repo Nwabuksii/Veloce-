@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState, FormEvent, KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
-import PageHeader from "@/app/components/PageHeader";
+import AdminPageHeader from "@/app/components/AdminPageHeader";
+import { AIcon } from "@/app/components/AdminIcons";
 import Avatar from "@/app/components/Avatar";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { friendlyErrorMessage } from "@/lib/api-client";
@@ -32,15 +33,6 @@ const ROLE_OPTIONS: { value: Role; label: string }[] = [
   { value: "SCRIBE", label: "Scribes" },
   { value: "ADMIN", label: "Admins" },
 ];
-
-const inputStyle: React.CSSProperties = {
-  display: "block",
-  width: "100%",
-  padding: "0.6rem",
-  marginTop: "0.4rem",
-  borderRadius: "8px",
-  border: "1px solid var(--border-blue)",
-};
 
 // How the "sent to" line reads for 1, a few, or many people — same
 // shorthand the backend already uses for its own recipientSummary.
@@ -211,113 +203,67 @@ export default function AdminMessagesPage() {
 
   return (
     <div className="page-wrap">
-      <div className="app-container">
-        <PageHeader title="Message users" subtitle="Send a direct message to any user.">
-          <button className="btn" onClick={() => router.push("/admin")}>
-            <i className="fas fa-arrow-left"></i> Admin
-          </button>
-        </PageHeader>
+      <AdminPageHeader
+        section="Comms"
+        title="Message"
+        serif="users"
+        subtitle="Send a direct message or a broadcast to a group. Serious priority blocks the app until opened."
+      >
+        <button className="btn btn-ghost" onClick={() => router.push("/admin")}>
+          {AIcon.back()} Admin
+        </button>
+      </AdminPageHeader>
 
-        <div style={{ marginTop: "1.5rem", maxWidth: 520 }}>
-          <form onSubmit={handleSend} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            <div style={{ display: "flex", gap: "0.6rem" }}>
-              <button
-                type="button"
-                className={`btn ${audience === "individual" ? "btn-primary" : ""}`}
-                onClick={() => setAudience("individual")}
-              >
+      <div className="two-col">
+        <div className="panel">
+          <h2 className="panel-title">{AIcon.send()} Compose</h2>
+          <p className="panel-desc">Specific people or a group broadcast.</p>
+
+          <form onSubmit={handleSend}>
+            <div className="tabs mb-16" style={{ width: "fit-content" }}>
+              <button type="button" className={`tab${audience === "individual" ? " is-active" : ""}`} onClick={() => setAudience("individual")}>
                 Specific people
               </button>
-              <button
-                type="button"
-                className={`btn ${audience === "group" ? "btn-primary" : ""}`}
-                onClick={() => setAudience("group")}
-              >
+              <button type="button" className={`tab${audience === "group" ? " is-active" : ""}`} onClick={() => setAudience("group")}>
                 Group broadcast
               </button>
             </div>
 
             {audience === "individual" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+              <div className="form-field">
                 {recipients.length > 0 && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                  <div className="chip-row">
                     {recipients.map((r) => (
-                      <div
-                        key={r.id}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.5rem",
-                          background: "var(--bg-info)",
-                          borderRadius: "999px",
-                          padding: "0.3rem 0.7rem 0.3rem 0.35rem",
-                        }}
-                      >
+                      <div key={r.id} className="chip">
                         <Avatar name={r.fullName} imageUrl={r.avatarUrl} size="sm" />
-                        <span style={{ fontSize: "0.82rem" }}>{r.fullName}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeRecipient(r.id)}
-                          aria-label={`Remove ${r.fullName}`}
-                          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", fontSize: "0.85rem", lineHeight: 1 }}
-                        >
-                          <i className="fas fa-xmark"></i>
+                        <span>{r.fullName}</span>
+                        <button type="button" onClick={() => removeRecipient(r.id)} aria-label={`Remove ${r.fullName}`}>
+                          {AIcon.x()}
                         </button>
                       </div>
                     ))}
                   </div>
                 )}
 
-                <div style={{ position: "relative" }}>
-                  <label style={{ fontSize: "0.85rem", fontWeight: 500 }}>
-                    {recipients.length === 0 ? "Who's this for?" : "Add another"}
-                    <input
-                      ref={searchInputRef}
-                      type="text"
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      onKeyDown={handleSearchKeyDown}
-                      placeholder="Search name or email, then , for the next"
-                      style={inputStyle}
-                    />
-                  </label>
+                <div className="picker">
+                  <label className="form-label">{recipients.length === 0 ? "Who's this for?" : "Add another"}</label>
+                  <input
+                    ref={searchInputRef}
+                    className="input"
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={handleSearchKeyDown}
+                    placeholder="Search name or email, then , for the next"
+                  />
                   {results.length > 0 && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: "100%",
-                        left: 0,
-                        right: 0,
-                        background: "var(--surface)",
-                        border: "1px solid var(--border-blue)",
-                        borderRadius: "8px",
-                        marginTop: "0.3rem",
-                        zIndex: 10,
-                        boxShadow: "0 8px 20px -8px rgba(0,20,40,0.18)",
-                      }}
-                    >
+                    <div className="picker-menu">
                       {results.map((u) => (
-                        <button
-                          key={u.id}
-                          type="button"
-                          onClick={() => addRecipient(u)}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.6rem",
-                            width: "100%",
-                            textAlign: "left",
-                            padding: "0.6rem 0.8rem",
-                            background: "none",
-                            border: "none",
-                            cursor: "pointer",
-                            fontSize: "0.85rem",
-                          }}
-                        >
+                        <button key={u.id} type="button" className="picker-item" onClick={() => addRecipient(u)}>
                           <Avatar name={u.fullName} imageUrl={u.avatarUrl} size="sm" />
                           <div>
                             <strong>{u.fullName}</strong> · {u.role}
-                            <div style={{ color: "var(--text-secondary)", fontSize: "0.78rem" }}>{u.email}</div>
+                            <div className="sub">{u.email}</div>
                           </div>
                         </button>
                       ))}
@@ -328,24 +274,13 @@ export default function AdminMessagesPage() {
             )}
 
             {audience === "group" && (
-              <div
-                style={{
-                  background: "var(--surface)",
-                  border: "1px solid var(--border-blue)",
-                  borderRadius: "8px",
-                  padding: "0.8rem 1rem",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.5rem",
-                }}
-              >
-                <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.9rem", fontWeight: 600 }}>
+              <div className="check-list">
+                <label className="check-row is-all">
                   <input type="checkbox" checked={allChecked} onChange={toggleAll} />
                   All users
                 </label>
-                <div style={{ height: "1px", background: "var(--bg-info)" }} />
                 {ROLE_OPTIONS.map((opt) => (
-                  <label key={opt.value} style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem" }}>
+                  <label key={opt.value} className="check-row">
                     <input type="checkbox" checked={selectedRoles.includes(opt.value)} onChange={() => toggleRole(opt.value)} />
                     {opt.label}
                   </label>
@@ -353,129 +288,116 @@ export default function AdminMessagesPage() {
               </div>
             )}
 
-            <label style={{ fontSize: "0.85rem", fontWeight: 500 }}>
-              Subject
-              <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)} style={inputStyle} />
-            </label>
+            <div className="form-field">
+              <label className="form-label">Subject</label>
+              <input className="input" type="text" value={subject} onChange={(e) => setSubject(e.target.value)} />
+            </div>
 
-            <label style={{ fontSize: "0.85rem", fontWeight: 500 }}>
-              Message
-              <textarea
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                rows={5}
-                style={{ ...inputStyle, fontFamily: "inherit" }}
-              />
-            </label>
+            <div className="form-field">
+              <label className="form-label">Message</label>
+              <textarea className="textarea" value={body} onChange={(e) => setBody(e.target.value)} rows={5} />
+            </div>
 
-            <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
-              <div>
-                <div style={{ fontSize: "0.85rem", fontWeight: 500, marginBottom: "0.4rem" }}>Type</div>
-                <div style={{ display: "flex", gap: "0.4rem" }}>
-                  <button type="button" className={`tab${msgType === "TEXT" ? " is-active" : ""}`} onClick={() => setMsgType("TEXT")}>
-                    Message
-                  </button>
-                  <button type="button" className={`tab${msgType === "POLL" ? " is-active" : ""}`} onClick={() => setMsgType("POLL")}>
-                    <i className="fas fa-square-poll-vertical"></i> Poll
-                  </button>
-                </div>
+            <div className="form-field">
+              <label className="form-label">Type</label>
+              <div className="tabs" style={{ width: "fit-content" }}>
+                <button type="button" className={`tab${msgType === "TEXT" ? " is-active" : ""}`} onClick={() => setMsgType("TEXT")}>
+                  Message
+                </button>
+                <button type="button" className={`tab${msgType === "POLL" ? " is-active" : ""}`} onClick={() => setMsgType("POLL")}>
+                  {AIcon.chart()} Poll
+                </button>
               </div>
-              <div>
-                <div style={{ fontSize: "0.85rem", fontWeight: 500, marginBottom: "0.4rem" }}>Priority</div>
-                <div style={{ display: "flex", gap: "0.4rem" }}>
-                  <button type="button" className={`tab${priority === "NORMAL" ? " is-active" : ""}`} onClick={() => setPriority("NORMAL")}>
-                    Normal
-                  </button>
-                  <button
-                    type="button"
-                    className={`tab${priority === "SERIOUS" ? " is-active" : ""}`}
-                    onClick={() => setPriority("SERIOUS")}
-                    title="Blocks the recipient from using the app until they open it"
-                  >
-                    <i className="fas fa-triangle-exclamation"></i> Serious
-                  </button>
-                </div>
+            </div>
+
+            <div className="form-field">
+              <label className="form-label">Priority</label>
+              <div className="tabs" style={{ width: "fit-content" }}>
+                <button type="button" className={`tab${priority === "NORMAL" ? " is-active" : ""}`} onClick={() => setPriority("NORMAL")}>
+                  Normal
+                </button>
+                <button
+                  type="button"
+                  className={`tab${priority === "SERIOUS" ? " is-active" : ""}`}
+                  onClick={() => setPriority("SERIOUS")}
+                  title="Blocks the recipient from using the app until they open it"
+                >
+                  {AIcon.warn()} Serious
+                </button>
               </div>
             </div>
 
             {msgType === "POLL" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                <div style={{ fontSize: "0.85rem", fontWeight: 500 }}>Options</div>
+              <div className="form-field">
+                <label className="form-label">Options</label>
                 {pollOptions.map((opt, i) => (
-                  <div key={i} style={{ display: "flex", gap: "0.4rem" }}>
+                  <div key={i} className="inline-row">
                     <input
+                      className="input"
                       type="text"
                       value={opt}
                       placeholder={`Option ${i + 1}`}
                       onChange={(e) => setPollOptions((prev) => prev.map((o, j) => (j === i ? e.target.value : o)))}
-                      style={{ ...inputStyle, marginTop: 0, flex: 1 }}
                     />
                     {pollOptions.length > 2 && (
                       <button
                         type="button"
+                        className="btn btn-quiet"
                         onClick={() => setPollOptions((prev) => prev.filter((_, j) => j !== i))}
                         aria-label={`Remove option ${i + 1}`}
-                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)" }}
                       >
-                        <i className="fas fa-xmark"></i>
+                        {AIcon.x()}
                       </button>
                     )}
                   </div>
                 ))}
                 {pollOptions.length < 8 && (
-                  <button type="button" className="btn" style={{ width: "fit-content" }} onClick={() => setPollOptions((prev) => [...prev, ""])}>
-                    <i className="fas fa-plus"></i> Add option
+                  <button type="button" className="btn btn-ghost" onClick={() => setPollOptions((prev) => [...prev, ""])}>
+                    {AIcon.plus()} Add option
                   </button>
                 )}
               </div>
             )}
 
-            {status && <p style={{ color: status.startsWith("Sent") ? "var(--text-success)" : "var(--text-danger)" }}>{status}</p>}
+            {status && <div className={`form-status${status.startsWith("Sent") ? " is-ok" : ""}`}>{status}</div>}
 
-            <button className="btn btn-primary" type="submit" disabled={sending}>
-              {sending ? "Sending..." : recipients.length > 1 ? `Send to ${recipients.length} people` : "Send message"}
-            </button>
+            <div className="flex-end">
+              <button className="btn btn-primary" type="submit" disabled={sending}>
+                {sending ? "Sending..." : recipients.length > 1 ? `Send to ${recipients.length} people` : "Send message"} {!sending && AIcon.arrow()}
+              </button>
+            </div>
           </form>
         </div>
 
-        <h2 style={{ marginTop: "2rem" }}>
-          <i className="fas fa-paper-plane" style={{ color: "var(--text-info)" }}></i> Recently sent
-        </h2>
+        <div>
+          <h2 className="panel-title">{AIcon.list()} Recently sent</h2>
+          <p className="panel-desc">Everything the admin team has sent recently.</p>
 
-        {loadingSent && <SkeletonList rows={3} />}
-        {!loadingSent && sentMessages.length === 0 && (
-          <p style={{ color: "var(--text-secondary)", marginTop: "0.6rem" }}>Nothing sent yet.</p>
-        )}
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginTop: "0.8rem" }}>
-          {sentMessages.map((m, i) => (
-            <div
-              key={`${m.subject}-${m.createdAt}-${i}`}
-              style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "0.8rem 1rem" }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                  <strong style={{ fontSize: "0.9rem" }}>{m.subject}</strong>
-                  {m.type === "POLL" && (
-                    <span className="pill pill-info">
-                      <i className="fas fa-square-poll-vertical"></i> Poll
-                    </span>
-                  )}
-                  {m.priority === "SERIOUS" && (
-                    <span className="pill" style={{ background: "var(--bg-danger)", color: "var(--text-danger)" }}>
-                      Serious
-                    </span>
-                  )}
-                </div>
-                <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
-                  {new Date(m.createdAt).toLocaleDateString()}
-                </span>
-              </div>
-              <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                To {m.recipientCount === 1 ? m.recipientSummary : `${m.recipientCount} recipients — ${m.recipientSummary}`}
-              </div>
+          {loadingSent && <SkeletonList rows={3} />}
+          {!loadingSent && sentMessages.length === 0 && (
+            <div className="empty-state">
+              <div className="empty-icon">{AIcon.send()}</div>
+              <h3 className="empty-title">Nothing sent yet</h3>
             </div>
-          ))}
+          )}
+
+          <div className="stack-10">
+            {sentMessages.map((m, i) => (
+              <div key={`${m.subject}-${m.createdAt}-${i}`} className="data-row link-row">
+                <div>
+                  <div className="row-title">{m.subject}</div>
+                  <div className="row-desc">
+                    To {m.recipientCount === 1 ? m.recipientSummary : `${m.recipientCount} recipients — ${m.recipientSummary}`}
+                  </div>
+                  <div className="row-code">{new Date(m.createdAt).toLocaleDateString()}</div>
+                </div>
+                <div className="request-actions" style={{ justifyContent: "flex-end" }}>
+                  {m.type === "POLL" && <span className="status info">Poll</span>}
+                  <span className={`status ${m.priority === "SERIOUS" ? "danger" : ""}`}>{m.priority === "SERIOUS" ? "Serious" : "Normal"}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
