@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getStoredUser, StoredUser } from "@/lib/client-session";
-import PageHeader from "@/app/components/PageHeader";
+import { Icon } from "@/app/components/icons";
 import { friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
 import { SkeletonList } from "@/app/components/Skeleton";
@@ -58,10 +58,25 @@ function levelOf(code: string): string | null {
   return inferLevelFromCourseCode(code);
 }
 
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+// One of the template's five book-spine tones, chosen stably from the name.
+function scribeTone(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return `a${(Math.abs(hash) % 5) + 1}`;
+}
+
 function CatalogPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const search = searchParams.get("q") ?? "";
+  const [searchInput, setSearchInput] = useState(search);
 
   const [user, setUser] = useState<StoredUser | null>(null);
   const [blocks, setBlocks] = useState<BlockView[]>([]);
@@ -79,8 +94,17 @@ function CatalogPage() {
   const [pendingCouponBuy, setPendingCouponBuy] = useState<{ block: BlockView; noteId?: string } | null>(null);
   const [couponConfirming, setCouponConfirming] = useState(false);
 
-  // The search term lives in the URL (?q=) — the header's search box writes
-  // it, so this page just reacts to it.
+  // Typing in the search field updates the URL (?q=) after a short pause;
+  // the fetch below reacts to that, so links to a search still work.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const term = searchInput.trim();
+      if (term !== search.trim()) router.replace(term ? `/dashboard?q=${encodeURIComponent(term)}` : "/dashboard");
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchInput, search, router]);
+
+  // The search term lives in the URL (?q=), so this page just reacts to it.
   useEffect(() => {
     const storedUser = getStoredUser();
     if (!storedUser) {
@@ -223,40 +247,54 @@ function CatalogPage() {
   }
 
   const hasCredit = creditBalance != null && creditBalance > 0;
+  const totalLiveNotes = blocks.reduce((sum, b) => sum + b.liveNoteCount, 0);
+  const totalScribes = new Set(blocks.map((b) => b.scribeId).filter(Boolean)).size;
 
   return (
     <div className="page-wrap">
-      <PageHeader
-        title="Browse Notes"
-        subtitle={`Verified peer lecture notes and study packs for ${CAMPUS.name} students.`}
-      >
-        <span className="page-meta">
-          {visible.length} course {visible.length === 1 ? "block" : "blocks"}
-        </span>
-        <span className="page-dot">•</span>
-        {user?.role === "STUDENT" ? (
-          <Link href="/scribe/apply" className="text-link">
-            Become a Scribe <i className="fas fa-arrow-right" style={{ fontSize: "0.7rem" }}></i>
-          </Link>
-        ) : (
-          <Link href="/scribe" className="text-link">
-            Scribe Studio <i className="fas fa-arrow-right" style={{ fontSize: "0.7rem" }}></i>
-          </Link>
-        )}
-      </PageHeader>
+      <div className="page-header">
+        <div className="page-header-left">
+          <span className="eyebrow">{CAMPUS.name} · Catalogue</span>
+          <h1>
+            Browse <span className="serif">Notes</span>
+          </h1>
+          <p>Verified peer lecture notes and study packs, curated per course block. Every note is watermarked to its buyer.</p>
+        </div>
+        <div className="page-header-right">
+          <div className="stat-strip">
+            <div className="stat">
+              <div className="stat-num">{blocks.length.toLocaleString()}</div>
+              <div className="stat-label">Course blocks</div>
+            </div>
+            <div className="stat">
+              <div className="stat-num">{totalLiveNotes.toLocaleString()}</div>
+              <div className="stat-label">Live notes</div>
+            </div>
+            <div className="stat">
+              <div className="stat-num">{totalScribes.toLocaleString()}</div>
+              <div className="stat-label">Active scribes</div>
+            </div>
+          </div>
+          <div className="header-actions">
+            <Link href={user?.role === "STUDENT" ? "/scribe/apply" : "/scribe"} className="btn">
+              {user?.role === "STUDENT" ? "Become a Scribe" : "Scribe Studio"}
+              <span style={{ display: "inline-flex", width: 14, height: 14 }}>{Icon.arrow()}</span>
+            </Link>
+          </div>
+        </div>
+      </div>
 
       <div className="filter-bar">
-        <form
-          className="search-field"
-          role="search"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const term = String(new FormData(e.currentTarget).get("q") ?? "").trim();
-            router.replace(term ? `/dashboard?q=${encodeURIComponent(term)}` : "/dashboard");
-          }}
-        >
-          <i className="fas fa-search"></i>
-          <input key={search} name="q" defaultValue={search} placeholder="Search notes, codes..." aria-label="Search notes" />
+        <form className="search-field" role="search" onSubmit={(e) => e.preventDefault()}>
+          {Icon.search()}
+          <input
+            type="search"
+            name="q"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Search by course code, title, or department…"
+            aria-label="Search notes"
+          />
         </form>
 
         <div className="tabs">
@@ -279,7 +317,6 @@ function CatalogPage() {
               </option>
             ))}
           </select>
-          <span className="filter-sep">|</span>
           <select className="select-plain" value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="Sort notes">
             <option value="rating">Top Rated</option>
             <option value="versions">Most Versions</option>
@@ -288,98 +325,119 @@ function CatalogPage() {
         </div>
       </div>
 
+      <div className="result-meta">
+        <div>
+          Showing <strong>{visible.length}</strong> of <strong>{blocks.length}</strong> course blocks
+        </div>
+      </div>
+
       {loading && <SkeletonList rows={3} />}
       {error && <div className="auth-error">{error}</div>}
 
-      {!loading && !error && visible.length === 0 && (
-        <p className="empty-state">
-          {search || program || level ? "No notes match your filters." : "No notes published yet — check back soon."}
-        </p>
-      )}
-
       <div className="catalog-grid">
+        {!loading && !error && visible.length === 0 && (
+          <div className="empty-state">
+            <div className="empty-icon">{Icon.search()}</div>
+            <h3 className="empty-title">{search || program || level ? "No notes found" : "No notes published yet"}</h3>
+            <p className="empty-desc">
+              {search || program || level
+                ? "Try a different search term or clear your filters."
+                : "Check back soon — new notes are added all the time."}
+            </p>
+          </div>
+        )}
+
         {visible.map((block) => {
           const effectivePrice = block.discountedPrice ?? block.price;
           const hasDiscount = block.discountedPrice != null && block.discountedPrice < block.price;
-          const percentOff = hasDiscount ? Math.round((1 - effectivePrice / block.price) * 100) : 0;
+          const blockLevel = levelOf(block.courseCode);
+          const topicsShown = block.topics.slice(0, 3);
+          const topicsExtra = block.topics.length - topicsShown.length;
+          const openBlock = () =>
+            router.push(block.featuredNoteId ? `/blocks/${block.id}?note=${block.featuredNoteId}` : `/blocks/${block.id}`);
 
           return (
             <article
               key={block.id}
-              className="note-card"
-              onClick={() => router.push(block.featuredNoteId ? `/blocks/${block.id}?note=${block.featuredNoteId}` : `/blocks/${block.id}`)}
+              className="course-card"
+              tabIndex={0}
+              onClick={openBlock}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && e.target === e.currentTarget) openBlock();
+              }}
             >
-              <div>
-                <div className="note-card-top">
-                  <span className={`seal mono${hasDiscount ? " seal-amber" : ""}`}>{block.courseCode}</span>
-                  <span className="seal" style={{ opacity: 0.75 }}>{block.universityName}</span>
-                  {block.unlocked ? (
-                    <span className="note-card-side is-good">
-                      <i className="fas fa-check-circle"></i> Unlocked
-                    </span>
-                  ) : hasDiscount ? (
-                    <span className="note-card-side is-good">{percentOff}% off · requested</span>
-                  ) : (
-                    <span className="note-card-side">
-                      {block.liveNoteCount} {block.liveNoteCount === 1 ? "version" : "versions"}
-                    </span>
+              {hasDiscount && <span className="ribbon">Requested</span>}
+
+              <div className="card-head">
+                <span className="course-code">
+                  {block.courseCode}
+                  {blockLevel && (
+                    <>
+                      <span className="dot" />
+                      <span className="level">{blockLevel}</span>
+                    </>
                   )}
-                </div>
-
-                <h2 className="note-card-title">{block.title}</h2>
-                <p className="note-card-desc">
-                  {block.courseName}
-                  {block.topics.length > 0 ? ` · ${block.topics.join(", ")}` : ""}
-                </p>
-
-                <div className="note-card-meta">
-                  <span className="count">
-                    <i className="fas fa-shopping-cart"></i> {block.purchaseCount}
+                </span>
+                {block.unlocked ? (
+                  <span className="trust good">Unlocked</span>
+                ) : (
+                  <span className="trust new">
+                    {block.liveNoteCount} {block.liveNoteCount === 1 ? "version" : "versions"}
                   </span>
-                  {block.ratingAvg != null ? (
-                    <>
-                      <span className="dot">•</span>
-                      <i className="fas fa-star star"></i>
-                      <strong>{block.ratingAvg.toFixed(1)}</strong>
-                      <span className="count">({block.ratingCount})</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="dot">•</span>
-                      <span className="count">No ratings yet</span>
-                    </>
-                  )}
-                  {block.scribeName && (
-                    <>
-                      <span className="dot">•</span>
-                      <button
-                        className="scribe-link"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(`/scribe/${block.scribeId}`);
-                        }}
-                      >
-                        {block.scribeName}
-                      </button>
-                      {block.scribeLevel && <span className="count">({block.scribeLevel})</span>}
-                    </>
-                  )}
-                </div>
+                )}
               </div>
 
-              <div className="note-card-foot">
-                <div>
-                  {hasDiscount ? (
+              <h3 className="course-title">{block.title}</h3>
+              <p className="course-dept">{block.courseName}</p>
+
+              {block.topics.length > 0 && (
+                <div className="topics">
+                  {topicsShown.map((t) => (
+                    <span key={t} className="topic">
+                      {t}
+                    </span>
+                  ))}
+                  {topicsExtra > 0 && <span className="topic more">+{topicsExtra}</span>}
+                </div>
+              )}
+
+              <div className="scribes-row">
+                {block.scribeName ? (
+                  <div className="avatar-stack">
+                    <span className={`avatar-sm scribe-dot ${scribeTone(block.scribeName)}`}>{initialsOf(block.scribeName)}</span>
+                    <button
+                      className="scribe-link"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/scribe/${block.scribeId}`);
+                      }}
+                    >
+                      {block.scribeName}
+                      {block.scribeLevel ? ` (${block.scribeLevel})` : ""}
+                    </button>
+                  </div>
+                ) : (
+                  <span />
+                )}
+                <span className="rating">
+                  {block.ratingAvg != null ? (
                     <>
-                      <span className="price-was">₦{block.price.toLocaleString()}</span>
-                      <span className="price-now is-good">₦{effectivePrice.toLocaleString()}</span>
+                      {Icon.star()} <strong>{block.ratingAvg.toFixed(1)}</strong> · {block.ratingCount}
                     </>
                   ) : (
-                    <>
-                      <span className="price-label">Price</span>
-                      <span className="price-now">₦{effectivePrice.toLocaleString()}</span>
-                    </>
+                    "No ratings yet"
                   )}
+                </span>
+              </div>
+
+              <div className="card-foot">
+                <div className="price">
+                  <span className="price-label">{hasDiscount ? "Requested price" : "Price"}</span>
+                  <span className={`price-amount${hasDiscount ? " is-good" : ""}`}>
+                    <span className="currency">₦</span>
+                    {effectivePrice.toLocaleString()}
+                  </span>
+                  {hasDiscount && <span className="price-was">₦{block.price.toLocaleString()}</span>}
                   {!block.unlocked && hasCredit && (
                     <span className="credit-note">
                       {(creditBalance ?? 0) >= effectivePrice
@@ -391,35 +449,36 @@ function CatalogPage() {
 
                 {block.liveNoteCount > 1 ? (
                   <button
-                    className="btn btn-primary btn-sm"
+                    className="browse-btn"
                     onClick={(e) => {
                       e.stopPropagation();
                       openVersionPicker(block);
                     }}
                   >
-                    Compare {block.liveNoteCount} Notes
+                    View versions
+                    <span style={{ display: "inline-flex", width: 14, height: 14 }}>{Icon.arrow()}</span>
                   </button>
                 ) : block.unlocked ? (
                   <button
-                    className="btn btn-dark btn-sm"
+                    className="browse-btn"
                     onClick={(e) => {
                       e.stopPropagation();
-                      router.push(
-                        block.featuredNoteId ? `/blocks/${block.id}?note=${block.featuredNoteId}` : `/blocks/${block.id}`,
-                      );
+                      openBlock();
                     }}
                   >
-                    View Notes
+                    View notes
+                    <span style={{ display: "inline-flex", width: 14, height: 14 }}>{Icon.arrow()}</span>
                   </button>
                 ) : (
                   <button
-                    className="btn btn-primary btn-sm"
+                    className="browse-btn"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleBuyClick(block);
                     }}
                   >
-                    {hasCredit ? "Use credit" : "Unlock Notes"}
+                    {hasCredit ? "Use credit" : "Unlock notes"}
+                    <span style={{ display: "inline-flex", width: 14, height: 14 }}>{Icon.arrow()}</span>
                   </button>
                 )}
               </div>
