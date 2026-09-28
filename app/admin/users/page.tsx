@@ -68,6 +68,8 @@ interface UserStats {
 export default function AdminUsersPage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [onlineFilter, setOnlineFilter] = useState("all");
   const [results, setResults] = useState<UserResult[]>([]);
   const [stats, setStats] = useState<UserStats>({ total: 0, loggedIn: 0, students: 0, scribes: 0, admins: 0 });
   const [searching, setSearching] = useState(false);
@@ -133,7 +135,11 @@ export default function AdminUsersPage() {
   useEffect(() => {
     setSearching(true);
     const handle = setTimeout(() => {
-      apiFetch(`/api/admin/users/search${query.trim() ? `?q=${encodeURIComponent(query.trim())}` : ""}`)
+      const params = new URLSearchParams();
+      if (query.trim()) params.set("q", query.trim());
+      if (roleFilter !== "all") params.set("role", roleFilter);
+      if (onlineFilter !== "all") params.set("online", onlineFilter);
+      apiFetch(`/api/admin/users/search${params.toString() ? `?${params.toString()}` : ""}`)
         .then((data) => {
           setResults(data.users || []);
           setStats(data.stats || { total: 0, loggedIn: 0, students: 0, scribes: 0, admins: 0 });
@@ -145,10 +151,14 @@ export default function AdminUsersPage() {
         .finally(() => setSearching(false));
     }, 250);
     return () => clearTimeout(handle);
-  }, [query]);
+  }, [query, roleFilter, onlineFilter]);
 
   function refreshOne(id: string) {
-    apiFetch(`/api/admin/users/search${query.trim() ? `?q=${encodeURIComponent(query.trim())}` : ""}`)
+    const params = new URLSearchParams();
+    if (query.trim()) params.set("q", query.trim());
+    if (roleFilter !== "all") params.set("role", roleFilter);
+    if (onlineFilter !== "all") params.set("online", onlineFilter);
+    apiFetch(`/api/admin/users/search${params.toString() ? `?${params.toString()}` : ""}`)
       .then((data) => {
         setResults(data.users || []);
         setStats(data.stats || stats);
@@ -255,6 +265,26 @@ export default function AdminUsersPage() {
       <div className="search-field mb-16" style={{ maxWidth: 420 }}>
         {AIcon.search()}
         <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or email..." />
+      </div>
+
+      <div className="panel-row mb-24" style={{ alignItems: "end", gap: 12 }}>
+        <div className="form-field" style={{ margin: 0, minWidth: 180 }}>
+          <label className="form-label" htmlFor="users-role-filter">Role</label>
+          <select id="users-role-filter" className="select" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+            <option value="all">All roles</option>
+            <option value="STUDENT">Students</option>
+            <option value="SCRIBE">Scribes</option>
+            <option value="ADMIN">Admins</option>
+          </select>
+        </div>
+        <div className="form-field" style={{ margin: 0, minWidth: 180 }}>
+          <label className="form-label" htmlFor="users-online-filter">Online status</label>
+          <select id="users-online-filter" className="select" value={onlineFilter} onChange={(e) => setOnlineFilter(e.target.value)}>
+            <option value="all">All statuses</option>
+            <option value="online">Online</option>
+            <option value="offline">Offline</option>
+          </select>
+        </div>
       </div>
       {searching && <p className="panel-desc">Searching...</p>}
       {actionMessage && <div className="notice">{actionMessage}</div>}

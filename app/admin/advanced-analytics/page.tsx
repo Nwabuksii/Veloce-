@@ -44,7 +44,7 @@ export default function AdminAdvancedAnalyticsPage() {
   const [selectedPoll, setSelectedPoll] = useState<SelectedPoll | null>(null);
   const [departmentOptions, setDepartmentOptions] = useState<string[]>([]);
   const [courseOptions, setCourseOptions] = useState<string[]>([]);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("search") ?? "" : ""));
   const [department, setDepartment] = useState("all");
   const [course, setCourse] = useState("all");
   const [pollId, setPollId] = useState(() => (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("poll") ?? "" : ""));
@@ -58,7 +58,7 @@ export default function AdminAdvancedAnalyticsPage() {
     if (course !== "all") params.set("course", course);
     if (pollId) params.set("poll", pollId);
     return params.toString();
-  }, [search, department, course]);
+  }, [search, department, course, pollId]);
 
   useEffect(() => {
     const user = getStoredUser();
@@ -81,6 +81,9 @@ export default function AdminAdvancedAnalyticsPage() {
         setRows(json.rows ?? []);
         setSummary(json.summary ?? null);
         setSelectedPoll(json.selectedPoll ?? null);
+        if (pollId && json.selectedPoll?.subject) {
+          setSearch((current) => current === json.selectedPoll.subject ? current : json.selectedPoll.subject);
+        }
         setDepartmentOptions(json.filters?.departmentOptions ?? []);
         setCourseOptions(json.filters?.courseOptions ?? []);
       } catch (err) {
@@ -107,7 +110,7 @@ export default function AdminAdvancedAnalyticsPage() {
         {pollId && (
           <div className="callout is-info" style={{ marginBottom: 14 }}>
             <div><strong>Filtered to one poll.</strong> Only responses belonging to this poll are shown.</div>
-            <button type="button" className="btn btn-ghost" onClick={() => { setPollId(""); router.push("/admin/advanced-analytics"); }}>Clear poll filter</button>
+            <button type="button" className="btn btn-ghost" onClick={() => { setPollId(""); setSearch(""); router.push("/admin/advanced-analytics"); }}>Clear poll filter</button>
           </div>
         )}
 

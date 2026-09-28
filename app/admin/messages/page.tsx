@@ -388,11 +388,11 @@ export default function AdminMessagesPage() {
               <div
                 key={`${m.subject}-${m.createdAt}-${i}`}
                 className={`data-row link-row${m.type === "POLL" ? " poll-row-clickable" : ""}`}
-                onClick={() => m.type === "POLL" && router.push(`/admin/advanced-analytics?poll=${encodeURIComponent(m.pollGroupId ?? m.messageId)}`)}
+                onClick={() => m.type === "POLL" && router.push(`/admin/advanced-analytics?poll=${encodeURIComponent(m.pollGroupId ?? m.messageId)}&search=${encodeURIComponent(m.subject)}`)}
                 onKeyDown={(e) => {
                   if (m.type === "POLL" && (e.key === "Enter" || e.key === " ")) {
                     e.preventDefault();
-                    router.push(`/admin/advanced-analytics?poll=${encodeURIComponent(m.pollGroupId ?? m.messageId)}`);
+                    router.push(`/admin/advanced-analytics?poll=${encodeURIComponent(m.pollGroupId ?? m.messageId)}&search=${encodeURIComponent(m.subject)}`);
                   }
                 }}
                 role={m.type === "POLL" ? "link" : undefined}
@@ -410,7 +410,7 @@ export default function AdminMessagesPage() {
                     <button
                       type="button"
                       className="status info"
-                      onClick={() => router.push(`/admin/advanced-analytics?poll=${encodeURIComponent(m.pollGroupId ?? m.messageId)}`)}
+                      onClick={() => router.push(`/admin/advanced-analytics?poll=${encodeURIComponent(m.pollGroupId ?? m.messageId)}&search=${encodeURIComponent(m.subject)}`)}
                       title="Open analytics for this poll"
                     >
                       Poll · Analytics

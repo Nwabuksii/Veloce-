@@ -4,17 +4,46 @@ import { requireRole } from "@/lib/session";
 import { isUserOnline } from "@/lib/online";
 
 export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
-  const q = new URL(req.url).searchParams.get("q")?.trim() || "";
+  const searchParams = new URL(req.url).searchParams;
+  const q = searchParams.get("q")?.trim() || "";
+  const role = searchParams.get("role")?.trim() || "all";
+  const online = searchParams.get("online")?.trim() || "all";
 
-  const where = q
-    ? {
-        universityId: adminUser.universityId,
+  const onlineSince = new Date(Date.now() - 5 * 60 * 1000);
+  const baseWhere: any = {
+    universityId: adminUser.universityId,
+    ...(role !== "all" ? { role } : {}),
+  };
+
+  if (q) {
+    baseWhere.OR = [
+      { fullName: { contains: q, mode: "insensitive" as const } },
+      { email: { contains: q, mode: "insensitive" as const } },
+    ];
+  }
+
+  if (online === "online") {
+    baseWhere.lastSeenAt = { gte: onlineSince };
+  } else if (online === "offline") {
+    baseWhere.OR = [
+      ...(baseWhere.OR ?? []),
+    ];
+    baseWhere.AND = [
+      ...(baseWhere.AND ?? []),
+      { OR: [{ lastSeenAt: null }, { lastSeenAt: { lt: onlineSince } }] },
+    ];
+    delete baseWhere.OR;
+    if (q) {
+      baseWhere.AND.push({
         OR: [
           { fullName: { contains: q, mode: "insensitive" as const } },
           { email: { contains: q, mode: "insensitive" as const } },
         ],
-      }
-    : { universityId: adminUser.universityId };
+      });
+    }
+  }
+
+  const where = baseWhere;
 
   const [users, totalUsers, loggedInUsers, studentUsers, scribeUsers, adminUsers] = await Promise.all([
     prisma.user.findMany({
