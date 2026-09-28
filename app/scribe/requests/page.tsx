@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
 import PageHeader from "@/app/components/PageHeader";
 import { SkeletonList } from "@/app/components/Skeleton";
+import { Icon } from "@/app/components/icons";
 import { friendlyErrorMessage } from "@/lib/api-client";
 
 interface RequestView {
@@ -46,60 +47,54 @@ export default function ScribeRequestsFeedPage() {
 
   return (
     <div className="page-wrap">
-      <div className="app-container">
-        <PageHeader title="Discovery feed" subtitle="What students are asking for.">
-          <button className="btn" onClick={() => router.push("/scribe/workspace")}>
-              <i className="fas fa-arrow-left"></i> Workspace
-            </button>
-        </PageHeader>
+      <PageHeader
+        eyebrow="Scribe · Demand"
+        title="Discovery"
+        accent="feed"
+        subtitle="What students are asking for, ranked by demand. Tap “Fulfil this” to jump straight into upload with the course and title already filled in."
+      >
+        <button className="btn btn-ghost" onClick={() => router.push("/scribe/workspace")}>
+          {Icon.back()} Workspace
+        </button>
+      </PageHeader>
 
-        <p style={{ color: "var(--text-secondary)", marginTop: "1rem", fontSize: "0.9rem" }}>
-          Ranked by demand. Tap "Fulfill this" to jump straight into upload with the course and title
-          already filled in.
-        </p>
+      {loading && <SkeletonList rows={3} />}
+      {error && <div className="auth-error">{error}</div>}
+      {!loading && !error && requests.length === 0 && (
+        <div className="panel">
+          <div className="empty-state">No open requests right now.</div>
+        </div>
+      )}
 
-        {loading && <SkeletonList rows={3} />}
-        {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}
-        {!loading && !error && requests.length === 0 && (
-          <p style={{ color: "var(--text-secondary)", marginTop: "1rem" }}>No open requests right now.</p>
-        )}
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.7rem", marginTop: "1rem" }}>
-          {requests.map((r) => (
-            <div
-              key={r.id}
-              style={{
-                background: "var(--surface)",
-                border: "1px solid var(--border-blue)",
-                borderRadius: "12px",
-                padding: "0.9rem 1.1rem",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <div>
-                <strong>{r.requestedTitle}</strong>
-                <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                  {r.courseCode} — {r.courseName}
-                </div>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                <div style={{ fontWeight: 600, color: "var(--text-info)" }}>
-                  <i className="fas fa-fire"></i> {r.voteCount} want this
-                </div>
-                <button
-                  className="btn btn-primary"
-                  onClick={() =>
-                    router.push(`/scribe/upload?requestId=${r.id}&courseId=${r.courseId}`)
-                  }
-                >
-                  Fulfill this
-                </button>
+      <div className="request-list">
+        {requests.map((r) => (
+          <div key={r.id} className="request-item">
+            <div className="vote-block" aria-label={`${r.voteCount} want this`}>
+              {Icon.up()}
+              <span className="count">{r.voteCount}</span>
+            </div>
+            <div className="request-body">
+              <div className="request-code">{r.courseCode}</div>
+              <div className="request-topic">{r.requestedTitle}</div>
+              <div className="request-meta">
+                <span>
+                  {Icon.book()} {r.courseName}
+                </span>
+                <span>
+                  {Icon.users()} {r.voteCount} want this
+                </span>
               </div>
             </div>
-          ))}
-        </div>
+            <div className="request-actions">
+              <button
+                className="btn btn-sm btn-primary"
+                onClick={() => router.push(`/scribe/upload?requestId=${r.id}&courseId=${r.courseId}`)}
+              >
+                Fulfil this {Icon.arrow()}
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

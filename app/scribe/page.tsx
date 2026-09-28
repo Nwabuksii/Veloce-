@@ -2,22 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ReactElement } from "react";
 import { getStoredUser } from "@/lib/client-session";
 import PageHeader from "@/app/components/PageHeader";
+import { Icon } from "@/app/components/icons";
 
 interface HubLink {
-  icon: string;
+  icon: ReactElement;
   label: string;
   description: string;
   href: string;
 }
 
 const LINKS: HubLink[] = [
-  { icon: "fa-store", label: "Workspace", description: "Your uploaded notes and their status", href: "/scribe/workspace" },
-  { icon: "fa-chart-simple", label: "Analytics", description: "Your scribe score, sales trend, and per-block performance", href: "/scribe/analytics" },
-  { icon: "fa-wallet", label: "Earnings", description: "Confirmed and pending money, withdrawals", href: "/scribe/earnings" },
-  { icon: "fa-cloud-upload-alt", label: "Upload notes", description: "Add a new version to a course block", href: "/scribe/upload" },
-  { icon: "fa-fire", label: "Discovery feed", description: "Student requests you could fulfill", href: "/scribe/requests" },
+  { icon: Icon.workshop(), label: "Workspace", description: "Your uploaded notes, their status and performance", href: "/scribe/workspace" },
+  { icon: Icon.chart(), label: "Analytics", description: "Your scribe score, sales trend, and per-block performance", href: "/scribe/analytics" },
+  { icon: Icon.coin(), label: "Earnings", description: "Confirmed and pending money, withdrawals", href: "/scribe/earnings" },
+  { icon: Icon.upload(), label: "Upload notes", description: "Add a new version to a course block", href: "/scribe/upload" },
+  { icon: Icon.compass(), label: "Discovery feed", description: "Student requests you could fulfil", href: "/scribe/requests" },
 ];
 
 export default function ScribeHubPage() {
@@ -41,28 +43,31 @@ export default function ScribeHubPage() {
 
   return (
     <div className="page-wrap">
-      <div className="app-container">
-        <PageHeader title="Scribe Studio" subtitle="Everything for publishing and managing your notes." />
+      <PageHeader
+        eyebrow="Scribe Workspace"
+        title="Your"
+        accent="studio"
+        subtitle="Everything for publishing and managing your notes — track performance and keep your library fresh for the students who follow you."
+      >
+        <button className="btn btn-ghost" onClick={() => router.push("/scribe/requests")}>
+          Discovery feed
+        </button>
+        <button className="btn btn-primary" onClick={() => router.push("/scribe/upload")}>
+          {Icon.upload()} Upload notes
+        </button>
+      </PageHeader>
 
-        <div style={{ marginTop: "1.5rem" }}>
-          <div className="ledger-list">
-            {LINKS.map((link) => (
-              <button
-                key={link.href}
-                className="ledger-row press-on-tap"
-                style={{ width: "100%", background: "none", cursor: "pointer", textAlign: "left" }}
-                onClick={() => router.push(link.href)}
-              >
-                <div className="ledger-row-head">
-                  <span className="ledger-row-title">
-                    <i className={`fas ${link.icon}`} style={{ color: "var(--accent)", width: "1.2rem" }}></i> {link.label}
-                  </span>
-                </div>
-                <div className="ledger-row-meta">{link.description}</div>
-              </button>
-            ))}
-          </div>
-        </div>
+      <div className="hub-grid">
+        {LINKS.map((link) => (
+          <button key={link.href} type="button" className="hub-card" onClick={() => router.push(link.href)}>
+            <span className="hub-icon">{link.icon}</span>
+            <span className="hub-title">{link.label}</span>
+            <span className="hub-desc">{link.description}</span>
+            <span className="hub-go">
+              Open {Icon.arrow()}
+            </span>
+          </button>
+        ))}
       </div>
     </div>
   );

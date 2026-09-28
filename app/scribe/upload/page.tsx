@@ -6,6 +6,7 @@ import { getStoredUser } from "@/lib/client-session";
 import { friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
 import PageHeader from "@/app/components/PageHeader";
+import { Icon } from "@/app/components/icons";
 
 interface CourseOption {
   id: string;
@@ -27,15 +28,6 @@ interface RequestOption {
   requestedTitle: string;
   voteCount: number;
 }
-
-const inputStyle: React.CSSProperties = {
-  display: "block",
-  width: "100%",
-  padding: "0.6rem",
-  marginTop: "0.4rem",
-  borderRadius: "0.7rem",
-  border: "1px solid var(--border-blue)",
-};
 
 // This page reads ?requestId=/?courseId= to support the "Fulfill this"
 // one-click flow from the discovery feed — needs dynamic rendering so
@@ -295,55 +287,89 @@ function ScribeUploadForm() {
     }
   }
 
+  const resolvedBlockTitle =
+    blockMode === "existing"
+      ? blocks.find((b) => b.id === resolvedBlockId)?.title ?? ""
+      : newBlockTitle.trim();
+
+  function formatSize(bytes: number) {
+    if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  const STEP_LABELS = ["Course", "Notes", "File"];
+
   return (
     <div className="page-wrap">
-      <div className="app-container" style={{ maxWidth: 620 }}>
-        <PageHeader title="Upload notes" subtitle={`Step ${step} of 3`}>
-          <button className="btn" onClick={() => router.push("/scribe/workspace")}>
-            <i className="fas fa-arrow-left"></i> Workspace
-          </button>
-        </PageHeader>
+      <PageHeader
+        eyebrow="Scribe · Publish"
+        title="Upload"
+        accent="notes"
+        subtitle="Three quick steps. Your notes go to moderation, then live in the catalogue."
+      >
+        <button className="btn btn-ghost" onClick={() => router.push("/scribe/workspace")}>
+          {Icon.back()} Workspace
+        </button>
+      </PageHeader>
 
-        {error && (
-          <div className="auth-error" style={{ marginTop: "1rem" }}>
-            {error}
-          </div>
-        )}
+      <div className="panel page-medium">
+        <div className="wizard-steps">
+          {STEP_LABELS.map((label, i) => {
+            const n = i + 1;
+            return (
+              <div key={label} style={{ display: "contents" }}>
+                {i > 0 && <div className="wline" />}
+                <div className={`wstep${n === step ? " is-active" : ""}${n < step ? " is-done" : ""}`}>
+                  <span className="num">{n < step ? Icon.check() : n}</span> {label}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {error && <div className="auth-error" style={{ marginBottom: 16 }}>{error}</div>}
 
         {step === 1 && (
-          <div style={{ marginTop: "1.5rem" }}>
-            <h2>
-              <i className="fas fa-book" style={{ color: "var(--text-info)" }}></i> Which course?
-            </h2>
+          <div>
+            <h2 className="panel-title">{Icon.book()} Which course is this for?</h2>
+            <p className="panel-desc">Pick an existing course, or create one if yours isn&apos;t listed.</p>
 
             {courses.length > 0 && (
-              <div style={{ display: "flex", gap: "0.6rem", margin: "1rem 0" }}>
+              <div className="seg">
                 <button
-                  className={`btn ${courseMode === "existing" ? "btn-primary" : ""}`}
+                  type="button"
+                  className={`btn btn-sm ${courseMode === "existing" ? "btn-primary" : "btn-ghost"}`}
                   onClick={() => setCourseMode("existing")}
                 >
                   Choose existing
                 </button>
-                <button className={`btn ${courseMode === "new" ? "btn-primary" : ""}`} onClick={() => setCourseMode("new")}>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${courseMode === "new" ? "btn-primary" : "btn-ghost"}`}
+                  onClick={() => setCourseMode("new")}
+                >
                   Create new
                 </button>
               </div>
             )}
 
             {courseMode === "existing" ? (
-              <select value={selectedCourseId} onChange={(e) => setSelectedCourseId(e.target.value)} style={inputStyle}>
-                <option value="">Select a course...</option>
-                {courses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.code} — {c.name}
-                  </option>
-                ))}
-              </select>
+              <div className="form-field">
+                <label className="form-label" htmlFor="course">Course</label>
+                <select id="course" className="select" value={selectedCourseId} onChange={(e) => setSelectedCourseId(e.target.value)}>
+                  <option value="">Select a course...</option>
+                  {courses.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.code} — {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
-                <label style={{ fontSize: "0.85rem", fontWeight: 500 }}>
-                  Department
-                  <select value={newCourseDepartmentId} onChange={(e) => setNewCourseDepartmentId(e.target.value)} style={inputStyle}>
+              <>
+                <div className="form-field">
+                  <label className="form-label" htmlFor="dept">Department</label>
+                  <select id="dept" className="select" value={newCourseDepartmentId} onChange={(e) => setNewCourseDepartmentId(e.target.value)}>
                     <option value="">Select a department/course area...</option>
                     {departments.map((d) => (
                       <option key={d.id} value={d.id}>
@@ -351,87 +377,73 @@ function ScribeUploadForm() {
                       </option>
                     ))}
                   </select>
-                </label>
-                <label style={{ fontSize: "0.85rem", fontWeight: 500 }}>
-                  Course name
-                  <input
-                    type="text"
-                    value={newCourseName}
-                    onChange={(e) => setNewCourseName(e.target.value)}
-                    placeholder="e.g. Intro to Programming"
-                    style={inputStyle}
-                  />
-                </label>
-                <label style={{ fontSize: "0.85rem", fontWeight: 500 }}>
-                  Course code
-                  <input
-                    type="text"
-                    value={newCourseCode}
-                    onChange={(e) => setNewCourseCode(e.target.value)}
-                    placeholder="e.g. COS 201"
-                    style={inputStyle}
-                  />
-                </label>
-              </div>
+                </div>
+                <div className="form-field">
+                  <label className="form-label" htmlFor="cname">Course name</label>
+                  <input id="cname" className="input" type="text" value={newCourseName} onChange={(e) => setNewCourseName(e.target.value)} placeholder="e.g. Intro to Programming" />
+                </div>
+                <div className="form-field">
+                  <label className="form-label" htmlFor="ccode">Course code</label>
+                  <input id="ccode" className="input" type="text" value={newCourseCode} onChange={(e) => setNewCourseCode(e.target.value)} placeholder="e.g. COS 201" />
+                </div>
+              </>
             )}
 
-            <button className="btn btn-primary" style={{ marginTop: "1.2rem" }} onClick={handleCourseNext}>
-              Continue <i className="fas fa-arrow-right"></i>
-            </button>
+            <div className="flex-end">
+              <button className="btn btn-primary" onClick={handleCourseNext}>
+                Continue {Icon.arrow()}
+              </button>
+            </div>
           </div>
         )}
 
         {step === 2 && (
-          <div style={{ marginTop: "1.5rem" }}>
-            <h2>
-              <i className="fas fa-layer-group" style={{ color: "var(--text-info)" }}></i> Which notes are these?
-            </h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: "0.3rem" }}>{resolvedCourseLabel}</p>
+          <div>
+            <h2 className="panel-title">{Icon.workshop()} Which notes are these?</h2>
+            <p className="panel-desc">{resolvedCourseLabel}</p>
 
             {blocks.length > 0 && (
-              <div style={{ display: "flex", gap: "0.6rem", margin: "1rem 0" }}>
+              <div className="seg">
                 <button
-                  className={`btn ${blockMode === "existing" ? "btn-primary" : ""}`}
+                  type="button"
+                  className={`btn btn-sm ${blockMode === "existing" ? "btn-primary" : "btn-ghost"}`}
                   onClick={() => setBlockMode("existing")}
                 >
                   Choose existing
                 </button>
-                <button className={`btn ${blockMode === "new" ? "btn-primary" : ""}`} onClick={() => setBlockMode("new")}>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${blockMode === "new" ? "btn-primary" : "btn-ghost"}`}
+                  onClick={() => setBlockMode("new")}
+                >
                   Create new
                 </button>
               </div>
             )}
 
             {blockMode === "existing" ? (
-              <select value={selectedBlockId} onChange={(e) => setSelectedBlockId(e.target.value)} style={inputStyle}>
-                <option value="">Select existing notes...</option>
-                {blocks.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.title}
-                  </option>
-                ))}
-              </select>
+              <div className="form-field">
+                <label className="form-label" htmlFor="block">Existing notes</label>
+                <select id="block" className="select" value={selectedBlockId} onChange={(e) => setSelectedBlockId(e.target.value)}>
+                  <option value="">Select existing notes...</option>
+                  {blocks.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
-                <label style={{ fontSize: "0.85rem", fontWeight: 500 }}>
-                  Notes title
-                  <input
-                    type="text"
-                    value={newBlockTitle}
-                    onChange={(e) => setNewBlockTitle(e.target.value)}
-                    placeholder="Name these notes anything you like"
-                    style={inputStyle}
-                  />
-                </label>
+              <>
+                <div className="form-field">
+                  <label className="form-label" htmlFor="btitle">Notes title</label>
+                  <input id="btitle" className="input" type="text" value={newBlockTitle} onChange={(e) => setNewBlockTitle(e.target.value)} placeholder="Name these notes anything you like" />
+                </div>
 
                 {openRequests.length > 0 && (
-                  <label style={{ fontSize: "0.85rem", fontWeight: 500 }}>
-                    Fulfill an open request? (optional — buyers who asked for it get a discount)
-                    <select
-                      value={fulfillsRequestId}
-                      onChange={(e) => setFulfillsRequestId(e.target.value)}
-                      style={inputStyle}
-                    >
+                  <div className="form-field">
+                    <label className="form-label" htmlFor="fulfil">Fulfil an open request? (optional)</label>
+                    <select id="fulfil" className="select" value={fulfillsRequestId} onChange={(e) => setFulfillsRequestId(e.target.value)}>
                       <option value="">Don&apos;t link to a request</option>
                       {openRequests.map((r) => (
                         <option key={r.id} value={r.id}>
@@ -439,81 +451,84 @@ function ScribeUploadForm() {
                         </option>
                       ))}
                     </select>
-                  </label>
+                    <p className="panel-desc" style={{ margin: "8px 0 0" }}>Buyers who asked for it get a discount.</p>
+                  </div>
                 )}
 
-                <div>
-                  <div style={{ fontSize: "0.85rem", fontWeight: 500, marginBottom: "0.4rem" }}>
-                    Topics covered (at least 3)
+                <div className="form-field">
+                  <div className="form-label">Topics covered (at least 3)</div>
+                  <div className="stack-10">
+                    {topics.map((t, i) => (
+                      <div key={i} className="topic-row">
+                        <input className="input" type="text" value={t} onChange={(e) => updateTopic(i, e.target.value)} placeholder={`Topic ${i + 1}`} />
+                        {topics.length > 3 && (
+                          <button type="button" className="btn btn-ghost" aria-label={`Remove topic ${i + 1}`} onClick={() => removeTopicField(i)}>
+                            {Icon.x()}
+                          </button>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                  {topics.map((t, i) => (
-                    <div key={i} style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                      <input
-                        type="text"
-                        value={t}
-                        onChange={(e) => updateTopic(i, e.target.value)}
-                        placeholder={`Topic ${i + 1}`}
-                        style={{ flex: 1, padding: "0.6rem", borderRadius: "0.7rem", border: "1px solid var(--border-blue)" }}
-                      />
-                      {topics.length > 3 && (
-                        <button type="button" className="btn" onClick={() => removeTopicField(i)}>
-                          <i className="fas fa-times"></i>
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  <button type="button" className="btn" onClick={addTopicField}>
-                    <i className="fas fa-plus"></i> Add topic
+                  <button type="button" className="btn btn-sm btn-ghost" style={{ marginTop: 10 }} onClick={addTopicField}>
+                    {Icon.plus()} Add topic
                   </button>
                 </div>
-              </div>
+              </>
             )}
 
-            <div style={{ display: "flex", gap: "0.6rem", marginTop: "1.2rem" }}>
-              <button className="btn" onClick={() => setStep(1)}>
-                <i className="fas fa-arrow-left"></i> Back
+            <div className="flex-end is-split">
+              <button className="btn btn-quiet" onClick={() => setStep(1)}>
+                {Icon.back()} Back
               </button>
               <button className="btn btn-primary" onClick={handleBlockNext}>
-                Continue <i className="fas fa-arrow-right"></i>
+                Continue {Icon.arrow()}
               </button>
             </div>
           </div>
         )}
 
         {step === 3 && (
-          <div style={{ marginTop: "1.5rem" }}>
-            <h2>
-              <i className="fas fa-cloud-upload-alt" style={{ color: "var(--text-info)" }}></i> Upload your PDF
-            </h2>
-            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem" }}>
-              <input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} required />
+          <form onSubmit={handleSubmit}>
+            <h2 className="panel-title">{Icon.upload()} Upload the file</h2>
+            <p className="panel-desc">PDF only. It&apos;s watermarked per-buyer automatically when they read it.</p>
 
-              <label style={{ display: "flex", gap: "0.6rem", alignItems: "flex-start", fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-                <input
-                  type="checkbox"
-                  checked={attested}
-                  onChange={(e) => setAttested(e.target.checked)}
-                  style={{ marginTop: "0.2rem" }}
-                  required
-                />
-                <span>
-                  I confirm these are my own original notes, taken from attending this lecture myself — not copied from
-                  slides, a textbook, or another student's work.
-                </span>
-              </label>
+            <div className="upload-zone">
+              <input type="file" accept="application/pdf" aria-label="Choose a PDF" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+              <div className="up-icon">{Icon.upload()}</div>
+              <div className="up-title">{file ? file.name : "Drop your PDF here"}</div>
+              <div className="up-desc">{file ? `${formatSize(file.size)} — click to choose a different file` : "or click to browse — PDF only"}</div>
+            </div>
 
-              {status && <p style={{ color: "var(--text-secondary)" }}>{status}</p>}
-
-              <div style={{ display: "flex", gap: "0.6rem" }}>
-                <button type="button" className="btn" onClick={() => setStep(2)}>
-                  <i className="fas fa-arrow-left"></i> Back
-                </button>
-                <button className="btn btn-primary" type="submit" disabled={loading || !attested}>
-                  {loading ? "Uploading..." : "Upload"}
-                </button>
+            <div className="info-list" style={{ marginTop: 18 }}>
+              <div className="info-row">
+                <span className="k">Course</span>
+                <span className="v">{resolvedCourseLabel || "—"}</span>
               </div>
-            </form>
-          </div>
+              <div className="info-row">
+                <span className="k">Notes</span>
+                <span className="v">{resolvedBlockTitle || "—"}</span>
+              </div>
+            </div>
+
+            <label className="check-row" style={{ marginTop: 18 }}>
+              <input type="checkbox" checked={attested} onChange={(e) => setAttested(e.target.checked)} required />
+              <span>
+                I confirm these are my own original notes, taken from attending this lecture myself — not copied from
+                slides, a textbook, or another student&apos;s work.
+              </span>
+            </label>
+
+            {status && <div className="auth-error" style={{ marginTop: 14 }}>{status}</div>}
+
+            <div className="flex-end is-split">
+              <button type="button" className="btn btn-quiet" onClick={() => setStep(2)}>
+                {Icon.back()} Back
+              </button>
+              <button className="btn btn-primary" type="submit" disabled={loading || !attested || !file}>
+                {loading ? "Uploading..." : <>Upload for review {Icon.check()}</>}
+              </button>
+            </div>
+          </form>
         )}
       </div>
     </div>

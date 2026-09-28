@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
 import PageHeader from "@/app/components/PageHeader";
 import { SkeletonCard } from "@/app/components/Skeleton";
+import { Icon } from "@/app/components/icons";
 import { friendlyErrorMessage } from "@/lib/api-client";
 
 interface Appeal {
@@ -15,10 +16,10 @@ interface Appeal {
   reviewedAt: string | null;
 }
 
-const STATUS_STYLES: Record<string, { bg: string; color: string; label: string; icon: string }> = {
-  PENDING: { bg: "var(--bg-warning)", color: "var(--text-warning)", label: "Pending review", icon: "fa-hourglass-half" },
-  APPROVED: { bg: "var(--bg-success)", color: "var(--text-success)", label: "Approved", icon: "fa-check-circle" },
-  REJECTED: { bg: "var(--bg-danger)", color: "var(--text-danger)", label: "Not approved", icon: "fa-times-circle" },
+const STATUS_STYLES: Record<Appeal["status"], { cls: string; label: string }> = {
+  PENDING: { cls: "pending", label: "Pending review" },
+  APPROVED: { cls: "paid", label: "Approved" },
+  REJECTED: { cls: "rejected", label: "Not approved" },
 };
 
 export default function ScribeAppealPage() {
@@ -93,101 +94,91 @@ export default function ScribeAppealPage() {
 
   return (
     <div className="page-wrap">
-      <div className="app-container" style={{ maxWidth: 560 }}>
-        <PageHeader title="Appeal reinstatement" subtitle="Ask an admin to review your removal." />
+      <PageHeader
+        eyebrow="Scribe · Reinstatement"
+        title="Appeal"
+        accent="reinstatement"
+        subtitle="Ask an admin to review your removal."
+      />
 
-        {loading && <div style={{ marginTop: "1rem" }}><SkeletonCard height="4.5rem" /></div>}
-        {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}
+      <div className="page-narrow">
+        {loading && <SkeletonCard height="4.5rem" />}
+        {error && <div className="auth-error">{error}</div>}
 
         {!loading && !error && !eligible && (
-          <p style={{ color: "var(--text-secondary)", marginTop: "1.5rem" }}>
-            You haven't been removed as a Scribe, so there's nothing to appeal here. If you'd like to become a
-            Scribe for the first time, use{" "}
-            <button
-              onClick={() => router.push("/scribe/apply")}
-              style={{ background: "none", border: "none", padding: 0, color: "var(--text-info)", cursor: "pointer", textDecoration: "underline" }}
-            >
-              the application page
-            </button>{" "}
-            instead.
-          </p>
+          <div className="panel">
+            <h2 className="panel-title">{Icon.shield()} Nothing to appeal</h2>
+            <p className="panel-desc" style={{ marginBottom: 0 }}>
+              You haven&apos;t been removed as a Scribe, so there&apos;s nothing to appeal here. If you&apos;d like to become a
+              Scribe for the first time, use{" "}
+              <button type="button" className="text-link" onClick={() => router.push("/scribe/apply")}>
+                the application page
+              </button>{" "}
+              instead.
+            </p>
+          </div>
         )}
 
         {!loading && !error && eligible && appeal && (
-          <div style={{ marginTop: "1.5rem" }}>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                background: STATUS_STYLES[appeal.status].bg,
-                color: STATUS_STYLES[appeal.status].color,
-                padding: "0.4rem 1rem",
-                borderRadius: "8px",
-                fontSize: "0.85rem",
-                fontWeight: 600,
-              }}
-            >
-              <i className={`fas ${STATUS_STYLES[appeal.status].icon}`}></i>
-              {STATUS_STYLES[appeal.status].label}
-            </span>
+          <div className="panel mb-24">
+            <div className="flex-between" style={{ marginBottom: 16 }}>
+              <h2 className="panel-title" style={{ marginBottom: 0 }}>{Icon.pen()} Your appeal</h2>
+              <span className={`status ${STATUS_STYLES[appeal.status].cls}`}>{STATUS_STYLES[appeal.status].label}</span>
+            </div>
 
-            <div style={{ marginTop: "1.2rem", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "1.2rem" }}>
-              <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "0.4rem" }}>Your appeal:</div>
-              <p style={{ fontSize: "0.9rem", color: "var(--text-primary)", whiteSpace: "pre-wrap" }}>&ldquo;{appeal.reason}&rdquo;</p>
-              <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "1rem" }}>
-                Submitted {new Date(appeal.submittedAt).toLocaleDateString()}
-                {appeal.reviewedAt && ` · Reviewed ${new Date(appeal.reviewedAt).toLocaleDateString()}`}
+            <div className="quote-block">&ldquo;{appeal.reason}&rdquo;</div>
+            <div className="info-list" style={{ marginTop: 14 }}>
+              <div className="info-row">
+                <span className="k">Submitted</span>
+                <span className="v">{new Date(appeal.submittedAt).toLocaleDateString()}</span>
               </div>
+              {appeal.reviewedAt && (
+                <div className="info-row">
+                  <span className="k">Reviewed</span>
+                  <span className="v">{new Date(appeal.reviewedAt).toLocaleDateString()}</span>
+                </div>
+              )}
             </div>
 
             {appeal.status === "PENDING" && (
-              <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: "1rem" }}>
-                An admin will review this soon — no need to submit another.
-              </p>
+              <p className="panel-desc" style={{ margin: "14px 0 0" }}>An admin will review this soon — no need to submit another.</p>
             )}
             {appeal.status === "APPROVED" && (
-              <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: "1rem" }}>
-                You're reinstated! Log out and back in to unlock your Scribe workspace again.
-              </p>
+              <p className="panel-desc" style={{ margin: "14px 0 0" }}>You&apos;re reinstated! Log out and back in to unlock your Scribe workspace again.</p>
             )}
             {appeal.status === "REJECTED" && !canAppeal && retryAt && (
-              <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: "1rem" }}>
-                This appeal wasn't approved. You can submit another appeal on{" "}
-                <strong>{new Date(retryAt).toLocaleDateString()}</strong>.
+              <p className="panel-desc" style={{ margin: "14px 0 0" }}>
+                This appeal wasn&apos;t approved. You can submit another appeal on <strong>{new Date(retryAt).toLocaleDateString()}</strong>.
               </p>
             )}
           </div>
         )}
 
         {showForm && (
-          <div style={{ marginTop: "1.5rem" }}>
-            <h2>
-              <i className="fas fa-undo" style={{ color: "var(--text-info)" }}></i> Tell us why you should be reinstated
-            </h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: "0.4rem" }}>
-              You can submit one appeal a month. Be specific about what changed and why you'd like another
-              chance as a Scribe.
+          <div className="panel">
+            <h2 className="panel-title">{Icon.pen()} Tell us why you should be reinstated</h2>
+            <p className="panel-desc">
+              You can submit one appeal a month. Be specific about what changed and why you&apos;d like another chance as a Scribe.
             </p>
 
-            <form onSubmit={handleSubmit} style={{ marginTop: "1rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <textarea
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                rows={6}
-                placeholder="Explain what happened, what you've done differently since, and why you should get another chance..."
-                style={{
-                  padding: "0.7rem",
-                  borderRadius: "8px",
-                  border: "1px solid var(--border-blue)",
-                  fontFamily: "inherit",
-                  fontSize: "0.9rem",
-                }}
-              />
-              {submitError && <div className="auth-error">{submitError}</div>}
-              <button className="btn btn-primary" type="submit" disabled={submitting}>
-                {submitting ? "Submitting..." : "Submit appeal"}
-              </button>
+            <form onSubmit={handleSubmit}>
+              <div className="form-field">
+                <label className="form-label" htmlFor="reason">Your appeal</label>
+                <textarea
+                  id="reason"
+                  className="textarea"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  rows={6}
+                  placeholder="Explain what happened, what you've done differently since, and why you should get another chance..."
+                />
+              </div>
+              {submitError && <div className="auth-error" style={{ marginBottom: 12 }}>{submitError}</div>}
+              <div className="flex-end">
+                <button className="btn btn-primary" type="submit" disabled={submitting}>
+                  {submitting ? "Submitting..." : <>Submit appeal {Icon.arrow()}</>}
+                </button>
+              </div>
             </form>
           </div>
         )}

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser, StoredUser } from "@/lib/client-session";
 import PageHeader from "@/app/components/PageHeader";
+import { SkeletonList } from "@/app/components/Skeleton";
+import { Icon } from "@/app/components/icons";
 import { friendlyErrorMessage } from "@/lib/api-client";
 
 interface ScribeNote {
@@ -18,14 +20,16 @@ interface ScribeNote {
   reviewCount: number;
 }
 
-const STATUS_STYLES: Record<string, { bg: string; color: string; label: string }> = {
-  LIVE: { bg: "var(--bg-success)", color: "var(--text-success)", label: "Live" },
-  APPROVED: { bg: "var(--bg-success)", color: "var(--text-success)", label: "Live" },
-  RENDERING: { bg: "var(--bg-warning)", color: "var(--text-warning)", label: "Rendering" },
-  FLAGGED: { bg: "var(--bg-warning)", color: "var(--text-warning)", label: "Under review" },
-  PENDING_REVIEW: { bg: "var(--bg-warning)", color: "var(--text-warning)", label: "Under review" },
-  REJECTED: { bg: "var(--bg-danger)", color: "var(--text-danger)", label: "Rejected" },
+const STATUS_STYLES: Record<string, { cls: string; label: string }> = {
+  LIVE: { cls: "live", label: "Live" },
+  APPROVED: { cls: "live", label: "Live" },
+  RENDERING: { cls: "review", label: "Rendering" },
+  FLAGGED: { cls: "review", label: "Under review" },
+  PENDING_REVIEW: { cls: "review", label: "Under review" },
+  REJECTED: { cls: "rejected", label: "Rejected" },
 };
+
+const isLive = (status: string) => status === "LIVE" || status === "APPROVED";
 
 export default function ScribeWorkspacePage() {
   const router = useRouter();
@@ -59,6 +63,12 @@ export default function ScribeWorkspacePage() {
   }, [router]);
 
   const totalSales = notes.reduce((sum, n) => sum + n.salesCount, 0);
+  const liveCount = notes.filter((n) => isLive(n.status)).length;
+  const inReviewCount = notes.filter((n) => !isLive(n.status) && n.status !== "REJECTED").length;
+  const totalReviews = notes.reduce((sum, n) => sum + n.reviewCount, 0);
+  // Weighted by review count, so one 5★ on a tiny note doesn't outweigh 40 reviews elsewhere.
+  const weightedRating =
+    totalReviews > 0 ? notes.reduce((sum, n) => sum + (n.avgRating ?? 0) * n.reviewCount, 0) / totalReviews : null;
 
   async function handleCopyLink(blockId: string, noteId: string) {
     const url = `${window.location.origin}/blocks/${blockId}?note=${noteId}`;
@@ -74,82 +84,110 @@ export default function ScribeWorkspacePage() {
 
   return (
     <div className="page-wrap">
-      <div className="app-container">
-        <PageHeader title="Scribe workspace" subtitle="Your notes, their status and performance.">
-          <button className="btn" onClick={() => router.push(`/scribe/${user?.id}`)}>
-              <i className="fas fa-id-badge"></i> My public profile
-            </button>
-          <button className="btn" onClick={() => router.push("/scribe/earnings")}>
-                <i className="fas fa-wallet"></i> Earnings
-              </button>
-          <button className="btn btn-primary" onClick={() => router.push("/scribe/upload")}>
-                <i className="fas fa-plus"></i> Upload new note
-              </button>
-        </PageHeader>
+      <PageHeader
+        eyebrow="Scribe Workspace"
+        title="Your"
+        accent="notes"
+        subtitle="Your notes, their status and performance — everything you've published in one place."
+      >
+        <button className="btn btn-ghost" onClick={() => router.push(`/scribe/${user?.id}`)}>
+          My public profile
+        </button>
+        <button className="btn btn-ghost" onClick={() => router.push("/scribe/earnings")}>
+          {Icon.coin()} Earnings
+        </button>
+        <button className="btn btn-primary" onClick={() => router.push("/scribe/upload")}>
+          {Icon.upload()} Upload notes
+        </button>
+      </PageHeader>
 
-        <div style={{ display: "flex", gap: "1rem", margin: "1.2rem 0", flexWrap: "wrap" }}>
-          <div className="role-pill">
-            <i className="fas fa-file-alt"></i> {notes.length} upload{notes.length === 1 ? "" : "s"}
+      {loading && <SkeletonList rows={4} />}
+      {error && <div className="auth-error">{error}</div>}
+
+      {!loading && !error && (
+        <>
+          <div className="three-col mb-24">
+            <div className="stat-card">
+              <div className="label">Copies sold</div>
+              <div className="value">{totalSales}</div>
+              <span className="delta flat">
+                {Icon.trend()} across {notes.length} upload{notes.length === 1 ? "" : "s"}
+              </span>
+            </div>
+            <div className="stat-card">
+              <div className="label">Live notes</div>
+              <div className="value">{liveCount}</div>
+              <span className="delta">{Icon.check()} visible in catalogue</span>
+            </div>
+            <div className="stat-card">
+              <div className="label">In review</div>
+              <div className="value">{inReviewCount}</div>
+              <span className={`delta ${inReviewCount > 0 ? "warn" : "flat"}`}>{Icon.spark()} awaiting moderation</span>
+            </div>
+            <div className="stat-card">
+              <div className="label">Avg. rating</div>
+              <div className="value">{weightedRating !== null ? weightedRating.toFixed(1) : "—"}</div>
+              <span className="delta flat">
+                {Icon.star()} {totalReviews} review{totalReviews === 1 ? "" : "s"}
+              </span>
+            </div>
           </div>
-          <div className="role-pill">
-            <i className="fas fa-shopping-cart"></i> {totalSales} total sale{totalSales === 1 ? "" : "s"}
-          </div>
-        </div>
 
-        {loading && <p style={{ color: "var(--text-secondary)" }}>Loading your uploads...</p>}
-        {error && <div className="auth-error">{error}</div>}
-        {!loading && !error && notes.length === 0 && (
-          <p style={{ color: "var(--text-secondary)" }}>
-            You haven't uploaded any notes yet — click "Upload new note" to get started.
-          </p>
-        )}
+          <h2 className="panel-title section-title">{Icon.book()} Your notes</h2>
 
-        <div className="ledger-list">
-          {notes.map((n) => {
-            const style = STATUS_STYLES[n.status] || STATUS_STYLES.PENDING_REVIEW;
-            return (
-              <div key={n.id} className="ledger-row">
-                <div className="badge">{n.courseCode}</div>
-                <h3>{n.blockTitle}</h3>
-                <div className="meta">{n.courseName}</div>
-
-                <span
-                  style={{
-                    background: style.bg,
-                    color: style.color,
-                    padding: "0.2rem 0.8rem",
-                    borderRadius: "8px",
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
-                  }}
-                >
-                  {style.label}
-                </span>
-
-                <div style={{ display: "flex", gap: "1rem", marginTop: "0.9rem", fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-                  <span>
-                    <i className="fas fa-shopping-cart" style={{ color: "var(--text-info)" }}></i> {n.salesCount} bought
-                  </span>
-                  <span>
-                    <i className="fas fa-star" style={{ color: "var(--star)" }}></i>{" "}
-                    {n.avgRating != null ? `${n.avgRating.toFixed(1)} (${n.reviewCount})` : "No ratings yet"}
-                  </span>
-                </div>
-
-                {(n.status === "LIVE" || n.status === "APPROVED") && (
-                  <button
-                    className="btn"
-                    style={{ marginTop: "0.8rem", width: "100%" }}
-                    onClick={() => handleCopyLink(n.blockId, n.id)}
-                  >
-                    <i className="fas fa-link"></i> {copiedId === n.id ? "Copied!" : "Copy share link"}
-                  </button>
-                )}
+          {notes.length === 0 ? (
+            <div className="panel">
+              <div className="empty-state">
+                You haven&apos;t uploaded any notes yet — click &ldquo;Upload notes&rdquo; to get started.
               </div>
-            );
-          })}
-        </div>
-      </div>
+            </div>
+          ) : (
+            <div>
+              {notes.map((n) => {
+                const style = STATUS_STYLES[n.status] || STATUS_STYLES.PENDING_REVIEW;
+                return (
+                  <div key={n.id} className="data-row data-row--studio">
+                    <div>
+                      <div className="row-code">{n.courseCode}</div>
+                      <div className="row-title">{n.blockTitle}</div>
+                      <div className="row-meta">{n.courseName}</div>
+                    </div>
+                    <div className="row-stat" data-label="Sold">
+                      <strong>{n.salesCount}</strong>
+                    </div>
+                    <div className="row-stat" data-label="Rating">
+                      <strong>{n.avgRating != null ? n.avgRating.toFixed(1) : "—"}</strong>
+                      {n.avgRating != null && (
+                        <span className="hide-sm-inline">
+                          {n.reviewCount} review{n.reviewCount === 1 ? "" : "s"}
+                        </span>
+                      )}
+                    </div>
+                    <div className="row-actions">
+                      <span className={`status ${style.cls}`}>{style.label}</span>
+                      {isLive(n.status) && (
+                        <>
+                          <button className="btn btn-sm btn-ghost" onClick={() => handleCopyLink(n.blockId, n.id)}>
+                            {Icon.link()} {copiedId === n.id ? "Copied!" : "Copy link"}
+                          </button>
+                          <button
+                            className="btn btn-sm btn-ghost"
+                            aria-label="View note page"
+                            title="View note page"
+                            onClick={() => router.push(`/blocks/${n.blockId}?note=${n.id}`)}
+                          >
+                            {Icon.eye()}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import PageHeader from "@/app/components/PageHeader";
 import Avatar from "@/app/components/Avatar";
 import { friendlyErrorMessage, apiFetch } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
+import { Icon } from "@/app/components/icons";
 
 interface ProfileBlock {
   noteId: string;
@@ -38,12 +39,7 @@ interface Profile {
   blocks: ProfileBlock[];
 }
 
-const TRUST_STYLES: Record<Profile["trustLevel"], { bg: string; color: string }> = {
-  NEW: { bg: "var(--bg-info)", color: "var(--text-secondary)" },
-  RISING: { bg: "var(--bg-warning)", color: "var(--text-warning)" },
-  TRUSTED: { bg: "var(--bg-success)", color: "var(--text-success)" },
-  ELITE: { bg: "var(--bg-pro)", color: "var(--text-pro)" },
-};
+const naira = (n: number) => `₦${n.toLocaleString()}`;
 
 export default function ScribeProfilePage() {
   const router = useRouter();
@@ -137,240 +133,191 @@ export default function ScribeProfilePage() {
 
   return (
     <div className="page-wrap">
-      <div className="app-container" style={{ maxWidth: 960 }}>
-        <PageHeader title="Scribe profile">
-          <button className="btn" onClick={() => router.back()}>
-              <i className="fas fa-arrow-left"></i> Back
-            </button>
-        </PageHeader>
+      <PageHeader eyebrow="Scribe · Profile" title="Scribe" accent="profile" subtitle="Ratings, followers and every live note this scribe has published.">
+        <button className="btn btn-ghost" onClick={() => router.back()}>
+          {Icon.back()} Back
+        </button>
+      </PageHeader>
 
-        {loading && <p style={{ marginTop: "1rem", color: "var(--text-secondary)" }}>Loading profile...</p>}
-        {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}
+      {loading && <SkeletonList rows={3} />}
+      {error && <div className="auth-error">{error}</div>}
 
-        {profile && (
-          <div style={{ marginTop: "1.5rem" }}>
-            <div style={{ display: "flex", gap: "1.1rem", alignItems: "flex-start", flexWrap: "wrap" }}>
-              <div style={{ transform: "scale(1.7)", transformOrigin: "top left", marginRight: "0.6rem" }}>
+      {profile && (
+        <>
+          <div className="panel mb-24">
+            <div className="profile-head">
+              <div className="profile-avatar">
                 <Avatar name={profile.fullName} imageUrl={profile.avatarUrl} />
               </div>
 
-              <div style={{ flex: "1 1 260px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
-                  <div>
-                    <h2 style={{ fontSize: "1.5rem" }}>{profile.fullName}</h2>
-                    <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "0.38rem",
-                          background: TRUST_STYLES[profile.trustLevel].bg,
-                          color: TRUST_STYLES[profile.trustLevel].color,
-                          padding: "0.3rem 0.9rem",
-                          borderRadius: "999px",
-                          fontSize: "0.78rem",
-                          fontWeight: 700,
-                        }}
-                      >
-                        <i className="fas fa-shield-alt" style={{ marginRight: "0.18rem" }}></i> {profile.trustLabel}
+              <div style={{ flex: "1 1 260px", minWidth: 0 }}>
+                <div className="flex-between">
+                  <div style={{ minWidth: 0 }}>
+                    <h2 className="profile-name">{profile.fullName}</h2>
+                    <div className="chip-row">
+                      <span className={`chip tier-${profile.trustLevel.toLowerCase()}`}>
+                        {Icon.shield()} {profile.trustLabel}
                       </span>
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "0.38rem",
-                          background: "var(--bg-pill)",
-                          color: "var(--text-secondary)",
-                          padding: "0.3rem 0.9rem",
-                          borderRadius: "999px",
-                          fontSize: "0.78rem",
-                          fontWeight: 600,
-                        }}
-                      >
-                        <i className="fas fa-school" style={{ marginRight: "0.18rem" }}></i> {profile.schoolName}
-                      </span>
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "0.38rem",
-                          background: "var(--bg-info)",
-                          color: "var(--text-secondary)",
-                          padding: "0.3rem 0.9rem",
-                          borderRadius: "999px",
-                          fontSize: "0.78rem",
-                          fontWeight: 600,
-                        }}
-                      >
-                        <i className="fas fa-graduation-cap" style={{ marginRight: "0.18rem" }}></i> {profile.currentLevel}
-                      </span>
-                      {!profile.isActiveScribe && (
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            background: "var(--bg-danger)",
-                            color: "var(--text-danger)",
-                            padding: "0.3rem 0.9rem",
-                            borderRadius: "999px",
-                            fontSize: "0.78rem",
-                            fontWeight: 700,
-                          }}
-                        >
-                          No longer an active scribe
-                        </span>
-                      )}
+                      <span className="chip">{Icon.compass()} {profile.schoolName}</span>
+                      <span className="chip">{Icon.book()} {profile.currentLevel}</span>
+                      {!profile.isActiveScribe && <span className="chip is-danger">No longer an active scribe</span>}
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", gap: "0.6rem" }}>
+                  <div className="header-actions" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     {!profile.isSelf && profile.isActiveScribe && (
                       <button
-                        className={`btn ${profile.isFollowing ? "" : "btn-primary"}`}
+                        className={`btn ${profile.isFollowing ? "btn-ghost" : "btn-primary"}`}
                         onClick={toggleFollow}
                         disabled={followLoading}
                       >
-                        <i className={`fas ${profile.isFollowing ? "fa-user-check" : "fa-user-plus"}`}></i>{" "}
-                        {profile.isFollowing ? "Following" : "Follow Scribe"}
+                        {Icon.user()} {profile.isFollowing ? "Following" : "Follow scribe"}
                       </button>
                     )}
                     {!profile.isSelf && (
-                      <button className="btn" onClick={() => setReporting((v) => !v)}>
-                        <i className="fas fa-flag"></i> Report
+                      <button className="btn btn-ghost" onClick={() => setReporting((v) => !v)}>
+                        {Icon.flag()} Report
                       </button>
                     )}
                   </div>
                 </div>
 
                 {reporting && (
-                  <div style={{ marginTop: "1rem", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "8px", padding: "1rem", display: "flex", flexDirection: "column", gap: "0.7rem" }}>
-                    <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-                      Why are you reporting {profile.fullName}? (harassment, scam, fake notes, etc.)
-                    </label>
-                    <textarea
-                      value={reportReason}
-                      onChange={(e) => setReportReason(e.target.value)}
-                      rows={3}
-                      placeholder="Describe what happened..."
-                      style={{ padding: "0.6rem", borderRadius: "8px", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem" }}
-                    />
-                    <div style={{ display: "flex", gap: "0.6rem" }}>
+                  <div style={{ marginTop: 18 }}>
+                    <div className="form-field">
+                      <label className="form-label" htmlFor="report">
+                        Why are you reporting {profile.fullName}?
+                      </label>
+                      <textarea
+                        id="report"
+                        className="textarea"
+                        value={reportReason}
+                        onChange={(e) => setReportReason(e.target.value)}
+                        rows={3}
+                        placeholder="Harassment, scam, fake notes, etc. — describe what happened..."
+                      />
+                    </div>
+                    <div className="flex-end" style={{ marginTop: 0, paddingTop: 12 }}>
+                      <button className="btn btn-quiet" onClick={() => setReporting(false)}>
+                        Cancel
+                      </button>
                       <button className="btn btn-primary" onClick={submitReport} disabled={reportSubmitting}>
                         {reportSubmitting ? "Submitting..." : "Submit report"}
-                      </button>
-                      <button className="btn" onClick={() => setReporting(false)}>
-                        Cancel
                       </button>
                     </div>
                   </div>
                 )}
-                {reportStatus && !reporting && (
-                  <p style={{ color: "var(--text-success)", marginTop: "0.6rem", fontSize: "0.85rem" }}>{reportStatus}</p>
+                {reportStatus && (
+                  <p className="panel-desc" style={{ margin: "12px 0 0", color: reporting ? "var(--text-danger)" : "var(--text-success)" }}>
+                    {reportStatus}
+                  </p>
                 )}
               </div>
             </div>
+          </div>
 
-            <div className="stat-row">
-              <div className="stat-card" style={{ flex: "1 1 180px" }}>
-                <div className="stat-label"><i className="fas fa-star" style={{ color: "var(--star)" }}></i> Overall rating</div>
-                <div className="stat-value">{profile.avgRating != null ? profile.avgRating.toFixed(1) : "—"}</div>
-                <div className="stat-sub">{profile.ratingCount} verified reviews</div>
-              </div>
-              <div className="stat-card" style={{ flex: "1 1 180px" }}>
-                <div className="stat-label"><i className="fas fa-shopping-cart"></i> Paid buyers</div>
-                <div className="stat-value">{profile.paidSubscriberCount}</div>
-                <div className="stat-sub">scholars</div>
-              </div>
-              <div className="stat-card" style={{ flex: "1 1 180px" }}>
-                <div className="stat-label"><i className="fas fa-users"></i> Followers</div>
-                <div className="stat-value">{profile.followerCount}</div>
-                <div className="stat-sub">active</div>
-              </div>
-              <div className="stat-card" style={{ flex: "1 1 180px" }}>
-                <div className="stat-label"><i className="fas fa-layer-group"></i> Authored blocks</div>
-                <div className="stat-value">{profile.blocks.length}</div>
-                <div className="stat-sub">packs</div>
-              </div>
+          <div className="three-col mb-24">
+            <div className="stat-card">
+              <div className="label">Overall rating</div>
+              <div className="value">{profile.avgRating != null ? profile.avgRating.toFixed(1) : "—"}</div>
+              <span className="delta flat">{Icon.star()} {profile.ratingCount} verified review{profile.ratingCount === 1 ? "" : "s"}</span>
             </div>
+            <div className="stat-card">
+              <div className="label">Paid buyers</div>
+              <div className="value">{profile.paidSubscriberCount}</div>
+              <span className="delta flat">{Icon.check()} scholars</span>
+            </div>
+            <div className="stat-card">
+              <div className="label">Followers</div>
+              <div className="value">{profile.followerCount}</div>
+              <span className="delta flat">{Icon.users()} following</span>
+            </div>
+            <div className="stat-card">
+              <div className="label">Authored blocks</div>
+              <div className="value">{profile.blocks.length}</div>
+              <span className="delta flat">{Icon.book()} live packs</span>
+            </div>
+          </div>
 
-            <h3 style={{ marginTop: "1.8rem", fontSize: "1.1rem" }}>
-              <i className="fas fa-layer-group" style={{ color: "var(--text-info)" }}></i> Live notes
-            </h3>
+          <h2 className="panel-title section-title">{Icon.book()} Live notes</h2>
 
-            {profile.blocks.length > 0 && (
-              <div style={{ display: "flex", gap: "0.8rem", margin: "0.8rem 0", flexWrap: "wrap" }}>
-                <div style={{ position: "relative", flex: "1 1 220px" }}>
-                  <i
-                    className="fas fa-search"
-                    style={{ position: "absolute", left: "0.9rem", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }}
-                  ></i>
-                  <input
-                    value={noteSearch}
-                    onChange={(e) => setNoteSearch(e.target.value)}
-                    placeholder="Search this scribe's notes..."
-                    style={{
-                      width: "100%",
-                      padding: "0.55rem 0.9rem 0.55rem 2.2rem",
-                      borderRadius: "8px",
-                      border: "1px solid var(--border-blue)",
-                      fontSize: "0.85rem",
-                    }}
-                  />
-                </div>
+          {profile.blocks.length > 0 && (
+            <div className="filter-bar" style={{ marginBottom: 16 }}>
+              <div className="search-field">
+                {Icon.search()}
+                <input
+                  type="search"
+                  value={noteSearch}
+                  onChange={(e) => setNoteSearch(e.target.value)}
+                  placeholder="Search this scribe's notes..."
+                  aria-label="Search this scribe's notes"
+                />
+              </div>
+              <div className="filter-selects">
                 <select
+                  className="select-plain"
                   value={noteSort}
                   onChange={(e) => setNoteSort(e.target.value as typeof noteSort)}
-                  style={{
-                    padding: "0.55rem 1rem",
-                    borderRadius: "8px",
-                    border: "1px solid var(--border-blue)",
-                    fontSize: "0.85rem",
-                    background: "var(--surface)",
-                    color: "var(--text-primary)",
-                  }}
+                  aria-label="Sort notes"
                 >
                   <option value="recent">Most recent</option>
                   <option value="title">Title (A–Z)</option>
                   <option value="price">Price (low to high)</option>
                 </select>
               </div>
-            )}
-
-            {profile.blocks.length === 0 && (
-              <p style={{ color: "var(--text-secondary)", marginTop: "0.6rem" }}>No live notes yet.</p>
-            )}
-            {profile.blocks.length > 0 && visibleBlocks.length === 0 && (
-              <p style={{ color: "var(--text-secondary)", marginTop: "0.6rem" }}>No notes match your search.</p>
-            )}
-
-            <div className="ledger-list" style={{ marginTop: "0.8rem" }}>
-              {visibleBlocks.map((b) => (
-                <div key={b.noteId} className="ledger-row press-on-tap" onClick={() => router.push(`/blocks/${b.blockId}`)} style={{ cursor: "pointer" }}>
-                  <span className="seal mono">{b.courseCode}</span>
-                  <div className="ledger-row-title" style={{ marginTop: "0.4rem" }}>{b.blockTitle}</div>
-                  <div className="ledger-row-meta">{b.courseName}</div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.6rem", paddingTop: "0.7rem", borderTop: "1px solid var(--border-light)" }}>
-                    {b.owned ? (
-                      <span className="seal">Owned</span>
-                    ) : (
-                      <span className="price-tag">₦{b.price.toLocaleString()}</span>
-                    )}
-                    {b.owned ? (
-                      <button className="btn btn-primary" onClick={(e) => { e.stopPropagation(); router.push(`/notes/${b.noteId}/read`); }}>
-                        <i className="fas fa-book-open"></i> Read
-                      </button>
-                    ) : (
-                      <button className="btn btn-primary" onClick={(e) => { e.stopPropagation(); router.push(`/blocks/${b.blockId}`); }}>
-                        <i className="fas fa-lock"></i> Instant Unlock
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
             </div>
+          )}
+
+          {profile.blocks.length === 0 && (
+            <div className="panel">
+              <div className="empty-state">No live notes yet.</div>
+            </div>
+          )}
+          {profile.blocks.length > 0 && visibleBlocks.length === 0 && (
+            <div className="panel">
+              <div className="empty-state">No notes match your search.</div>
+            </div>
+          )}
+
+          <div>
+            {visibleBlocks.map((b) => (
+              <div key={b.noteId} className="data-row data-row--tx" style={{ cursor: "pointer" }} onClick={() => router.push(`/blocks/${b.blockId}`)}>
+                <div>
+                  <div className="row-code">{b.courseCode}</div>
+                  <div className="row-title">{b.blockTitle}</div>
+                  <div className="row-meta">{b.courseName}</div>
+                </div>
+                <div className="row-stat" data-label="Price">
+                  {b.owned ? <span className="status paid">Owned</span> : <strong>{naira(b.price)}</strong>}
+                </div>
+                <div className="row-actions">
+                  {b.owned ? (
+                    <button
+                      className="btn btn-sm btn-primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/notes/${b.noteId}/read`);
+                      }}
+                    >
+                      {Icon.book()} Read
+                    </button>
+                  ) : (
+                    <button
+                      className="btn btn-sm btn-primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/blocks/${b.blockId}`);
+                      }}
+                    >
+                      {Icon.lock()} Instant unlock
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 }

@@ -140,6 +140,88 @@ export const Icon: Record<string, () => ReactElement> = {
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" {...stroke(1.7)} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
+  back: () => (
+    <svg fill="none" viewBox="0 0 20 20" aria-hidden="true">
+      <path d="M16 10H5M9 5.5L4.5 10 9 14.5" {...stroke(1.8)} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  clock: () => (
+    <svg {...S} aria-hidden="true">
+      <circle cx="12" cy="12" r="9" {...stroke(1.7)} />
+      <path d="M12 7v5l3 2" {...stroke(1.7)} strokeLinecap="round" />
+    </svg>
+  ),
+  up: () => (
+    <svg fill="none" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 19V5M5 12l7-7 7 7" {...stroke(2.2)} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  eye: () => (
+    <svg {...S} aria-hidden="true">
+      <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6z" {...stroke(1.7)} />
+      <circle cx="12" cy="12" r="2.6" {...stroke(1.7)} />
+    </svg>
+  ),
+  warn: () => (
+    <svg {...S} aria-hidden="true">
+      <path d="M12 4l9 16H3L12 4z" {...stroke(1.7)} strokeLinejoin="round" />
+      <path d="M12 10v4M12 17.2v.1" {...stroke(1.9)} strokeLinecap="round" />
+    </svg>
+  ),
+  trend: () => (
+    <svg {...S} aria-hidden="true">
+      <path d="M3 17l6-6 4 4 8-8" {...stroke(1.9)} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M21 7h-5M21 7v5" {...stroke(1.9)} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  spark: () => (
+    <svg {...S} aria-hidden="true">
+      <path
+        d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"
+        {...stroke(1.7)}
+        strokeLinecap="round"
+      />
+    </svg>
+  ),
+  link: () => (
+    <svg {...S} aria-hidden="true">
+      <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" {...stroke(1.7)} strokeLinecap="round" />
+      <path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" {...stroke(1.7)} strokeLinecap="round" />
+    </svg>
+  ),
+  lock: () => (
+    <svg {...S} aria-hidden="true">
+      <rect x="4" y="11" width="16" height="10" rx="2" {...stroke(1.7)} />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" {...stroke(1.7)} strokeLinecap="round" />
+    </svg>
+  ),
+  hourglass: () => (
+    <svg {...S} aria-hidden="true">
+      <path d="M6 3h12M6 21h12M7 3v3.5a5 5 0 0 0 2 4l1.5 1.5L9 13.5a5 5 0 0 0-2 4V21M17 3v3.5a5 5 0 0 1-2 4L13.5 12l1.5 1.5a5 5 0 0 1 2 4V21" {...stroke(1.6)} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  users: () => (
+    <svg {...S} aria-hidden="true">
+      <circle cx="9" cy="8" r="3.5" {...stroke(1.7)} />
+      <path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" {...stroke(1.7)} strokeLinecap="round" />
+      <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.3c2.2.7 3.5 2.6 3.5 5.7" {...stroke(1.7)} strokeLinecap="round" />
+    </svg>
+  ),
+  bank: () => (
+    <svg {...S} aria-hidden="true">
+      <path d="M3 10l9-6 9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18" {...stroke(1.7)} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  pen: () => (
+    <svg {...S} aria-hidden="true">
+      <path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19l-4 1z" {...stroke(1.7)} strokeLinejoin="round" />
+    </svg>
+  ),
+  x: () => (
+    <svg {...S} aria-hidden="true">
+      <path d="M6 6l12 12M18 6L6 18" {...stroke(2)} strokeLinecap="round" />
+    </svg>
+  ),
   caret: () => (
     <svg className="pcaret" {...S} aria-hidden="true">
       <path d="M6 9l6 6 6-6" {...stroke(2)} strokeLinecap="round" strokeLinejoin="round" />

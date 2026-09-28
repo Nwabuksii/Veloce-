@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
 import PageHeader from "@/app/components/PageHeader";
 import { SkeletonList } from "@/app/components/Skeleton";
+import { Icon } from "@/app/components/icons";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 
 interface BlockEarning {
@@ -38,12 +39,14 @@ interface PayoutItem {
   failureReason: string | null;
 }
 
-const STATUS_STYLES: Record<string, { bg: string; color: string; label: string }> = {
-  PENDING: { bg: "var(--bg-warning)", color: "var(--text-warning)", label: "Pending review" },
-  PROCESSING: { bg: "var(--bg-info)", color: "var(--text-info)", label: "Processing" },
-  PAID: { bg: "var(--bg-success)", color: "var(--text-success)", label: "Paid" },
-  FAILED: { bg: "var(--bg-danger)", color: "var(--text-danger)", label: "Failed" },
+const STATUS_STYLES: Record<PayoutItem["status"], { cls: string; label: string }> = {
+  PENDING: { cls: "pending", label: "Pending review" },
+  PROCESSING: { cls: "processing", label: "Processing" },
+  PAID: { cls: "paid", label: "Paid" },
+  FAILED: { cls: "failed", label: "Failed" },
 };
+
+const naira = (n: number) => `₦${n.toLocaleString()}`;
 
 // Counts up from 0 to the real total over ~900ms — just enough motion to
 // feel like "your earnings, going up" without being gimmicky.
@@ -208,219 +211,216 @@ export default function ScribeEarningsPage() {
 
   const hasAccount = Boolean(account?.accountNumber);
 
+  function scrollToWithdraw() {
+    document.getElementById("withdraw")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return (
     <div className="page-wrap">
-      <div className="app-container" style={{ maxWidth: 560 }}>
-        <PageHeader title="Your earnings" subtitle="What you've earned and been paid.">
-          <button className="btn" onClick={() => router.push("/scribe/workspace")}>
-              <i className="fas fa-arrow-left"></i> Workspace
-            </button>
-        </PageHeader>
+      <PageHeader
+        eyebrow="Scribe · Money"
+        title="Your"
+        accent="earnings"
+        subtitle="What you've earned and been paid. Withdrawals go to your saved bank account once an admin has processed them."
+      >
+        <button className="btn btn-ghost" onClick={() => router.push("/scribe/workspace")}>
+          {Icon.back()} Workspace
+        </button>
+        <button className="btn btn-primary" onClick={scrollToWithdraw}>
+          {Icon.coin()} Withdraw
+        </button>
+      </PageHeader>
 
-        {loading && <SkeletonList rows={3} />}
-        {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}
+      {loading && <SkeletonList rows={3} />}
+      {error && <div className="auth-error">{error}</div>}
 
-        {!loading && !error && (
-          <div style={{ marginTop: "1.5rem" }}>
-            <div
-              style={{
-                background: "var(--ink)",
-                borderRadius: "1.2rem",
-                padding: "1.8rem",
-                color: "white",
-                textAlign: "center",
-              }}
-            >
-              <div style={{ fontSize: "0.85rem", opacity: 0.85 }}>Total earnings</div>
-              <div style={{ fontSize: "2.6rem", fontWeight: 700, marginTop: "0.3rem" }}>
-                ₦{displayedEarnings.toLocaleString()}
+      {!loading && !error && (
+        <>
+          <div className="two-col mb-24">
+            {/* Balance */}
+            <div className="panel balance-hero">
+              <div className="form-label">Available balance</div>
+              <div className="balance-num">{naira(balance)}</div>
+              <div className="chip-row">
+                <span className="status paid">{naira(displayedEarnings)} total earned</span>
+                {pendingSales > 0 && <span className="status pending">{naira(pendingEarnings)} verifying</span>}
               </div>
-              <div style={{ fontSize: "0.85rem", opacity: 0.85, marginTop: "0.4rem" }}>
-                From {totalSales} sale{totalSales === 1 ? "" : "s"} · ₦{balance.toLocaleString()} available to withdraw
-              </div>
+              <p className="panel-desc" style={{ marginTop: 14, marginBottom: 0 }}>
+                From {totalSales} sale{totalSales === 1 ? "" : "s"}.
+              </p>
             </div>
 
-            {pendingSales > 0 && (
-              <div
-                style={{
-                  marginTop: "0.8rem",
-                  background: "var(--bg-warning)",
-                  border: "1px solid var(--text-warning)",
-                  borderRadius: "12px",
-                  padding: "1rem",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  gap: "0.6rem",
-                }}
-              >
-                <div>
-                  <div style={{ fontWeight: 600, color: "var(--text-warning)" }}>
-                    <i className="fas fa-hourglass-half"></i> ₦{pendingEarnings.toLocaleString()} verifying
-                  </div>
-                  <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>
-                    {pendingSales} recent sale{pendingSales === 1 ? "" : "s"} — moves to your available balance{" "}
-                    {refundWindowMinutes} minutes after purchase, as long as the buyer doesn't request a refund. You'll
-                    get a message if one does.
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Bank account */}
-            <h3 style={{ marginTop: "1.5rem", fontSize: "1.05rem" }}>
-              <i className="fas fa-university" style={{ color: "var(--text-info)" }}></i> Bank account
-            </h3>
+            <div className="panel">
+              <h2 className="panel-title">{Icon.bank()} Payout account</h2>
+              <p className="panel-desc">Where your withdrawals are sent. We verify the account name with your bank when you save it.</p>
 
-            {!editingAccount && hasAccount && (
-              <div style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "1rem", marginTop: "0.6rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <div style={{ fontWeight: 600 }}>{account?.accountName}</div>
-                  <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-                    {account?.bankName} · •••• {account?.accountNumber?.slice(-4)}
+              {!editingAccount && hasAccount && (
+                <>
+                  <div className="info-list">
+                    <div className="info-row">
+                      <span className="k">Bank</span>
+                      <span className="v">{account?.bankName}</span>
+                    </div>
+                    <div className="info-row">
+                      <span className="k">Account number</span>
+                      <span className="v">•••• {account?.accountNumber?.slice(-4)}</span>
+                    </div>
+                    <div className="info-row">
+                      <span className="k">Account name</span>
+                      <span className="v">{account?.accountName}</span>
+                    </div>
                   </div>
-                </div>
-                <button className="btn" onClick={() => setEditingAccount(true)}>
-                  Change
-                </button>
-              </div>
-            )}
-
-            {editingAccount && (
-              <form onSubmit={handleSaveAccount} style={{ marginTop: "0.6rem", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "1rem", display: "flex", flexDirection: "column", gap: "0.7rem" }}>
-                <select
-                  value={bankCode}
-                  onChange={(e) => setBankCode(e.target.value)}
-                  style={{ padding: "0.6rem", borderRadius: "8px", border: "1px solid var(--border-blue)" }}
-                >
-                  <option value="">Select your bank</option>
-                  {banks.map((b) => (
-                    <option key={b.code} value={b.code}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={10}
-                  placeholder="10-digit account number"
-                  value={accountNumber}
-                  onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ""))}
-                  style={{ padding: "0.6rem", borderRadius: "8px", border: "1px solid var(--border-blue)" }}
-                />
-                {accountError && <p style={{ color: "var(--text-danger)", fontSize: "0.85rem" }}>{accountError}</p>}
-                <div style={{ display: "flex", gap: "0.6rem" }}>
-                  <button className="btn btn-primary" type="submit" disabled={accountSaving}>
-                    {accountSaving ? "Verifying..." : "Save & verify"}
-                  </button>
-                  {hasAccount && (
-                    <button className="btn" type="button" onClick={() => setEditingAccount(false)}>
-                      Cancel
+                  <div className="flex-end">
+                    <button className="btn btn-ghost" onClick={() => setEditingAccount(true)}>
+                      Change account
                     </button>
-                  )}
+                  </div>
+                </>
+              )}
+
+              {editingAccount && (
+                <form onSubmit={handleSaveAccount}>
+                  <div className="form-field">
+                    <label className="form-label" htmlFor="bank">Bank</label>
+                    <select id="bank" className="select" value={bankCode} onChange={(e) => setBankCode(e.target.value)}>
+                      <option value="">Select your bank</option>
+                      {banks.map((b) => (
+                        <option key={b.code} value={b.code}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-field">
+                    <label className="form-label" htmlFor="acct">Account number</label>
+                    <input
+                      id="acct"
+                      className="input"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={10}
+                      placeholder="10-digit account number"
+                      value={accountNumber}
+                      onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ""))}
+                    />
+                  </div>
+                  {accountError && <div className="auth-error" style={{ marginBottom: 12 }}>{accountError}</div>}
+                  <div className="flex-end is-split" style={{ marginTop: 6 }}>
+                    {hasAccount ? (
+                      <button className="btn btn-quiet" type="button" onClick={() => setEditingAccount(false)}>
+                        Cancel
+                      </button>
+                    ) : (
+                      <span />
+                    )}
+                    <button className="btn btn-primary" type="submit" disabled={accountSaving}>
+                      {accountSaving ? "Verifying..." : "Save & verify"}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+
+          {pendingSales > 0 && (
+            <div className="callout is-warn mb-24">
+              {Icon.hourglass()}
+              <div>
+                <strong>{naira(pendingEarnings)} verifying</strong>
+                <div className="callout-sub">
+                  {pendingSales} recent sale{pendingSales === 1 ? "" : "s"} — moves to your available balance{" "}
+                  {refundWindowMinutes} minutes after purchase, as long as the buyer doesn&apos;t request a refund. You&apos;ll
+                  get a message if one does.
                 </div>
-              </form>
-            )}
+              </div>
+            </div>
+          )}
 
-            {/* Withdraw */}
-            <h3 style={{ marginTop: "1.5rem", fontSize: "1.05rem" }}>
-              <i className="fas fa-money-bill-wave" style={{ color: "var(--text-info)" }}></i> Withdraw
-            </h3>
+          {/* Withdraw */}
+          <div className="panel mb-24" id="withdraw">
+            <h2 className="panel-title">{Icon.coin()} Withdraw</h2>
 
-            {!hasAccount && (
-              <p style={{ color: "var(--text-secondary)", marginTop: "0.6rem" }}>Add your bank account above before withdrawing.</p>
-            )}
+            {!hasAccount && <p className="panel-desc" style={{ marginBottom: 0 }}>Add your bank account above before withdrawing.</p>}
 
-            {hasAccount && !eligible && (
-              <p style={{ color: "var(--text-secondary)", marginTop: "0.6rem" }}>{eligibilityReason}</p>
-            )}
+            {hasAccount && !eligible && <p className="panel-desc" style={{ marginBottom: 0 }}>{eligibilityReason}</p>}
 
             {hasAccount && eligible && (
-              <form onSubmit={handleWithdraw} style={{ marginTop: "0.6rem", display: "flex", gap: "0.6rem" }}>
-                <input
-                  type="number"
-                  min={2000}
-                  max={balance}
-                  placeholder={`Up to ₦${balance.toLocaleString()}`}
-                  value={withdrawAmount}
-                  onChange={(e) => setWithdrawAmount(e.target.value)}
-                  style={{ flex: 1, padding: "0.6rem", borderRadius: "8px", border: "1px solid var(--border-blue)" }}
-                />
-                <button className="btn btn-primary" type="submit" disabled={withdrawSubmitting}>
-                  {withdrawSubmitting ? "Requesting..." : "Withdraw"}
-                </button>
-              </form>
+              <>
+                <p className="panel-desc">Enter an amount up to your available balance.</p>
+                <form onSubmit={handleWithdraw} className="withdraw-form">
+                  <input
+                    className="input"
+                    type="number"
+                    min={2000}
+                    max={balance}
+                    placeholder={`Up to ${naira(balance)}`}
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                  />
+                  <button className="btn btn-primary" type="submit" disabled={withdrawSubmitting}>
+                    {withdrawSubmitting ? "Requesting..." : "Withdraw"}
+                  </button>
+                </form>
+              </>
             )}
-            {withdrawStatus && <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: "0.5rem" }}>{withdrawStatus}</p>}
+            {withdrawStatus && <p className="panel-desc" style={{ marginTop: 12, marginBottom: 0 }}>{withdrawStatus}</p>}
+          </div>
 
-            {payouts.length > 0 && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginTop: "0.8rem" }}>
+          {/* Payout history */}
+          {payouts.length > 0 && (
+            <>
+              <h2 className="panel-title section-title">{Icon.list()} Payout history</h2>
+              <div className="mb-24">
                 {payouts.map((p) => (
-                  <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.85rem", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "8px", padding: "0.6rem 0.8rem" }}>
-                    <span>
-                      ₦{p.amount.toLocaleString()} · {new Date(p.requestedAt).toLocaleDateString()}
-                    </span>
-                    <span
-                      style={{
-                        background: STATUS_STYLES[p.status].bg,
-                        color: STATUS_STYLES[p.status].color,
-                        padding: "0.15rem 0.6rem",
-                        borderRadius: "8px",
-                        fontWeight: 600,
-                        fontSize: "0.75rem",
-                      }}
-                    >
-                      {STATUS_STYLES[p.status].label}
-                    </span>
+                  <div key={p.id} className="data-row data-row--tx">
+                    <div>
+                      <div className="row-title">Withdrawal request</div>
+                      <div className="row-code" style={{ marginTop: 4 }}>{new Date(p.requestedAt).toLocaleDateString()}</div>
+                    </div>
+                    <div className="row-stat" data-label="Amount">
+                      <span className="money-neg">−{naira(p.amount)}</span>
+                    </div>
+                    <div className="row-actions">
+                      <span className={`status ${STATUS_STYLES[p.status].cls}`}>{STATUS_STYLES[p.status].label}</span>
+                    </div>
                   </div>
                 ))}
               </div>
-            )}
+            </>
+          )}
 
-            {/* By block */}
-            <h3 style={{ marginTop: "1.5rem", fontSize: "1.05rem" }}>
-              <i className="fas fa-layer-group" style={{ color: "var(--text-info)" }}></i> By block
-            </h3>
+          {/* By block */}
+          <h2 className="panel-title section-title">{Icon.book()} By block</h2>
 
-            {byBlock.length === 0 && (
-              <p style={{ color: "var(--text-secondary)", marginTop: "0.6rem" }}>No sales yet — keep uploading!</p>
-            )}
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.7rem", marginTop: "0.8rem" }}>
+          {byBlock.length === 0 ? (
+            <div className="panel">
+              <div className="empty-state">No sales yet — keep uploading!</div>
+            </div>
+          ) : (
+            <div>
               {byBlock.map((b) => (
-                <div
-                  key={b.blockId}
-                  style={{
-                    background: "var(--surface)",
-                    border: "1px solid var(--border-blue)",
-                    borderRadius: "12px",
-                    padding: "0.9rem 1rem",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
+                <div key={b.blockId} className="data-row data-row--tx">
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: "0.92rem" }}>{b.blockTitle}</div>
-                    <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                      {b.courseCode} · {b.salesCount} sold
+                    <div className="row-code">{b.courseCode}</div>
+                    <div className="row-title">{b.blockTitle}</div>
+                    <div className="row-meta">
+                      {b.salesCount} sold
                       {b.pendingCount > 0 && ` · ${b.pendingCount} verifying`}
                     </div>
                   </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontWeight: 700, color: "var(--text-success)" }}>₦{b.earnings.toLocaleString()}</div>
-                    {b.pending > 0 && (
-                      <div style={{ fontSize: "0.75rem", color: "var(--text-warning)" }}>+₦{b.pending.toLocaleString()} pending</div>
-                    )}
+                  <div className="row-stat" data-label="Earned">
+                    <span className="money-pos">{naira(b.earnings)}</span>
+                  </div>
+                  <div className="row-stat" data-label="Pending">
+                    {b.pending > 0 ? <span className="money-pos" style={{ color: "var(--text-warning)" }}>+{naira(b.pending)}</span> : <span className="money-pos" style={{ color: "var(--text-muted)" }}>—</span>}
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

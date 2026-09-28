@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
 import PageHeader from "@/app/components/PageHeader";
 import { SkeletonList } from "@/app/components/Skeleton";
+import { Icon } from "@/app/components/icons";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 
 interface BlockPerf {
@@ -35,12 +36,7 @@ interface Analytics {
   byBlock: BlockPerf[];
 }
 
-const TIER_COLOR: Record<string, string> = {
-  NEW: "var(--text-secondary)",
-  RISING: "var(--text-info)",
-  TRUSTED: "var(--text-success)",
-  ELITE: "var(--star)",
-};
+const naira = (n: number) => `₦${n.toLocaleString()}`;
 
 export default function ScribeAnalyticsPage() {
   const router = useRouter();
@@ -61,120 +57,149 @@ export default function ScribeAnalyticsPage() {
   }, [router]);
 
   const salesTrendDelta = data ? data.salesLast30 - data.salesPrev30 : 0;
+  const topSales = data ? Math.max(1, ...data.byBlock.map((b) => b.salesCount)) : 1;
 
   return (
     <div className="page-wrap">
-      <div className="app-container">
-        <PageHeader title="Your analytics" subtitle="How your notes are performing.">
-          <button className="btn" onClick={() => router.push("/scribe")}>
-              <i className="fas fa-arrow-left"></i> Scribe Studio
-            </button>
-        </PageHeader>
+      <PageHeader
+        eyebrow="Scribe · Insights"
+        title="Your"
+        accent="analytics"
+        subtitle="How your notes are performing — your scribe score, sales trend and top performers."
+      >
+        <button className="btn btn-ghost" onClick={() => router.push("/scribe")}>
+          {Icon.back()} Scribe Studio
+        </button>
+      </PageHeader>
 
-        {loading && <SkeletonList rows={4} />}
-        {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}
+      {loading && <SkeletonList rows={4} />}
+      {error && <div className="auth-error">{error}</div>}
 
-        {data && (
-          <div style={{ marginTop: "1.5rem", display: "flex", flexDirection: "column", gap: "1.8rem" }}>
-            {/* --- Trust score hero --- */}
-            <div className="stat-hero" style={{ borderTopColor: TIER_COLOR[data.trustLevel] }}>
-              <div className="stat-label">Your scribe score</div>
-              <div className="stat-value">{data.trustLabel}</div>
-              <div className="stat-sub">
-                {data.nextTier ? (
-                  <>
-                    <i className="fas fa-arrow-trend-up"></i>{" "}
-                    {data.nextTier.salesNeeded > 0 && `${data.nextTier.salesNeeded} more sale${data.nextTier.salesNeeded === 1 ? "" : "s"}`}
-                    {data.nextTier.salesNeeded > 0 && data.nextTier.ratingNeeded && " and "}
-                    {data.nextTier.ratingNeeded && `a ${data.nextTier.ratingNeeded.toFixed(1)}+ average rating`}
-                    {data.nextTier.salesNeeded === 0 && !data.nextTier.ratingNeeded
-                      ? `You qualify for ${data.nextTier.label} — it'll apply automatically.`
-                      : ` to reach ${data.nextTier.label}`}
-                  </>
-                ) : (
-                  <>
-                    <i className="fas fa-crown"></i> You've reached the top tier
-                  </>
-                )}
+      {data && (
+        <>
+          {/* --- Scribe score --- */}
+          <div className="panel balance-hero mb-24">
+            <div className="flex-between">
+              <div>
+                <div className="form-label">Your scribe score</div>
+                <div className="balance-num">{data.trustLabel}</div>
               </div>
-              {data.hasRejectedNote && (
-                <div className="stat-sub" style={{ color: "var(--text-warning)" }}>
-                  <i className="fas fa-triangle-exclamation"></i> A rejected note is capping you below Trusted/Elite right now
-                </div>
+              <span className={`chip tier-${data.trustLevel.toLowerCase()}`}>
+                {Icon.shield()} {data.trustLevel.charAt(0) + data.trustLevel.slice(1).toLowerCase()}
+              </span>
+            </div>
+
+            <p className="panel-desc" style={{ marginTop: 14, marginBottom: 0 }}>
+              {data.nextTier ? (
+                <>
+                  {data.nextTier.salesNeeded > 0 &&
+                    `${data.nextTier.salesNeeded} more sale${data.nextTier.salesNeeded === 1 ? "" : "s"}`}
+                  {data.nextTier.salesNeeded > 0 && data.nextTier.ratingNeeded && " and "}
+                  {data.nextTier.ratingNeeded && `a ${data.nextTier.ratingNeeded.toFixed(1)}+ average rating`}
+                  {data.nextTier.salesNeeded === 0 && !data.nextTier.ratingNeeded
+                    ? `You qualify for ${data.nextTier.label} — it'll apply automatically.`
+                    : ` to reach ${data.nextTier.label}`}
+                </>
+              ) : (
+                "You've reached the top tier."
+              )}
+            </p>
+
+            {data.hasRejectedNote && (
+              <div className="callout is-warn" style={{ marginTop: 14 }}>
+                {Icon.warn()}
+                <div>A rejected note is capping you below Trusted/Elite right now.</div>
+              </div>
+            )}
+          </div>
+
+          {/* --- Stats --- */}
+          <div className="three-col mb-24">
+            <div className="stat-card">
+              <div className="label">Total sales</div>
+              <div className="value">{data.totalSales}</div>
+              {salesTrendDelta === 0 ? (
+                <span className="delta flat">{Icon.trend()} same as previous 30 days</span>
+              ) : salesTrendDelta > 0 ? (
+                <span className="delta">
+                  {Icon.trend()} +{salesTrendDelta} vs previous 30 days
+                </span>
+              ) : (
+                <span className="delta down">
+                  {Icon.trend()} −{Math.abs(salesTrendDelta)} vs previous 30 days
+                </span>
               )}
             </div>
-
-            {/* --- Secondary stats --- */}
-            <div className="stat-row">
-              <div className="stat-card">
-                <div className="stat-label">Total sales</div>
-                <div className="stat-value">{data.totalSales}</div>
-                <div className="stat-sub">
-                  {salesTrendDelta === 0 ? (
-                    "same as the 30 days before"
-                  ) : salesTrendDelta > 0 ? (
-                    <span style={{ color: "var(--text-success)" }}>
-                      <i className="fas fa-arrow-up"></i> {salesTrendDelta} more than the previous 30 days
-                    </span>
-                  ) : (
-                    <span style={{ color: "var(--text-danger)" }}>
-                      <i className="fas fa-arrow-down"></i> {Math.abs(salesTrendDelta)} fewer than the previous 30 days
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-label">Average rating</div>
-                <div className="stat-value">{data.avgRating !== null ? data.avgRating.toFixed(1) : "—"}</div>
-                <div className="stat-sub">from {data.totalReviews} review{data.totalReviews === 1 ? "" : "s"}</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-label">Followers</div>
-                <div className="stat-value">{data.followerCount}</div>
-                <div className="stat-sub">students following you</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-label">Earnings</div>
-                <div className="stat-value">₦{data.totalEarnings.toLocaleString()}</div>
-                <div className="stat-sub">
-                  {data.pendingEarnings > 0 ? `+₦${data.pendingEarnings.toLocaleString()} pending` : "confirmed"}
-                </div>
-              </div>
+            <div className="stat-card">
+              <div className="label">Average rating</div>
+              <div className="value">{data.avgRating !== null ? data.avgRating.toFixed(1) : "—"}</div>
+              <span className="delta flat">
+                {Icon.star()} {data.totalReviews} review{data.totalReviews === 1 ? "" : "s"}
+              </span>
             </div>
-
-            {/* --- Per-block performance --- */}
-            <div>
-              <h2 style={{ fontSize: "1.1rem", marginBottom: "0.5rem" }}>
-                <i className="fas fa-chart-simple" style={{ color: "var(--accent)" }}></i> Per-block performance
-              </h2>
-              {data.byBlock.length === 0 ? (
-                <p style={{ color: "var(--text-secondary)" }}>No sales yet — once you make a sale, it'll show up here.</p>
+            <div className="stat-card">
+              <div className="label">Followers</div>
+              <div className="value">{data.followerCount}</div>
+              <span className="delta flat">{Icon.users()} students following you</span>
+            </div>
+            <div className="stat-card">
+              <div className="label">Earnings</div>
+              <div className="value">{naira(data.totalEarnings)}</div>
+              {data.pendingEarnings > 0 ? (
+                <span className="delta warn">{Icon.hourglass()} +{naira(data.pendingEarnings)} pending</span>
               ) : (
-                <div className="ledger-list">
-                  {data.byBlock.map((b) => (
-                    <div key={b.blockId} className="ledger-row">
-                      <div className="ledger-row-head">
-                        <span className="ledger-row-title">
-                          <span className="seal mono" style={{ marginRight: "0.5rem" }}>{b.courseCode}</span>
-                          {b.blockTitle}
-                        </span>
-                        <span className="price-tag">₦{b.earnings.toLocaleString()}</span>
-                      </div>
-                      <div className="ledger-row-meta">
-                        {b.salesCount} sale{b.salesCount === 1 ? "" : "s"}
-                        {b.avgRating !== null && ` · ${b.avgRating.toFixed(1)}★ (${b.reviewCount})`}
-                        {b.pending > 0 && ` · ₦${b.pending.toLocaleString()} pending`}
-                      </div>
-                      {b.status === "FLAGGED" && <span className="stamp stamp-warning">Flagged for review</span>}
-                      {b.status === "REJECTED" && <span className="stamp stamp-danger">Rejected</span>}
-                    </div>
-                  ))}
-                </div>
+                <span className="delta">{Icon.check()} confirmed</span>
               )}
             </div>
           </div>
-        )}
-      </div>
+
+          {/* --- Per-block performance --- */}
+          <h2 className="panel-title section-title">{Icon.book()} Per-block performance</h2>
+          {data.byBlock.length === 0 ? (
+            <div className="panel">
+              <div className="empty-state">No sales yet — once you make a sale, it&apos;ll show up here.</div>
+            </div>
+          ) : (
+            <div>
+              {data.byBlock.map((b) => {
+                const pct = Math.round((b.salesCount / topSales) * 100);
+                return (
+                  <div key={b.blockId} className="panel perf-card">
+                    <div className="flex-between perf-head">
+                      <div style={{ minWidth: 0 }}>
+                        <div className="code-label">{b.courseCode}</div>
+                        <div className="perf-title">{b.blockTitle}</div>
+                        <div className="perf-meta">
+                          {b.avgRating !== null ? `${b.avgRating.toFixed(1)}★ (${b.reviewCount})` : "No ratings yet"}
+                          {b.pending > 0 && ` · ${naira(b.pending)} pending`}
+                        </div>
+                      </div>
+                      <div className="perf-stats">
+                        <div className="perf-stat">
+                          <strong>{b.salesCount}</strong>Sold
+                        </div>
+                        <div className="perf-stat">
+                          <strong>{naira(b.earnings)}</strong>Earned
+                        </div>
+                      </div>
+                    </div>
+                    <div className="poll-track">
+                      <div className="poll-fill" style={{ width: `${pct}%` }} />
+                    </div>
+                    {(b.status === "FLAGGED" || b.status === "REJECTED") && (
+                      <div style={{ marginTop: 10 }}>
+                        <span className={`status ${b.status === "FLAGGED" ? "review" : "rejected"}`}>
+                          {b.status === "FLAGGED" ? "Flagged for review" : "Rejected"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

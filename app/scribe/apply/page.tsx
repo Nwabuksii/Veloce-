@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
 import PageHeader from "@/app/components/PageHeader";
 import { SkeletonCard } from "@/app/components/Skeleton";
+import { Icon } from "@/app/components/icons";
 import { friendlyErrorMessage } from "@/lib/api-client";
 
 interface Application {
@@ -15,10 +16,10 @@ interface Application {
   reviewedAt: string | null;
 }
 
-const STATUS_STYLES: Record<string, { bg: string; color: string; label: string; icon: string }> = {
-  PENDING: { bg: "var(--bg-warning)", color: "var(--text-warning)", label: "Pending review", icon: "fa-hourglass-half" },
-  APPROVED: { bg: "var(--bg-success)", color: "var(--text-success)", label: "Approved", icon: "fa-check-circle" },
-  REJECTED: { bg: "var(--bg-danger)", color: "var(--text-danger)", label: "Not approved", icon: "fa-times-circle" },
+const STATUS_STYLES: Record<Application["status"], { cls: string; label: string }> = {
+  PENDING: { cls: "pending", label: "Pending review" },
+  APPROVED: { cls: "paid", label: "Approved" },
+  REJECTED: { cls: "rejected", label: "Not approved" },
 };
 
 export default function ScribeApplyPage() {
@@ -94,87 +95,78 @@ export default function ScribeApplyPage() {
 
   return (
     <div className="page-wrap">
-      <div className="app-container" style={{ maxWidth: 560 }}>
-        <PageHeader title="Become a Scribe" subtitle="Share your notes with other students and earn from them." />
+      <PageHeader
+        eyebrow="Scribe · Apply"
+        title="Become a"
+        accent="scribe"
+        subtitle="Share your notes with other students and earn from them."
+      />
 
-        {loading && <div style={{ marginTop: "1rem" }}><SkeletonCard height="4.5rem" /></div>}
-        {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}
+      <div className="page-narrow">
+        {loading && <SkeletonCard height="4.5rem" />}
+        {error && <div className="auth-error">{error}</div>}
 
         {!loading && !error && application && (
-          <div style={{ marginTop: "1.5rem" }}>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                background: STATUS_STYLES[application.status].bg,
-                color: STATUS_STYLES[application.status].color,
-                padding: "0.4rem 1rem",
-                borderRadius: "8px",
-                fontSize: "0.85rem",
-                fontWeight: 600,
-              }}
-            >
-              <i className={`fas ${STATUS_STYLES[application.status].icon}`}></i>
-              {STATUS_STYLES[application.status].label}
-            </span>
+          <div className="panel mb-24">
+            <div className="flex-between" style={{ marginBottom: 16 }}>
+              <h2 className="panel-title" style={{ marginBottom: 0 }}>{Icon.pen()} Your application</h2>
+              <span className={`status ${STATUS_STYLES[application.status].cls}`}>{STATUS_STYLES[application.status].label}</span>
+            </div>
 
-            <div style={{ marginTop: "1.2rem", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "12px", padding: "1.2rem" }}>
-              <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "0.4rem" }}>Your reason for applying:</div>
-              <p style={{ fontSize: "0.9rem", color: "var(--text-primary)", whiteSpace: "pre-wrap" }}>&ldquo;{application.reason}&rdquo;</p>
-              <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "1rem" }}>
-                Submitted {new Date(application.submittedAt).toLocaleDateString()}
-                {application.reviewedAt && ` · Reviewed ${new Date(application.reviewedAt).toLocaleDateString()}`}
+            <div className="form-label">Your reason for applying</div>
+            <div className="quote-block">&ldquo;{application.reason}&rdquo;</div>
+            <div className="info-list" style={{ marginTop: 14 }}>
+              <div className="info-row">
+                <span className="k">Submitted</span>
+                <span className="v">{new Date(application.submittedAt).toLocaleDateString()}</span>
               </div>
+              {application.reviewedAt && (
+                <div className="info-row">
+                  <span className="k">Reviewed</span>
+                  <span className="v">{new Date(application.reviewedAt).toLocaleDateString()}</span>
+                </div>
+              )}
             </div>
 
             {application.status === "PENDING" && (
-              <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: "1rem" }}>
-                An admin will review this soon — no need to apply again.
-              </p>
+              <p className="panel-desc" style={{ margin: "14px 0 0" }}>An admin will review this soon — no need to apply again.</p>
             )}
             {application.status === "APPROVED" && (
-              <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: "1rem" }}>
-                You're approved! Log out and back in to unlock your Scribe workspace.
-              </p>
+              <p className="panel-desc" style={{ margin: "14px 0 0" }}>You&apos;re approved! Log out and back in to unlock your Scribe workspace.</p>
             )}
             {application.status === "REJECTED" && !canApply && retryAt && (
-              <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: "1rem" }}>
-                This application wasn't approved. You can apply again on{" "}
-                <strong>{new Date(retryAt).toLocaleDateString()}</strong>.
+              <p className="panel-desc" style={{ margin: "14px 0 0" }}>
+                This application wasn&apos;t approved. You can apply again on <strong>{new Date(retryAt).toLocaleDateString()}</strong>.
               </p>
             )}
           </div>
         )}
 
         {showForm && (
-          <div style={{ marginTop: "1.5rem" }}>
-            <h2>
-              <i className="fas fa-pen-fancy" style={{ color: "var(--text-info)" }}></i> Why do you want to be a scribe?
-            </h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem", marginTop: "0.4rem" }}>
-              Tell an admin a bit about yourself and why you'd be a good fit — this is what they'll see when
-              reviewing your application.
+          <div className="panel">
+            <h2 className="panel-title">{Icon.pen()} Why do you want to be a scribe?</h2>
+            <p className="panel-desc">
+              Tell an admin a bit about yourself and why you&apos;d be a good fit — this is what they&apos;ll see when reviewing your application.
             </p>
 
-            <form onSubmit={handleSubmit} style={{ marginTop: "1rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <textarea
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                rows={6}
-                placeholder="e.g. I've taken detailed notes for COS 201 all semester and want to share them, plus help other students who are struggling with..."
-                style={{
-                  padding: "0.7rem",
-                  borderRadius: "8px",
-                  border: "1px solid var(--border-blue)",
-                  fontFamily: "inherit",
-                  fontSize: "0.9rem",
-                }}
-              />
-              {submitError && <div className="auth-error">{submitError}</div>}
-              <button className="btn btn-primary" type="submit" disabled={submitting}>
-                {submitting ? "Submitting..." : "Submit application"}
-              </button>
+            <form onSubmit={handleSubmit}>
+              <div className="form-field">
+                <label className="form-label" htmlFor="reason">Your reason</label>
+                <textarea
+                  id="reason"
+                  className="textarea"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  rows={6}
+                  placeholder="e.g. I've taken detailed notes for COS 201 all semester and want to share them, plus help other students who are struggling with..."
+                />
+              </div>
+              {submitError && <div className="auth-error" style={{ marginBottom: 12 }}>{submitError}</div>}
+              <div className="flex-end">
+                <button className="btn btn-primary" type="submit" disabled={submitting}>
+                  {submitting ? "Submitting..." : <>Submit application {Icon.arrow()}</>}
+                </button>
+              </div>
             </form>
           </div>
         )}
