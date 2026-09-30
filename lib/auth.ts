@@ -12,6 +12,10 @@ export interface TokenPayload {
   email: string;
   role: UserRole;
   universityId: string;
+  // User.sessionVersion at the moment this token was issued. requireRole
+  // rejects the token once the DB value moves past it. Optional only so
+  // tokens issued before this field existed still parse (treated as 0).
+  sv?: number;
 }
 
 // ── Session cookie ────────────────────────────────────────────
@@ -43,8 +47,10 @@ export async function verifyPassword(plain: string, hash: string): Promise<boole
 }
 
 // ── Tokens ──────────────────────────────────────────────────
-// Issued fresh on every login, so a role change (e.g. Student -> Scribe)
-// only takes effect once the user logs in again with their updated role.
+// The role/universityId inside a token are only a snapshot from login time.
+// requireRole (lib/session.ts) re-reads the role from the database on every
+// request and checks `sv` against User.sessionVersion, so neither a stale
+// role nor a token issued before a password change/demotion/ban is trusted.
 
 export function signToken(payload: TokenPayload): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });

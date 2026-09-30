@@ -4,6 +4,7 @@ import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import { sendEmail } from "@/lib/email";
+import { AUTH_MIN_RESPONSE_MS, padToMinimum } from "@/lib/timing";
 import { passwordSchema } from "@/lib/password-policy";
 import { checkRateLimit, ipKeyFrom } from "@/lib/rate-limit";
 
@@ -39,6 +40,28 @@ function normalizeFullName(fullName: string): string {
   return fullName.trim().toLowerCase();
 }
 
+const SIGNUP_MESSAGE = "Check your email to verify your account within the next 10 minutes.";
+
+// Someone signed up with an email that already has an account. The form
+// can't say so (that would let anyone check which emails are registered), so
+// the real owner is told by email instead. At most one per address per hour,
+// so the form can't be used to fill somebody's inbox.
+async function notifyExistingOwner(email: string) {
+  if (!(await checkRateLimit(`signup-notice:${email}`, 1, 60 * 60 * 1000))) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  try {
+    await sendEmail({
+      to: email,
+      subject: "Someone tried to sign up to Veloce with your email",
+      text: `Someone just tried to create a Veloce account with this email address, but you already have one.\n\nIf that was you, log in here: ${appUrl}/login — or reset your password: ${appUrl}/forgot-password\n\nIf it wasn't you, you can ignore this email. Nothing about your account has changed.`,
+      html: `<p>Someone just tried to create a Veloce account with this email address, but you already have one.</p><p>If that was you, <a href="${appUrl}/login">log in</a> — or <a href="${appUrl}/forgot-password">reset your password</a>.</p><p>If it wasn't you, you can ignore this email. Nothing about your account has changed.</p>`,
+    });
+  } catch (err) {
+    console.error("Failed to send existing-account notice:", err);
+  }
+}
+
 // Sign-up does NOT write to User at all. It writes a PendingRegistration
 // row instead, which only becomes a real account if the verification link
 // is clicked within 10 minutes (see /api/auth/verify-email) — an
@@ -49,6 +72,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Too many signups from this network. Try again later." }, { status: 429 });
   }
 
+  const started = Date.now();
   const parsed = signupSchema.safeParse(await req.json());
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -67,9 +91,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unknown university" }, { status: 400 });
   }
 
+  // Every "we already know this email" outcome (a real account, or a signup
+  // still waiting on its link) gets the SAME answer as a brand-new signup, so
+  // this form can't be used to find out who is registered. The password is
+  // hashed on every path for the same reason: without it, an existing email
+  // would answer visibly faster than a new one. Taken NAMES are still
+  // reported — unique display names are a product rule, and that message was
+  // kept on purpose.
+  const passwordHash = await hashPassword(password);
+  const respondGeneric = async () => {
+    await padToMinimum(started, AUTH_MIN_RESPONSE_MS);
+    return NextResponse.json({ message: SIGNUP_MESSAGE });
+  };
+
   const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (existingUser) {
-    return NextResponse.json({ error: "An account with this email already exists" }, { status: 409 });
+    await notifyExistingOwner(existingUser.email);
+    return respondGeneric();
   }
   const nameTakenByUser = await prisma.user.findUnique({ where: { fullNameNormalized } });
   if (nameTakenByUser) {
@@ -86,17 +124,15 @@ export async function POST(req: NextRequest) {
 
   const stillPendingEmail = await prisma.pendingRegistration.findUnique({ where: { email: normalizedEmail } });
   if (stillPendingEmail) {
-    return NextResponse.json(
-      { error: "A verification link was already sent to this email — check your inbox, or wait for it to expire and try again." },
-      { status: 409 }
-    );
+    // A link is already on its way (or lost — "resend" on the login page
+    // covers that). Same answer, nothing new sent.
+    return respondGeneric();
   }
   const stillPendingName = await prisma.pendingRegistration.findUnique({ where: { fullNameNormalized } });
   if (stillPendingName) {
     return NextResponse.json({ error: "That name is already taken — try adding a middle name or initial" }, { status: 409 });
   }
 
-  const passwordHash = await hashPassword(password);
   const verificationToken = randomBytes(32).toString("hex");
   const now = new Date();
 
@@ -124,10 +160,7 @@ export async function POST(req: NextRequest) {
       if (target.includes("fullNameNormalized")) {
         return NextResponse.json({ error: "That name is already taken — try adding a middle name or initial" }, { status: 409 });
       }
-      return NextResponse.json(
-        { error: "A verification link was already sent to this email — check your inbox." },
-        { status: 409 }
-      );
+      return respondGeneric();
     }
     throw err;
   }
@@ -147,7 +180,5 @@ export async function POST(req: NextRequest) {
     console.error("Failed to send verification email:", err);
   }
 
-  return NextResponse.json({
-    message: "Check your email to verify your account within the next 10 minutes.",
-  });
+  return respondGeneric();
 }

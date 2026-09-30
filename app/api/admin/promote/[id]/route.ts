@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
+import { logSecurityEvent } from "@/lib/security-log";
 import { sendWelcomeMessage } from "@/lib/scribe-lifecycle";
 
 interface RouteContext {
@@ -29,6 +30,8 @@ export const POST = requireRole<RouteContext>("ADMIN", async (req: NextRequest, 
     where: { id: target.id },
     data: { role: "ADMIN" },
   });
+
+  await logSecurityEvent("role_changed", { userId: target.id, from: target.role, to: "ADMIN", byAdminId: adminUser.sub }, "alert");
 
   await sendWelcomeMessage(target.id, "admin", adminUser.sub);
 

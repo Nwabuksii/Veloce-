@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
+import { logSecurityEvent } from "@/lib/security-log";
 
 interface RouteContext {
   params: { id: string };
@@ -114,6 +115,8 @@ export const POST = requireRole<RouteContext>("ADMIN", async (req: NextRequest, 
   if (!result) {
     return NextResponse.json({ error: "This purchase has already been refunded" }, { status: 409 });
   }
+
+  await logSecurityEvent("refund_approved", { purchaseId: purchase.id, buyerId: purchase.buyerId, amount: creditToGrant, byAdminId: adminUser.sub });
 
   return NextResponse.json({
     purchase: { id: purchase.id, refunded: true },

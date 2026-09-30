@@ -1,15 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { verifyPassword, signToken, SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth";
+import { hashPassword, verifyPassword, signToken, SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth";
 import { checkAndResolveBan } from "@/lib/ban";
 import { formatDateDDMMYYYY } from "@/lib/date-format";
 import { checkRateLimit, ipKeyFrom } from "@/lib/rate-limit";
+import { signMfaChallenge } from "@/lib/mfa";
+import { logSecurityEvent, requestIp } from "@/lib/security-log";
 
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string(),
 });
+
+// A real bcrypt hash of a throwaway string, made once per server instance.
+// When the email doesn't exist we still run one bcrypt comparison against it,
+// so "no such account" takes as long as "wrong password" instead of
+// answering visibly faster (bcrypt is deliberately slow).
+const dummyPasswordHash = hashPassword("veloce-not-a-real-password");
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
@@ -47,17 +55,31 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const passwordOk = user ? await verifyPassword(password, user.passwordHash) : false;
+  const passwordMatches = await verifyPassword(password, user?.passwordHash ?? (await dummyPasswordHash));
+  const passwordOk = Boolean(user) && passwordMatches;
 
   // Same error for "no such user" and "wrong password" — don't reveal which one.
   if (!user || !passwordOk) {
     if (user) {
-      const attempts = user.failedLoginAttempts + 1;
-      const data: { failedLoginAttempts: number; lockedUntil?: Date } = { failedLoginAttempts: attempts };
-      if (attempts >= MAX_FAILED_ATTEMPTS) {
-        data.lockedUntil = new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000);
+      // Atomic increment in the database — not "read the count, add one,
+      // write it back", which lets parallel wrong-password attempts all read
+      // the same starting value and undercount, sidestepping the lockout.
+      const { failedLoginAttempts } = await prisma.user.update({
+        where: { id: user.id },
+        data: { failedLoginAttempts: { increment: 1 } },
+        select: { failedLoginAttempts: true },
+      });
+      if (failedLoginAttempts >= MAX_FAILED_ATTEMPTS) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lockedUntil: new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000) },
+        });
+        await logSecurityEvent("login_locked", { userId: user.id, role: user.role, ip: requestIp(req) }, user.role === "ADMIN" ? "alert" : "warn");
       }
-      await prisma.user.update({ where: { id: user.id }, data });
+      // Failed logins against an admin account are the ones worth alerting
+      // on; for everyone else it's a searchable log line. Only known
+      // accounts are logged (by id) — an unknown email is not written down.
+      await logSecurityEvent(user.role === "ADMIN" ? "admin_login_failed" : "login_failed", { userId: user.id, attempts: failedLoginAttempts, ip: requestIp(req) }, user.role === "ADMIN" ? "alert" : "info");
     }
     return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
   }
@@ -83,6 +105,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Two-factor: an admin who has turned it on doesn't get a session from a
+  // correct password alone. They get a short-lived challenge instead, which
+  // POST /api/auth/mfa/verify trades (with a code) for the real cookie.
+  // Nothing is reset or recorded yet — failed attempts keep counting until
+  // the second step succeeds.
+  if (user.mfaEnabledAt) {
+    return NextResponse.json({ mfaRequired: true, mfaToken: signMfaChallenge(user.id) });
+  }
+
   // Correct password — clear any accumulated failed attempts and record the
   // successful login so the admin monitoring view can show who has actually
   // used the platform.
@@ -98,6 +129,7 @@ export async function POST(req: NextRequest) {
     email: user.email,
     role: user.role,
     universityId: user.universityId,
+    sv: user.sessionVersion,
   });
 
   const res = NextResponse.json({

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
+import { rateLimitResponse } from "@/lib/rate-limit";
 
 export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
   const courses = await prisma.course.findMany({
@@ -28,6 +29,10 @@ const createCourseSchema = z.object({
 });
 
 export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
+  // Any student can add a course to their university's list, so throttle it.
+  const blocked = await rateLimitResponse(`create-course:${user.sub}`, 20, 60 * 60 * 1000, "You've added a lot of courses recently. Please try again later.");
+  if (blocked) return blocked;
+
   const body = await req.json();
   const parsed = createCourseSchema.safeParse(body);
 

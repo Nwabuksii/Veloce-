@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSessionUser } from "@/lib/session";
+import { requireRole } from "@/lib/session";
 import { checkNoteAccess } from "@/lib/note-access";
 import { readNoteFile, saveNotePageImage } from "@/lib/storage";
 import { getPdfPageCount, renderPdfPageToImage, stampWatermark } from "@/lib/pdf-render";
@@ -22,11 +22,11 @@ interface RouteContext {
 // route is gone. Every response here is unique per viewer (their name/email
 // baked into the image), so it must NEVER be cached by a browser, proxy, or
 // CDN and handed to a different person.
-export async function GET(req: NextRequest, ctx: RouteContext) {
-  const user = getSessionUser(req);
-  if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
+// requireRole (not the bare getSessionUser) so a banned, deleted or
+// signed-out-everywhere account is cut off here exactly as it is on every
+// other route — previously these three routes only checked the token
+// signature, so a banned user could keep reading everything they'd bought.
+export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest, user, ctx) => {
 
   // Keyed per-user, not per-IP like the auth routes — this is already
   // behind a session, so the account itself is the meaningful identity to
@@ -51,6 +51,13 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
   }
   if (!allowed) {
     return NextResponse.json({ error: "You don't have access to this note" }, { status: 403 });
+  }
+
+  // A page number past the end can never exist — say so before touching the
+  // database or storage. (pageCount is null only for older, never-opened
+  // notes; those fall through to the renderer as before.)
+  if (note.pageCount && pageNum > note.pageCount) {
+    return NextResponse.json({ error: "Page not found" }, { status: 404 });
   }
 
   // Marks "the buyer actually started reading this" the first time only —
@@ -132,4 +139,4 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
       "Cache-Control": "private, no-store, no-cache, must-revalidate",
     },
   });
-}
+});

@@ -7,6 +7,7 @@ import PageHeader from "@/app/components/PageHeader";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
+import ConfirmDialog from "@/app/components/ConfirmDialog";
 
 interface PollOptionView {
   id: string;
@@ -32,6 +33,8 @@ export default function MessagesPage() {
   const [error, setError] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [voting, setVoting] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<MessageView | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const user = getStoredUser();
@@ -83,17 +86,27 @@ export default function MessagesPage() {
     }
   }
 
-  async function handleDelete(m: MessageView) {
-    if (!window.confirm(`Delete “${m.subject}” from your inbox?`)) return;
+  // Opens the site's own confirmation box; the delete itself happens in confirmDelete.
+  function handleDelete(m: MessageView) {
+    setPendingDelete(m);
+  }
 
+  async function confirmDelete() {
+    const m = pendingDelete;
+    if (!m) return;
+    setDeleting(true);
     try {
       const res = await fetch(`/api/messages/${m.id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not delete message");
       setMessages((prev) => prev.filter((msg) => msg.id !== m.id));
       if (expandedId === m.id) setExpandedId(null);
+      setPendingDelete(null);
     } catch (err) {
       toast.error(friendlyErrorMessage(err));
+      setPendingDelete(null);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -146,7 +159,7 @@ export default function MessagesPage() {
                     type="button"
                     className="btn btn-ghost"
                     style={{ padding: "0.3rem 0.55rem", fontSize: "0.72rem" }}
-                    onClick={(e) => { e.stopPropagation(); void handleDelete(m); }}
+                    onClick={(e) => { e.stopPropagation(); handleDelete(m); }}
                     aria-label={`Delete message: ${m.subject}`}
                   >
                     Delete
@@ -224,6 +237,24 @@ export default function MessagesPage() {
           ))}
         </div>
       </div>
+
+      {pendingDelete && (
+        <ConfirmDialog
+          title="Delete this message?"
+          confirmLabel="Delete"
+          danger
+          busy={deleting}
+          onConfirm={confirmDelete}
+          onCancel={() => setPendingDelete(null)}
+        >
+          <p style={{ margin: 0 }}>
+            <strong>{pendingDelete.subject}</strong> will be removed from your inbox.
+            {pendingDelete.type === "POLL" && pendingDelete.poll?.myOptionId
+              ? " Your vote will still count in the poll results."
+              : ""}
+          </p>
+        </ConfirmDialog>
+      )}
     </div>
   );
 }

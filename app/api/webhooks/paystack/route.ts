@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import * as Sentry from "@sentry/nextjs";
 import { prisma } from "@/lib/prisma";
-import { generateReceiptImage } from "@/lib/receipt";
-import { sendEmail } from "@/lib/email";
 import { completePurchase } from "@/lib/complete-purchase";
 import { computeScribeCut, effectivePrice, EARNINGS_HOLD_MINUTES } from "@/lib/pricing";
 import { saleStatus, getTotalEarnings } from "@/lib/withdrawal";
+import { safePaymentSummary } from "@/lib/safe-log";
+import { settlePayout, sendPayoutReceipt } from "@/lib/payout-settlement";
 
 // Register this URL (https://your-domain/api/webhooks/paystack) on the
 // Paystack Dashboard under Settings -> API Keys & Webhooks. Paystack signs
@@ -129,41 +129,17 @@ async function handleTransferEvent(eventType: string, data: any) {
   });
   if (!payout) return; // reference doesn't match any payout — nothing to do
 
-  if (eventType === "transfer.success") {
-    const updated = await prisma.payout.update({
-      where: { id: payout.id },
-      data: { status: "PAID", paidAt: new Date() },
-    });
+  // Paystack delivers webhooks at-least-once, so the same event can arrive
+  // twice (or a late one after the payout already settled). settlePayout
+  // applies a change only from the state the event is valid for, and only
+  // the delivery whose update actually lands gets `applied` — so the
+  // receipt email below goes out once, and a stray event can't overwrite a
+  // paid payout. See lib/payout-settlement.ts.
+  const outcome = eventType === "transfer.success" ? "success" : eventType === "transfer.reversed" ? "reversed" : "failed";
+  const result = await settlePayout(payout, outcome, data?.failure_reason || eventType, "webhook");
 
-    // Same receipt-email step as the manual mark-paid flow — best-effort,
-    // doesn't affect the payout's actual paid status if it fails.
-    try {
-      const { scribe } = payout;
-      const receiptImage = await generateReceiptImage({
-        scribeName: scribe.fullName,
-        amount: payout.amount,
-        date: updated.paidAt!,
-        reference: payout.id,
-        bankName: scribe.bankName || "N/A",
-        accountLast4: scribe.accountNumber?.slice(-4) || "----",
-      });
-
-      await sendEmail({
-        to: scribe.email,
-        subject: "Your Veloce withdrawal has been paid",
-        text: `Your withdrawal of \u20a6${payout.amount.toLocaleString()} has been sent. See the attached receipt for details.`,
-        html: `<p>Your withdrawal of \u20a6${payout.amount.toLocaleString()} has been sent. See the attached receipt for details.</p>`,
-        attachments: [{ filename: "veloce-receipt.png", content: receiptImage, mimetype: "image/png" }],
-      });
-    } catch (err) {
-      console.error("Failed to send payout receipt email:", err);
-      Sentry.captureException(err, { extra: { payoutId: payout.id, context: "payout-receipt-email" } });
-    }
-  } else {
-    await prisma.payout.update({
-      where: { id: payout.id },
-      data: { status: "FAILED", failureReason: data?.failure_reason || eventType },
-    });
+  if (result.applied && result.to === "PAID") {
+    await sendPayoutReceipt(payout, new Date());
   }
 }
 
@@ -195,10 +171,12 @@ async function handleDisputeCreated(data: any) {
   const reference: string | undefined = data?.transaction?.reference || data?.transaction_reference || data?.reference;
 
   if (!reference) {
-    console.error("Paystack webhook: charge.dispute.create had no recognizable reference — payload:", JSON.stringify(data));
+    // Only key names and a few scalar fields — never the payload itself,
+    // which carries the customer's email and card details.
+    console.error("Paystack webhook: charge.dispute.create had no recognizable reference — shape:", JSON.stringify(safePaymentSummary(data)));
     Sentry.captureMessage("Paystack dispute webhook: no recognizable reference in payload", {
       level: "fatal", // this is the exact scenario that needs a human immediately — a chargeback that goes unhandled
-      extra: { payload: data },
+      extra: { summary: safePaymentSummary(data) },
     });
     return;
   }

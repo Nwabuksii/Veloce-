@@ -26,12 +26,15 @@ export const GET = requireRole<RouteContext>(
         avatarUrl: true,
         avatarDisplay: true,
         level: true,
+        universityId: true,
         university: { select: { name: true } },
         department: { select: { name: true } },
       },
     });
 
-    if (!scribe) {
+    // Profiles are university-scoped: someone at another university gets the
+    // same "not found" as a nonexistent id.
+    if (!scribe || scribe.universityId !== viewer.universityId) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 

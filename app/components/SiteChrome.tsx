@@ -4,6 +4,7 @@ import { ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import SiteHeader from "@/app/components/SiteHeader";
+import MfaReminder from "@/app/components/MfaReminder";
 import { CAMPUS } from "@/lib/campus";
 import { getStoredUser, StoredUser } from "@/lib/client-session";
 import AcademicProfileModal from "@/app/components/AcademicProfileModal";
@@ -74,6 +75,7 @@ export default function SiteChrome({ children }: { children: ReactNode }) {
 
   return (
     <div className="site-shell">
+      <MfaReminder />
       <SiteHeader />
       <main className="site-main">{children}</main>
       <footer className="site-footer">

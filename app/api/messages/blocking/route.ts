@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
+import { blockingMessageWhere } from "@/lib/blocking-messages";
 
 // Powers app/components/BlockingMessageModal — the global, non-dismissible
 // gate. Two kinds of thing block the app until resolved:
@@ -11,13 +12,7 @@ import { requireRole } from "@/lib/session";
 //     is what resolves it.
 export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
   const messages = await prisma.adminMessage.findMany({
-    where: {
-      recipientId: user.sub,
-      OR: [
-        { type: "TEXT", priority: "SERIOUS", readAt: null },
-        { type: "POLL", pollOptions: { none: { votes: { some: { userId: user.sub } } } } },
-      ],
-    },
+    where: blockingMessageWhere(user.sub),
     include: {
       sender: { select: { fullName: true } },
       pollOptions: { orderBy: { order: "asc" }, select: { id: true, label: true } },

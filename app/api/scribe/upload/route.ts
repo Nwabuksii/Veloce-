@@ -1,19 +1,49 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
-import { saveNoteFile } from "@/lib/storage";
-import { runQualityGate } from "@/lib/quality-check";
-import { getPdfPageCount } from "@/lib/pdf-render";
+import { saveNoteFile, deleteNoteFile } from "@/lib/storage";
+import { runQualityGate, textFingerprint, MAX_TEXT_CHARS } from "@/lib/quality-check";
+import { inspectPdf, PdfLimitError } from "@/lib/pdf-render";
+import { rateLimitResponse } from "@/lib/rate-limit";
+import { withTimeout } from "@/lib/async-limits";
 import { notifyFollowersOfNewNote } from "@/lib/notify-followers";
 import { queueNoteRender } from "@/lib/render-queue";
 // @ts-expect-error — pdf-parse ships without its own type declarations
 import pdfParse from "pdf-parse";
 
 const MAX_FILE_SIZE_BYTES = 3 * 1024 * 1024; // 3MB
-const MAX_PDF_PAGES = 300;
+// Each upload is compared against at most this many recent notes from the
+// same course (an identical re-upload anywhere in the university is caught
+// by the text fingerprint instead, so this can stay small).
+const SIMILARITY_COMPARE_LIMIT = 100;
+const UPLOADS_PER_HOUR = 10;
+const PDF_PARSE_TIMEOUT_MS = 30_000;
 const PDF_MAGIC_BYTES = Buffer.from("%PDF-", "ascii");
 
 export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
+  // First thing, before the body is read: an upload is the most expensive
+  // request a scribe can make (parse + validate + compare + store + render).
+  const blocked = await rateLimitResponse(
+    `scribe-upload:${user.sub}`,
+    UPLOADS_PER_HOUR,
+    60 * 60 * 1000,
+    "You've uploaded a lot in the last hour. Please wait a bit before uploading more."
+  );
+  if (blocked) return blocked;
+
+  // Refuse an obviously oversized body before buffering it. The headroom is
+  // for the multipart envelope; the exact file size is still checked below.
+  if (Number(req.headers.get("content-length")) > MAX_FILE_SIZE_BYTES + 512 * 1024) {
+    return NextResponse.json(
+      { error: `File is too large — max ${MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB` },
+      { status: 413 }
+    );
+  }
+
+  // Set once the PDF is in storage and cleared once the note row exists, so
+  // any failure in between removes the file instead of leaving it orphaned.
+  let storedRef: string | null = null;
+
   try {
     const formData = await req.formData();
     const blockId = formData.get("blockId");
@@ -32,7 +62,7 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
         { status: 400 }
       );
     }
-    if (file.type !== "application/pdf") {
+    if (file.type !== "application/pdf" || !/\.pdf$/i.test(file.name)) {
       return NextResponse.json({ error: "Only PDF files are accepted" }, { status: 400 });
     }
     if (file.size > MAX_FILE_SIZE_BYTES) {
@@ -79,39 +109,19 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
       return NextResponse.json({ error: "This doesn't look like a real PDF file" }, { status: 400 });
     }
 
-    let parsed: { text?: string; numpages: number; info?: { Producer?: string; Creator?: string } };
-    try {
-      parsed = await pdfParse(buffer);
-    } catch (err) {
-      console.error("pdf-parse failed on upload:", err);
-      return NextResponse.json(
-        { error: "This PDF looks corrupted or didn't fully upload. Please try uploading it again." },
-        { status: 400 }
-      );
-    }
-    const extractedText: string = parsed.text || "";
-
-    if (parsed.numpages > MAX_PDF_PAGES) {
-      return NextResponse.json(
-        { error: `PDF has too many pages (${parsed.numpages}) — max ${MAX_PDF_PAGES}. Split it into smaller blocks.` },
-        { status: 400 }
-      );
-    }
-
-    // pdf-parse is a lenient reader — it can happily return text for a file
-    // that's truncated or otherwise malformed and never notice. The actual
-    // reading experience renders pages with pdfjs-dist instead (see
-    // lib/pdf-render.ts), which is stricter and throws on exactly the kind
-    // of broken/incomplete PDF pdf-parse let through above. Without this
-    // check, that mismatch was the whole bug: a half-uploaded PDF could
-    // sail past pdf-parse, get saved, and go LIVE — only to 500 the moment
-    // a buyer actually tried to open it. Running the real renderer's own
-    // "can I even open this" check here, before anything is saved or goes
-    // live, catches it up front instead.
+    // Open the PDF the way the renderer will, BEFORE the heavier text
+    // extraction: enforces the page-count and page-size limits and rejects a
+    // corrupt/truncated file up front. (pdf-parse below is a lenient reader
+    // that happily returns text for a half-uploaded file — the old bug where
+    // such a note went LIVE and then 500'd for every buyer — so pdf.js is
+    // the authority on whether the file is really usable.)
     let pageCount: number;
     try {
-      pageCount = await getPdfPageCount(buffer);
+      ({ pageCount } = await inspectPdf(buffer));
     } catch (err) {
+      if (err instanceof PdfLimitError) {
+        return NextResponse.json({ error: err.message }, { status: 400 });
+      }
       console.error("PDF failed render validation on upload:", err);
       return NextResponse.json(
         { error: "This PDF looks corrupted or didn't fully upload. Please try uploading it again." },
@@ -119,25 +129,49 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
       );
     }
 
-    // Compare against every existing live/flagged note across the WHOLE
-    // university, not just this one block — a note only ever being checked
-    // against its own block meant creating a new block (any scribe can, any
-    // title) with zero existing notes always starts the similarity check
-    // from empty, so re-uploading the exact same PDF under a fresh block
-    // title slipped past undetected. Same university-wide scope already
-    // used everywhere else in this app for isolation between universities.
-    const existingNotes = await prisma.note.findMany({
-      where: {
-        status: { in: ["LIVE", "FLAGGED"] },
-        block: { course: { department: { universityId: user.universityId } } },
-      },
-      select: { extractedText: true },
-    });
+    let parsed: { text?: string; numpages: number; info?: { Producer?: string; Creator?: string } };
+    try {
+      parsed = await withTimeout(pdfParse(buffer), PDF_PARSE_TIMEOUT_MS, "Reading the PDF text");
+    } catch (err) {
+      console.error("pdf-parse failed on upload:", err);
+      return NextResponse.json(
+        { error: "This PDF looks corrupted or didn't fully upload. Please try uploading it again." },
+        { status: 400 }
+      );
+    }
+    // Capped once here, so what's stored, fingerprinted and compared is the same text.
+    const extractedText: string = (parsed.text || "").slice(0, MAX_TEXT_CHARS);
+    const textHash = textFingerprint(extractedText);
+
+    // Two cheap checks instead of comparing against every note at the
+    // university (which grew with the whole platform and could be used to
+    // make each upload cost more and more):
+    //  1. one indexed lookup for an IDENTICAL text anywhere in the university
+    //     — this is what catches the same PDF re-uploaded under a brand-new
+    //     block title, which the old university-wide scan existed to catch;
+    //  2. a similarity comparison against only the most recent notes in the
+    //     same course, for near-duplicates.
+    const universityScope = { course: { department: { universityId: user.universityId } } };
+    const [recentNotes, exactDuplicate] = await Promise.all([
+      prisma.note.findMany({
+        where: { status: { in: ["LIVE", "FLAGGED"] }, block: { courseId: block.courseId } },
+        orderBy: { createdAt: "desc" },
+        take: SIMILARITY_COMPARE_LIMIT,
+        select: { extractedText: true },
+      }),
+      textHash
+        ? prisma.note.findFirst({
+            where: { textHash, status: { in: ["LIVE", "FLAGGED"] }, block: universityScope },
+            select: { id: true },
+          })
+        : null,
+    ]);
 
     const result = runQualityGate(
       extractedText,
-      existingNotes.map((n) => n.extractedText || ""),
-      parsed.info
+      recentNotes.map((n) => n.extractedText || ""),
+      parsed.info,
+      Boolean(exactDuplicate)
     );
 
     // A scribe's very first upload is the riskiest moment — they haven't
@@ -153,6 +187,7 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
     const flagged = result.flagged || priorUploadCount === 0;
 
     const storedFilename = await saveNoteFile(buffer, file.name);
+    storedRef = storedFilename;
 
     const note = await prisma.note.create({
       data: {
@@ -160,6 +195,7 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
         scribeId: user.sub,
         fileUrl: storedFilename,
         extractedText,
+        textHash,
         pageCount,
         similarityScore: result.maxSimilarity,
         qualityScore: result.qualityScore,
@@ -172,6 +208,7 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
       },
     });
 
+    storedRef = null; // the note now owns the file
     if (!flagged) {
       void queueNoteRender(note.id);
     }
@@ -184,7 +221,8 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
     });
   } catch (err) {
     console.error("Scribe upload failed:", err);
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: `Upload failed: ${message}` }, { status: 500 });
+    if (storedRef) await deleteNoteFile(storedRef);
+    // Details stay in the server log; the client gets nothing it could learn from.
+    return NextResponse.json({ error: "Upload failed — please try again in a moment." }, { status: 500 });
   }
 });

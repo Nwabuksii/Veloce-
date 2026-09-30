@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { saveAvatarImage } from "@/lib/storage";
+import { rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,10 @@ const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 // who prefers the generic icon can switch back anytime via PATCH
 // /api/account without losing the upload (see avatarDisplay on User).
 export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
+  // Every upload is a paid storage write that overwrites the last one.
+  const blocked = await rateLimitResponse(`avatar-upload:${user.sub}`, 10, 60 * 60 * 1000, "You've changed your icon a lot recently. Please try again later.");
+  if (blocked) return blocked;
+
   const formData = await req.formData();
   const file = formData.get("file");
 

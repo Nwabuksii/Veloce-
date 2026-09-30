@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
+import { logSecurityEvent } from "@/lib/security-log";
 import { generateReceiptImage } from "@/lib/receipt";
 import { sendEmail } from "@/lib/email";
 
@@ -33,10 +34,18 @@ export const POST = requireRole<RouteContext>("ADMIN", async (req: NextRequest, 
     );
   }
 
-  const updated = await prisma.payout.update({
-    where: { id: payout.id },
+  // Claimed the same way as approve/reject, so a double click (or the
+  // webhook landing at the same moment) can't mark it paid — and email the
+  // scribe a receipt — twice.
+  const claim = await prisma.payout.updateMany({
+    where: { id: payout.id, status: "PROCESSING" },
     data: { status: "PAID", paidAt: new Date() },
   });
+  if (claim.count !== 1) {
+    return NextResponse.json({ error: "This payout was just handled by someone else — refresh to see its status" }, { status: 409 });
+  }
+  await logSecurityEvent("payout_marked_paid", { payoutId: payout.id, scribeId: payout.scribeId, amount: payout.amount, byAdminId: adminUser.sub });
+  const updated = (await prisma.payout.findUnique({ where: { id: payout.id } }))!;
 
   // Best-effort — a failed receipt email shouldn't undo the fact that the
   // payout itself is genuinely marked paid; log it and move on rather than

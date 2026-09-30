@@ -27,7 +27,6 @@ export const GET = requireRole<RouteContext>("ADMIN", async (req: NextRequest, a
       notes: {
         select: {
           id: true,
-          fileUrl: true,
           status: true,
           createdAt: true,
           block: { select: { title: true, course: { select: { code: true } } } },

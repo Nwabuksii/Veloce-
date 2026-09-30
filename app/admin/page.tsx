@@ -51,6 +51,7 @@ const GROUPS: HubGroup[] = [
       { icon: AIcon.user(), label: "Manage users", description: "Ban or unban an account", href: "/admin/users" },
       { icon: AIcon.workshop(), label: "Manage scribes", description: "Demote a scribe back to student", href: "/admin/scribes", countKey: "demotedScribes" },
       { icon: AIcon.send(), label: "Message a user", description: "Send someone a direct message", href: "/admin/messages" },
+      { icon: AIcon.eye(), label: "Security history", description: "Failed logins, bans, role changes, payouts and other sensitive actions", href: "/admin/security" },
     ],
   },
   {

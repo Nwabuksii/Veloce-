@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/session";
 import { getFinanceData } from "@/lib/finance";
+import { NO_STORE } from "@/lib/cache-policy";
 
 // The plain ledger — deliberately just the headline numbers and the recent
 // transaction feed, no escrow breakdown. See /api/admin/finance/advanced
@@ -22,6 +23,8 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
     recentTransactions: data.recentTransactions,
   });
 
-  response.headers.set("Cache-Control", "private, max-age=60, stale-while-revalidate=180");
+  // Financial data: never cached (it used to be kept for 60s, plus 180s
+  // stale, in the browser and any shared cache).
+  response.headers.set("Cache-Control", NO_STORE);
   return response;
 });

@@ -58,16 +58,27 @@ export const POST = requireRole<RouteContext>("STUDENT", async (req: NextRequest
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const report = await prisma.report.create({
-    data: {
-      type: "REFUND",
-      reporterId: user.sub,
-      blockId: purchase.blockId,
-      noteId: purchase.noteId,
-      purchaseId: purchase.id,
-      reason: parsed.data.reason,
-    },
-  });
+  // The check above is only a fast, friendly answer. The database's one-open-
+  // report-per-target index is what stops two simultaneous requests both
+  // getting through, so its rejection is the same 409.
+  let report;
+  try {
+    report = await prisma.report.create({
+      data: {
+        type: "REFUND",
+        reporterId: user.sub,
+        blockId: purchase.blockId,
+        noteId: purchase.noteId,
+        purchaseId: purchase.id,
+        reason: parsed.data.reason,
+      },
+    });
+  } catch (err: any) {
+    if (err?.code === "P2002") {
+      return NextResponse.json({ error: "You already have a pending refund request for this purchase" }, { status: 409 });
+    }
+    throw err;
+  }
 
   await evaluateBlockModeration(purchase.blockId);
 

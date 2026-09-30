@@ -1,0 +1,4 @@
+.mfa-reminder { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 9px 16px; background: var(--bg-danger); color: var(--text-danger); border-bottom: 1px solid var(--text-danger); font-size: 13px; font-weight: 600; line-height: 1.4; text-align: center; }
+.mfa-reminder a { color: inherit; text-decoration: underline; text-underline-offset: 2px; font-weight: 700; white-space: nowrap; }
+.mfa-reminder button { flex-shrink: 0; display: inline-grid; place-items: center; width: 24px; height: 24px; padding: 0; background: none; border: none; border-radius: 50%; color: inherit; cursor: pointer; font-size: 18px; line-height: 1; }
+.mfa-reminder button:hover { background: rgba(0, 0, 0, 0.08); }

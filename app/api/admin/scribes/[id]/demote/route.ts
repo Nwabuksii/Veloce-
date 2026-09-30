@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
+import { logSecurityEvent } from "@/lib/security-log";
 import { APPEAL_COOLDOWN_DAYS } from "@/lib/scribe-lifecycle";
 
 interface RouteContext {
@@ -42,8 +43,12 @@ export const POST = requireRole<RouteContext>("ADMIN", async (req: NextRequest, 
 
   const updated = await prisma.user.update({
     where: { id: scribe.id },
-    data: { role: "STUDENT", demotedAt: now },
+    // sessionVersion bump signs the demoted scribe out everywhere, so their
+    // still-valid token can't keep working with scribe-era state.
+    data: { role: "STUDENT", demotedAt: now, sessionVersion: { increment: 1 } },
   });
+
+  await logSecurityEvent("role_changed", { userId: scribe.id, from: "SCRIBE", to: "STUDENT", byAdminId: adminUser.sub }, "warn");
 
   await prisma.adminMessage.create({
     data: {

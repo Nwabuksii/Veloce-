@@ -6,6 +6,13 @@
 // one, based on which runtime is currently starting up.
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
+    // lib/env.ts was written to run here but was never actually called, so
+    // its checks (missing variables, weak JWT secret) never ran. Skipped
+    // during `next build`, which has no production secrets to check.
+    if (process.env.NEXT_PHASE !== "phase-production-build") {
+      const { validateEnv } = await import("./lib/env");
+      validateEnv();
+    }
     await import("./sentry.server.config");
   }
   if (process.env.NEXT_RUNTIME === "edge") {

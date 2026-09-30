@@ -8,6 +8,8 @@
 // Prisma reads it directly via `env("DATABASE_URL")` in schema.prisma and
 // already fails immediately and clearly on its own if it's missing, so
 // there's nothing this file needs to add for that one.
+import { jwtSecretProblem } from "@/lib/jwt-secret";
+
 const REQUIRED_ENV_VARS = [
   "DATABASE_URL",
   "DIRECT_URL",
@@ -25,6 +27,21 @@ const REQUIRED_ENV_VARS = [
 
 export function validateEnv(): void {
   const missing = REQUIRED_ENV_VARS.filter((name) => !process.env[name]);
+
+  // A weak signing secret lets anyone forge a login for any account, so in
+  // production it stops the boot just like a missing variable does. In dev
+  // it is only reported, so a quick local .env still works.
+  const secretProblem = process.env.JWT_SECRET ? jwtSecretProblem(process.env.JWT_SECRET) : null;
+  if (secretProblem) {
+    const message = `${secretProblem} Use a random value of at least 32 characters (for example: node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"). Changing it signs every user out.`;
+    if (process.env.NODE_ENV === "production") {
+      // eslint-disable-next-line no-console
+      console.error(message);
+      throw new Error(message);
+    }
+    // eslint-disable-next-line no-console
+    console.warn(`[dev] ${message}`);
+  }
 
   if (missing.length > 0) {
     // One error listing everything missing, not one throw per var — so a

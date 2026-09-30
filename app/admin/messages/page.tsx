@@ -45,6 +45,11 @@ function summarizeNames(names: string[]): string {
 
 export default function AdminMessagesPage() {
   const router = useRouter();
+
+  // Opens Advanced analytics already filtered to this one poll.
+  function openPollAnalytics(m: { pollGroupId: string | null; messageId: string }) {
+    router.push(`/admin/advanced-analytics?poll=${encodeURIComponent(m.pollGroupId ?? m.messageId)}`);
+  }
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [audience, setAudience] = useState<"individual" | "group">("individual");
@@ -388,11 +393,11 @@ export default function AdminMessagesPage() {
               <div
                 key={`${m.subject}-${m.createdAt}-${i}`}
                 className={`data-row link-row${m.type === "POLL" ? " poll-row-clickable" : ""}`}
-                onClick={() => m.type === "POLL" && router.push(`/admin/advanced-analytics?poll=${encodeURIComponent(m.pollGroupId ?? m.messageId)}&search=${encodeURIComponent(m.subject)}`)}
+                onClick={() => { if (m.type === "POLL") openPollAnalytics(m); }}
                 onKeyDown={(e) => {
                   if (m.type === "POLL" && (e.key === "Enter" || e.key === " ")) {
                     e.preventDefault();
-                    router.push(`/admin/advanced-analytics?poll=${encodeURIComponent(m.pollGroupId ?? m.messageId)}&search=${encodeURIComponent(m.subject)}`);
+                    openPollAnalytics(m);
                   }
                 }}
                 role={m.type === "POLL" ? "link" : undefined}
@@ -401,7 +406,9 @@ export default function AdminMessagesPage() {
                 <div>
                   <div className="row-title">{m.subject}</div>
                   <div className="row-desc">
-                    To {m.recipientCount === 1 ? m.recipientSummary : `${m.recipientCount} recipients — ${m.recipientSummary}`}
+                    {m.recipientCount === 0
+                      ? m.recipientSummary
+                      : <>To {m.recipientCount === 1 ? m.recipientSummary : `${m.recipientCount} recipients — ${m.recipientSummary}`}</>}
                   </div>
                   <div className="row-code">{new Date(m.createdAt).toLocaleDateString()}</div>
                 </div>
@@ -410,7 +417,7 @@ export default function AdminMessagesPage() {
                     <button
                       type="button"
                       className="status info"
-                      onClick={() => router.push(`/admin/advanced-analytics?poll=${encodeURIComponent(m.pollGroupId ?? m.messageId)}&search=${encodeURIComponent(m.subject)}`)}
+                      onClick={(e) => { e.stopPropagation(); openPollAnalytics(m); }}
                       title="Open analytics for this poll"
                     >
                       Poll · Analytics

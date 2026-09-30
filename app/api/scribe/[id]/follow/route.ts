@@ -15,8 +15,14 @@ export const POST = requireRole<RouteContext>(
       return NextResponse.json({ error: "You can't follow yourself" }, { status: 400 });
     }
 
-    const scribe = await prisma.user.findUnique({ where: { id: scribeId }, select: { role: true, bannedAt: true } });
-    if (!scribe || (scribe.role !== "SCRIBE" && scribe.role !== "ADMIN")) {
+    const scribe = await prisma.user.findUnique({ where: { id: scribeId }, select: { role: true, bannedAt: true, universityId: true } });
+    // A scribe at another university is reported as "not found" — same
+    // answer as a nonexistent id, so this can't be used to probe them.
+    if (
+      !scribe ||
+      scribe.universityId !== user.universityId ||
+      (scribe.role !== "SCRIBE" && scribe.role !== "ADMIN")
+    ) {
       return NextResponse.json({ error: "Scribe not found" }, { status: 404 });
     }
 

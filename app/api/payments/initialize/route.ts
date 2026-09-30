@@ -3,11 +3,24 @@ import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { initializeTransaction } from "@/lib/paystack";
+import { rateLimitResponse } from "@/lib/rate-limit";
 import { computeScribeCut, getEffectivePriceForNote, planCreditRedemption } from "@/lib/pricing";
 
 export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
+  // Each call to Paystack creates a transaction on their side, so an
+  // unthrottled loop here piles up abandoned checkouts (and every call is
+  // a paid-for API request). Generous for real use — a buyer picking
+  // several notes in a row is well under it.
+  const blocked = await rateLimitResponse(
+    `payment-init:${user.sub}`,
+    10,
+    10 * 60 * 1000,
+    "Too many checkout attempts. Please wait a few minutes and try again."
+  );
+  if (blocked) return blocked;
+
   try {
-    const { blockId, noteId } = await req.json();
+    const { blockId, noteId, confirmSelfPurchase } = await req.json();
 
     if (!blockId) {
       return NextResponse.json({ error: "blockId is required" }, { status: 400 });
@@ -34,6 +47,17 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
     }
 
     const note = block.notes[0];
+
+    // A scribe may buy their own note (it's a normal sale), but never by
+    // accident: the first request is answered with 409 + a flag, the page
+    // shows a confirm prompt, and only a retry carrying confirmSelfPurchase
+    // goes through. Checked before any credit or Paystack work.
+    if (note.scribeId === user.sub && confirmSelfPurchase !== true) {
+      return NextResponse.json(
+        { error: "Please confirm you want to buy your own note.", needsSelfPurchaseConfirm: true },
+        { status: 409 }
+      );
+    }
 
     // Ownership is per-note, not per-block — a student can buy more than one
     // scribe's version of the same block, they just can't buy the exact same
@@ -199,10 +223,11 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
 
     return NextResponse.json({ authorizationUrl: authorization_url, reference, creditApplied: creditToApply });
   } catch (err) {
-    // Surface the real reason instead of letting Next.js return a generic HTML 500,
-    // which is what was making the client show "Something went wrong."
+    // Log the real reason on the server; answer with JSON (not Next.js's
+    // generic HTML 500) so the client can show a proper message.
     console.error("Payment initialize failed:", err);
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: `Checkout failed: ${message}` }, { status: 500 });
+    // Details stay in the server log (Prisma/Paystack errors can name tables,
+    // queries and keys); the client gets a plain message.
+    return NextResponse.json({ error: "Checkout couldn't be started — please try again in a moment." }, { status: 500 });
   }
 });

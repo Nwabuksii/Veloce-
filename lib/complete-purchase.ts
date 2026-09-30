@@ -55,6 +55,11 @@ export async function completePurchase(params: CompletePurchaseParams): Promise<
     }
   }
 
+  const duplicateMessage = {
+    subject: "You already owned this — refunded as credit",
+    body: `You already had access to this note from an earlier purchase, so this second payment wasn't charged as a duplicate. Your ₦${amountPaid.toLocaleString()} has been added to your credit balance instead — it'll apply automatically to your next purchase.`,
+  };
+
   try {
     return await prisma.$transaction(async (tx): Promise<CompletePurchaseResult> => {
       // Already handled this exact charge (the other of verify/webhook got here first).
@@ -71,10 +76,7 @@ export async function completePurchase(params: CompletePurchaseParams): Promise<
       if (alreadyOwned) {
         // The credit this checkout had reserved (if any) was never actually
         // decremented anywhere — only amountPaid is genuinely new money.
-        await convertToCredit(tx, "DUPLICATE", {
-          subject: "You already owned this — refunded as credit",
-          body: `You already had access to this note from an earlier purchase, so this second payment wasn't charged as a duplicate. Your ₦${amountPaid.toLocaleString()} has been added to your credit balance instead — it'll apply automatically to your next purchase.`,
-        });
+        await convertToCredit(tx, "DUPLICATE", duplicateMessage);
         return { purchase: alreadyOwned, convertedToCredit: true };
       }
 
@@ -121,6 +123,26 @@ export async function completePurchase(params: CompletePurchaseParams): Promise<
       const converted = await prisma.convertedPayment.findUnique({ where: { paystackRef: reference } });
       if (converted) {
         const owned = await prisma.purchase.findFirst({ where: { buyerId, noteId, refundedAt: null } });
+        return { purchase: owned, convertedToCredit: true };
+      }
+
+      // Neither of the above: the insert lost to a DIFFERENT reference's
+      // purchase of the same note, caught by the database's one-active-
+      // purchase-per-buyer-per-note index (the alreadyOwned check inside the
+      // transaction can't see a purchase committed a moment later). This
+      // transaction rolled back, so nothing was taken or granted — treat
+      // this charge exactly like the "already owned" case above.
+      const owned = await prisma.purchase.findFirst({
+        where: { buyerId, noteId, refundedAt: null, paystackRef: { not: reference } },
+      });
+      if (owned) {
+        try {
+          await prisma.$transaction((tx) => convertToCredit(tx, "DUPLICATE", duplicateMessage));
+        } catch (convertErr: any) {
+          // A concurrent verify/webhook call already converted this same
+          // charge (unique paystackRef) — the credit was granted once.
+          if (convertErr?.code !== "P2002") throw convertErr;
+        }
         return { purchase: owned, convertedToCredit: true };
       }
     }

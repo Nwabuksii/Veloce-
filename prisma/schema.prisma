@@ -137,6 +137,22 @@ model User {
   failedLoginAttempts Int       @default(0)
   lockedUntil         DateTime?
 
+  // Session versioning — every JWT carries the version it was issued at
+  // (see lib/auth.ts), and requireRole rejects any token whose version no
+  // longer matches this column. Bumping it is how a password change/reset,
+  // a demotion or a ban kills every already-issued session at once, instead
+  // of waiting out the token's 7-day expiry.
+  sessionVersion      Int       @default(0)
+
+  // Two-factor login (TOTP), used by admins. mfaSecret is AES-GCM encrypted
+  // (see lib/mfa.ts). It is set while enrolling but only enforced at login
+  // once mfaEnabledAt is set. mfaLastStep is the newest 30-second step
+  // already accepted, so a code can't be replayed.
+  mfaSecret      String?
+  mfaEnabledAt   DateTime?
+  mfaLastStep    Int?
+  mfaRecoveryCodes MfaRecoveryCode[]
+
   // Self-service password reset — same token/expiry pattern as email
   // verification below, deliberately separate fields so a pending
   // verification and a pending reset can never collide with each other.
@@ -325,17 +341,30 @@ model PollOption {
 }
 
 model PollVote {
-  id        String     @id @default(uuid())
+  id        String      @id @default(uuid())
   messageId String // denormalized from optionId for the one-vote-per-message constraint below
-  optionId  String
-  option    PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  // Detached (null) when the recipient deletes their copy of the poll —
+  // the vote itself is kept, using the copied fields below.
+  optionId  String?
+  option    PollOption? @relation(fields: [optionId], references: [id], onDelete: SetNull)
   userId    String
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime   @default(now())
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+
+  // Copied from the poll at vote time so results survive the message being
+  // deleted (see app/api/messages/[id]/vote/route.ts).
+  pollGroupId String?
+  pollSubject String  @default("")
+  pollBody    String  @default("")
+  senderId    String?
+  optionLabel String  @default("")
+  optionOrder Int     @default(0)
 
   // The whole point: one vote per person per poll, enforced by the
   // database, not just checked in application code.
   @@unique([messageId, userId])
+  @@index([pollGroupId])
+  @@index([senderId])
 }
 
 enum ApplicationStatus {
@@ -401,7 +430,8 @@ model Note {
   scribeLevelAtUpload String?
 
   fileUrl String // stored filename on disk — NOT a public URL; access is gated
-  extractedText String? // raw text pulled from the PDF, used by the quality gate
+  extractedText String? // raw text pulled from the PDF, used by the quality gate (capped, see lib/quality-check.ts)
+  textHash      String? // fingerprint of extractedText — finds exact re-uploads with one lookup
   status  NoteStatus @default(PENDING_REVIEW)
   pageCount Int? // total pages — set once, the first time any page gets rendered
 
@@ -437,6 +467,7 @@ model Note {
   @@index([status])
   @@index([scribeId])
   @@index([status, scribeId])
+  @@index([textHash])
 }
 
 // A cached, plain (no watermark) render of one page of a note's PDF.
@@ -686,6 +717,18 @@ model Feedback {
 // Deliberately simple, DB-backed rate limiting — see lib/rate-limit.ts for
 // why this beats an in-memory counter on a serverless host like Vercel.
 // One row per (bucket + identifier) key, e.g. "login:102.67.15.8".
+// Single-use backup codes for two-factor login. Only the hash is stored.
+model MfaRecoveryCode {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String    @unique
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
 model RateLimitHit {
   key         String   @id
   count       Int      @default(1)
@@ -750,4 +793,26 @@ model PendingRegistration {
   expiresAt         DateTime
 
   @@index([expiresAt])
+}
+
+// Permanent security history, shown at /admin/security. Cleared monthly
+// after being emailed to the site email (see lib/security-archive.ts).
+model SecurityEvent {
+  id           String   @id @default(uuid())
+  createdAt    DateTime @default(now())
+  event        String
+  severity     String   @default("info")
+  userId       String?
+  universityId String?
+  ip           String?
+  details      Json?
+
+  @@index([universityId, createdAt])
+  @@index([userId, createdAt])
+}
+
+// Single row — makes sure only one server instance runs the monthly clear.
+model SecurityLogLock {
+  id          String   @id
+  lockedUntil DateTime
 }

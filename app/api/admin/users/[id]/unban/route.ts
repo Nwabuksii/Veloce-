@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
+import { logSecurityEvent } from "@/lib/security-log";
 import { sendUnbanEmail } from "@/lib/ban";
 
 interface RouteContext {
@@ -24,6 +25,8 @@ export const POST = requireRole<RouteContext>("ADMIN", async (req: NextRequest, 
     where: { id: target.id },
     data: { bannedAt: null, banReason: null, banExpiresAt: null, bannedById: null },
   });
+
+  await logSecurityEvent("user_unbanned", { userId: target.id, byAdminId: adminUser.sub });
 
   try {
     await sendUnbanEmail({ email: target.email, fullName: target.fullName });

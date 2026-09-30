@@ -48,8 +48,13 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
 
   const normalized = parsed.data.requestedTitle.trim();
 
-  const course = await prisma.course.findUnique({ where: { id: parsed.data.courseId } });
-  if (!course) {
+  const course = await prisma.course.findUnique({
+    where: { id: parsed.data.courseId },
+    include: { department: { select: { universityId: true } } },
+  });
+  // Same "not found" for a course that doesn't exist and one at another
+  // university, so course IDs can't be probed across universities.
+  if (!course || course.department.universityId !== user.universityId) {
     return NextResponse.json({ error: "Course not found" }, { status: 404 });
   }
 

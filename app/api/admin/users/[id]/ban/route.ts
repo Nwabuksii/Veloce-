@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
+import { logSecurityEvent } from "@/lib/security-log";
 import { sendBanEmail } from "@/lib/ban";
 
 interface RouteContext {
@@ -59,8 +60,13 @@ export const POST = requireRole<RouteContext>("ADMIN", async (req: NextRequest, 
       banReason: parsed.data.reason ?? null,
       banExpiresAt: until,
       bannedById: adminUser.sub,
+      // Kills every token issued before the ban, so an old session can't
+      // quietly start working again the moment a timed suspension lapses.
+      sessionVersion: { increment: 1 },
     },
   });
+
+  await logSecurityEvent("user_banned", { userId: target.id, byAdminId: adminUser.sub, permanent: until === null }, "warn");
 
   // Best-effort — the ban itself is already applied regardless of whether
   // the notification email succeeds.

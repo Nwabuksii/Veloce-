@@ -113,6 +113,16 @@ export async function createTransferRecipient(params: {
   return data.data.recipient_code;
 }
 
+/**
+ * Thrown ONLY when Paystack answered and said no — a 4xx with status:false
+ * (bad recipient, insufficient balance, duplicate reference...). In that case
+ * we know for certain no money moved. Any other failure of initiateTransfer
+ * (network drop, timeout, 5xx, unreadable body) is deliberately a plain
+ * Error, because the transfer MAY have been created on Paystack's side and
+ * we simply never heard back — callers must not treat that as "failed".
+ */
+export class PaystackRejectedError extends Error {}
+
 interface InitiateTransferResult {
   transfer_code: string;
   reference: string;
@@ -144,9 +154,17 @@ export async function initiateTransfer(params: {
     }),
   });
 
-  const data = await res.json();
-  if (!data.status) throw new Error(data.message || "Paystack transfer failed to initiate");
-  return data.data;
+  const data = await res.json().catch(() => null);
+  if (data?.status) return data.data;
+
+  // A clear "no" from Paystack (4xx, except timeout/rate-limit statuses that
+  // don't tell us anything about whether the transfer was created).
+  if (data && res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429) {
+    throw new PaystackRejectedError(data.message || "Paystack transfer was rejected");
+  }
+
+  // Anything else: we don't actually know the outcome.
+  throw new Error(data?.message || `Paystack transfer outcome unknown (HTTP ${res.status})`);
 }
 
 export async function verifyTransfer(reference: string): Promise<{ status: string; failureReason?: string }> {

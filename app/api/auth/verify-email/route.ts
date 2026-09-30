@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
 
     await sendWelcomeMessage(user.id, "student");
 
-    const jwt = signToken({ sub: user.id, email: user.email, role: user.role, universityId: user.universityId });
+    const jwt = signToken({ sub: user.id, email: user.email, role: user.role, universityId: user.universityId, sv: user.sessionVersion });
     const res = NextResponse.json({
       user: {
         id: user.id,
@@ -114,6 +114,7 @@ export async function POST(req: NextRequest) {
     email: user.email,
     role: user.role,
     universityId: user.universityId,
+    sv: user.sessionVersion,
   });
 
   const res = NextResponse.json({

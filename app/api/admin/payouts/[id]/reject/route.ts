@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
+import { logSecurityEvent } from "@/lib/security-log";
 
 interface RouteContext {
   params: { id: string };
@@ -38,8 +39,12 @@ export const POST = requireRole<RouteContext>("ADMIN", async (req: NextRequest, 
     // no body sent — fine
   }
 
-  const updated = await prisma.payout.update({
-    where: { id: payout.id },
+  // Same claim pattern as approve: the WHERE status = PENDING is what
+  // decides who wins. If approve got there first, this matches nothing and
+  // we must NOT mark the payout FAILED — Paystack may already be sending the
+  // money, and FAILED would hand the scribe their balance back to spend twice.
+  const claim = await prisma.payout.updateMany({
+    where: { id: payout.id, status: "PENDING" },
     data: {
       status: "FAILED",
       processedAt: new Date(),
@@ -47,6 +52,14 @@ export const POST = requireRole<RouteContext>("ADMIN", async (req: NextRequest, 
       failureReason: reason ?? "Rejected by admin",
     },
   });
+
+  if (claim.count !== 1) {
+    return NextResponse.json({ error: "This payout was just handled by someone else — refresh to see its status" }, { status: 409 });
+  }
+
+  await logSecurityEvent("payout_rejected", { payoutId: payout.id, scribeId: payout.scribeId, amount: payout.amount, byAdminId: adminUser.sub });
+
+  const updated = await prisma.payout.findUnique({ where: { id: payout.id } });
 
   // No money ever moved for this one, so it doesn't count against the
   // scribe's balance anymore — reflected automatically since

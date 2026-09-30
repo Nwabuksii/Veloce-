@@ -8,6 +8,7 @@ import { AIcon } from "@/app/components/AdminIcons";
 import Avatar from "@/app/components/Avatar";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
+import { PAYOUTS_AUTOMATED } from "@/lib/payout-mode";
 
 interface PayoutItem {
   id: string;
@@ -74,6 +75,27 @@ export default function AdminPayoutsPage() {
       await apiFetch(`/api/admin/payouts/${id}/mark-paid`, { method: "POST" });
       setActionMessage("Marked as paid.");
       setPayouts((prev) => prev.filter((p) => p.id !== id));
+    } catch (err) {
+      setActionMessage(friendlyErrorMessage(err));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  // Asks Paystack what happened to a transfer that's still "processing"
+  // and applies the answer with the same rules as the webhook.
+  async function handleReconcile(id: string) {
+    setActionMessage("");
+    setBusyId(id);
+    try {
+      const data = await apiFetch(`/api/admin/payouts/${id}/reconcile`, { method: "POST" });
+      setActionMessage(
+        data?.message ||
+          (data?.settled
+            ? `Paystack says "${data.paystackStatus}" — the payout has been updated.`
+            : `Paystack says "${data?.paystackStatus ?? "unknown"}". Nothing was changed.`)
+      );
+      load();
     } catch (err) {
       setActionMessage(friendlyErrorMessage(err));
     } finally {
@@ -161,9 +183,16 @@ export default function AdminPayoutsPage() {
                   </button>
                 </>
               ) : (
-                <button className="btn btn-sm btn-success" onClick={() => handleMarkPaid(p.id)} disabled={busyId === p.id}>
-                  {AIcon.check()} {busyId === p.id ? "Saving..." : "Mark as paid"}
-                </button>
+                <>
+                  {PAYOUTS_AUTOMATED && (
+                    <button className="btn btn-sm btn-ghost" onClick={() => handleReconcile(p.id)} disabled={busyId === p.id}>
+                      {busyId === p.id ? "Checking..." : "Check with Paystack"}
+                    </button>
+                  )}
+                  <button className="btn btn-sm btn-success" onClick={() => handleMarkPaid(p.id)} disabled={busyId === p.id}>
+                    {AIcon.check()} {busyId === p.id ? "Saving..." : "Mark as paid"}
+                  </button>
+                </>
               )}
             </div>
           </div>

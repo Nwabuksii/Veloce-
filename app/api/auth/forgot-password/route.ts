@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { randomBytes } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { checkRateLimit, ipKeyFrom } from "@/lib/rate-limit";
+import { AUTH_MIN_RESPONSE_MS, padToMinimum } from "@/lib/timing";
 
 const RESEND_COOLDOWN_MS = 60 * 1000;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour — shorter than email verification's 24h, since a live reset link is a more sensitive thing to leave valid for long
@@ -21,6 +22,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Too many requests from this network. Try again later." }, { status: 429 });
   }
 
+  const started = Date.now();
   const parsed = forgotSchema.safeParse(await req.json());
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -34,7 +36,11 @@ export async function POST(req: NextRequest) {
     message: "If an account with that email exists, we've sent a password reset link.",
   });
 
+  // Unknown email, cooldown, or a real send: all three answer with the same
+  // body AND after about the same delay (a real send writes to the database
+  // and calls the email API, which is slow), so timing can't tell them apart.
   if (!user) {
+    await padToMinimum(started, AUTH_MIN_RESPONSE_MS);
     return genericResponse;
   }
 
@@ -44,6 +50,7 @@ export async function POST(req: NextRequest) {
   ) {
     // Still return the generic response — don't leak timing info about
     // whether the account exists via a different error shape.
+    await padToMinimum(started, AUTH_MIN_RESPONSE_MS);
     return genericResponse;
   }
 
@@ -52,7 +59,10 @@ export async function POST(req: NextRequest) {
   await prisma.user.update({
     where: { id: user.id },
     data: {
-      passwordResetToken,
+      // Only the SHA-256 of the token is stored. The raw token exists just in
+      // the emailed link, so a database leak or read-only SQL access can't be
+      // turned into working password-reset links for every pending request.
+      passwordResetToken: createHash("sha256").update(passwordResetToken).digest("hex"),
       passwordResetExpiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
       lastPasswordResetEmailSentAt: new Date(),
     },
@@ -71,5 +81,6 @@ export async function POST(req: NextRequest) {
     console.error("Failed to send password reset email:", err);
   }
 
+  await padToMinimum(started, AUTH_MIN_RESPONSE_MS);
   return genericResponse;
 }

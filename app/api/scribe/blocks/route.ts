@@ -3,12 +3,22 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { inferLevelFromCourseCode } from "@/lib/academic";
 import { requireRole } from "@/lib/session";
+import { rateLimitResponse } from "@/lib/rate-limit";
 
-export const GET = requireRole("SCRIBE", async (req: NextRequest) => {
+export const GET = requireRole("SCRIBE", async (req: NextRequest, user) => {
   const courseId = new URL(req.url).searchParams.get("courseId");
 
   if (!courseId) {
     return NextResponse.json({ error: "courseId is required" }, { status: 400 });
+  }
+
+  // Only list blocks for a course at the caller's own university.
+  const course = await prisma.course.findFirst({
+    where: { id: courseId, department: { universityId: user.universityId } },
+    select: { id: true },
+  });
+  if (!course) {
+    return NextResponse.json({ error: "Course not found" }, { status: 404 });
   }
 
   const blocks = await prisma.block.findMany({
@@ -28,6 +38,11 @@ const createBlockSchema = z.object({
 });
 
 export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
+  // Blocks are public catalogue entries anyone can create with any title,
+  // so creation is throttled to stop the catalogue being flooded.
+  const blocked = await rateLimitResponse(`create-block:${user.sub}`, 20, 60 * 60 * 1000, "You've created a lot of blocks recently. Please try again later.");
+  if (blocked) return blocked;
+
   const body = await req.json();
   const parsed = createBlockSchema.safeParse(body);
 

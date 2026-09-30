@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
 import AdminPageHeader from "@/app/components/AdminPageHeader";
 import { AIcon } from "@/app/components/AdminIcons";
@@ -38,18 +38,38 @@ interface PollAnalyticsRow {
 }
 
 export default function AdminAdvancedAnalyticsPage() {
+  return (
+    <Suspense fallback={<div className="page-wrap"><p style={{ color: "var(--text-secondary)" }}>Loading poll analytics…</p></div>}>
+      <AdminAdvancedAnalyticsContent />
+    </Suspense>
+  );
+}
+
+function AdminAdvancedAnalyticsContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [rows, setRows] = useState<PollAnalyticsRow[]>([]);
   const [summary, setSummary] = useState<PollAnalyticsSummary | null>(null);
   const [selectedPoll, setSelectedPoll] = useState<SelectedPoll | null>(null);
+  const [polls, setPolls] = useState<Array<{ id: string; subject: string }>>([]);
   const [departmentOptions, setDepartmentOptions] = useState<string[]>([]);
   const [courseOptions, setCourseOptions] = useState<string[]>([]);
-  const [search, setSearch] = useState(() => (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("search") ?? "" : ""));
+  const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
   const [department, setDepartment] = useState("all");
   const [course, setCourse] = useState("all");
-  const [pollId, setPollId] = useState(() => (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("poll") ?? "" : ""));
+  const [pollId, setPollId] = useState(() => searchParams.get("poll") ?? "");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const querySearch = searchParams.get("search") ?? "";
+  const queryPoll = searchParams.get("poll") ?? "";
+
+  // Keep the controlled search field synchronized with router query params.
+  // This is important when navigating to this page from a poll link without a full reload.
+  useEffect(() => {
+    setSearch(querySearch);
+    setPollId(queryPoll);
+  }, [querySearch, queryPoll]);
 
   const urlParams = useMemo(() => {
     const params = new URLSearchParams();
@@ -81,9 +101,7 @@ export default function AdminAdvancedAnalyticsPage() {
         setRows(json.rows ?? []);
         setSummary(json.summary ?? null);
         setSelectedPoll(json.selectedPoll ?? null);
-        if (pollId && json.selectedPoll?.subject) {
-          setSearch((current) => current === json.selectedPoll.subject ? current : json.selectedPoll.subject);
-        }
+        setPolls(json.polls ?? []);
         setDepartmentOptions(json.filters?.departmentOptions ?? []);
         setCourseOptions(json.filters?.courseOptions ?? []);
       } catch (err) {
@@ -108,11 +126,30 @@ export default function AdminAdvancedAnalyticsPage() {
 
       <div className="filter-panel">
         {pollId && (
-          <div className="callout is-info" style={{ marginBottom: 14 }}>
-            <div><strong>Filtered to one poll.</strong> Only responses belonging to this poll are shown.</div>
+          <div className="notice" style={{ marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <span><strong>Filtered to one poll.</strong> Only responses belonging to this poll are shown.</span>
             <button type="button" className="btn btn-ghost" onClick={() => { setPollId(""); setSearch(""); router.push("/admin/advanced-analytics"); }}>Clear poll filter</button>
           </div>
         )}
+
+        <div className="form-field">
+          <label className="form-label" htmlFor="aa-poll">Poll</label>
+          <select
+            id="aa-poll"
+            className="select"
+            value={pollId}
+            onChange={(e) => {
+              const next = e.target.value;
+              setPollId(next);
+              router.replace(next ? `/admin/advanced-analytics?poll=${encodeURIComponent(next)}` : "/admin/advanced-analytics");
+            }}
+          >
+            <option value="">All polls</option>
+            {polls.map((p) => (
+              <option key={p.id} value={p.id}>{p.subject}</option>
+            ))}
+          </select>
+        </div>
 
         <div className="form-field">
           <label className="form-label" htmlFor="aa-search">Search</label>
@@ -242,7 +279,7 @@ export default function AdminAdvancedAnalyticsPage() {
         <div className="empty-state">
           <div className="empty-icon">{AIcon.chart()}</div>
           <h3 className="empty-title">No responses yet</h3>
-          <p className="empty-desc">No poll responses match the current filters yet.</p>
+          <p className="empty-desc">{pollId ? "Nobody has voted on this poll yet." : "No poll responses match the current filters yet."}</p>
         </div>
       )}
     </div>

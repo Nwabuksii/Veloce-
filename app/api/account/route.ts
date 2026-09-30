@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
-import { hashPassword, verifyPassword } from "@/lib/auth";
+import { hashPassword, verifyPassword, signToken, SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth";
 import { passwordSchema } from "@/lib/password-policy";
+import { rateLimitResponse } from "@/lib/rate-limit";
+import { logSecurityEvent } from "@/lib/security-log";
 
 // Force Next.js to evaluate this API route dynamically at runtime,
 // preventing static generation errors during Vercel builds.
@@ -78,11 +80,28 @@ export const PATCH = requireRole("STUDENT", async (req: NextRequest, user) => {
     return NextResponse.json({ error: "Upload a profile icon before switching to it" }, { status: 400 });
   }
 
-  const data: { email?: string; passwordHash?: string; theme?: string; avatarDisplay?: string } = {};
+  const data: {
+    email?: string;
+    passwordHash?: string;
+    sessionVersion?: { increment: number };
+    theme?: string;
+    avatarDisplay?: string;
+  } = {};
 
   // Only touch password verification at all if this request is actually
   // trying to change something that needs it.
   if (newEmail || newPassword) {
+    // This endpoint is a password oracle: with a stolen session cookie an
+    // attacker could otherwise guess currentPassword as fast as they can
+    // send requests. Counted per account, only for requests that check it.
+    const blocked = await rateLimitResponse(
+      `account-password-check:${user.sub}`,
+      5,
+      15 * 60 * 1000,
+      "Too many attempts. Please wait a few minutes and try again."
+    );
+    if (blocked) return blocked;
+
     const passwordOk = await verifyPassword(currentPassword!, dbUser.passwordHash);
     if (!passwordOk) {
       return NextResponse.json({ error: "Current password is incorrect" }, { status: 401 });
@@ -92,6 +111,10 @@ export const PATCH = requireRole("STUDENT", async (req: NextRequest, user) => {
     }
     if (newPassword) {
       data.passwordHash = await hashPassword(newPassword);
+      // Signs out every OTHER session (a stolen cookie, a forgotten
+      // library computer). This device is re-issued a fresh token below so
+      // the person changing their password isn't kicked out themselves.
+      data.sessionVersion = { increment: 1 };
     }
   }
 
@@ -111,9 +134,32 @@ export const PATCH = requireRole("STUDENT", async (req: NextRequest, user) => {
     const updated = await prisma.user.update({
       where: { id: user.sub },
       data,
-      select: { id: true, email: true, fullName: true, role: true, theme: true, creditBalance: true, avatarUrl: true, avatarDisplay: true },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        theme: true,
+        creditBalance: true,
+        avatarUrl: true,
+        avatarDisplay: true,
+        universityId: true,
+        sessionVersion: true,
+      },
     });
-    return NextResponse.json({ user: updated });
+
+    if (data.passwordHash) await logSecurityEvent("password_changed", { userId: updated.id, role: updated.role });
+
+    const { universityId, sessionVersion, ...publicUser } = updated;
+    const res = NextResponse.json({ user: publicUser });
+    if (data.sessionVersion) {
+      res.cookies.set(
+        SESSION_COOKIE,
+        signToken({ sub: updated.id, email: updated.email, role: updated.role, universityId, sv: sessionVersion }),
+        sessionCookieOptions()
+      );
+    }
+    return res;
   } catch (err: any) {
     if (err?.code === "P2002") {
       return NextResponse.json({ error: "That email is already in use" }, { status: 409 });

@@ -12,7 +12,11 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
       return NextResponse.json({ error: "reference is required" }, { status: 400 });
     }
 
-    const existing = await prisma.purchase.findUnique({ where: { paystackRef: reference } });
+    // Scoped to the caller: a reference that belongs to someone else must not
+    // hand back their purchase. For anyone else's reference this now finds
+    // nothing, falls through to the Paystack check, and is rejected by the
+    // metadata.userId comparison below without revealing that it exists.
+    const existing = await prisma.purchase.findFirst({ where: { paystackRef: reference, buyerId: user.sub } });
     if (existing) {
       return NextResponse.json({ purchase: existing });
     }
@@ -49,7 +53,6 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
     return NextResponse.json({ purchase });
   } catch (err) {
     console.error("Payment verify failed:", err);
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: `Verification failed: ${message}` }, { status: 500 });
+    return NextResponse.json({ error: "We couldn't verify this payment yet — please try again in a moment." }, { status: 500 });
   }
 });

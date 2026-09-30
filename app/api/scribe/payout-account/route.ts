@@ -4,6 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { listBanks, resolveAccountNumber } from "@/lib/paystack";
 
+// The page only ever shows the last 4 digits, so that's all the browser gets.
+function maskAccount<T extends { accountNumber: string | null }>(account: T | null): T | null {
+  if (!account) return account;
+  return { ...account, accountNumber: account.accountNumber ? `••••${account.accountNumber.slice(-4)}` : null };
+}
+
 export const GET = requireRole("SCRIBE", async (req: NextRequest, user) => {
   const [dbUser, banks] = await Promise.all([
     prisma.user.findUnique({
@@ -13,7 +19,7 @@ export const GET = requireRole("SCRIBE", async (req: NextRequest, user) => {
     listBanks(),
   ]);
 
-  return NextResponse.json({ account: dbUser, banks });
+  return NextResponse.json({ account: maskAccount(dbUser), banks });
 });
 
 const saveSchema = z.object({
@@ -54,5 +60,5 @@ export const PATCH = requireRole("SCRIBE", async (req: NextRequest, user) => {
     select: { bankCode: true, bankName: true, accountNumber: true, accountName: true },
   });
 
-  return NextResponse.json({ account: updated });
+  return NextResponse.json({ account: maskAccount(updated) });
 });

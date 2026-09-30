@@ -28,7 +28,30 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
     groups.get(key)!.recipients.push(m.recipient.fullName);
   }
 
+  // Polls whose recipients have all deleted their copies would otherwise
+  // vanish from this list even though their votes still count — list them
+  // from the votes so the admin can still open their analytics.
+  const listedGroupIds = Array.from(groups.values()).map((g) => g.pollGroupId).filter((v): v is string => !!v);
+  const orphanPolls = await prisma.pollVote.groupBy({
+    by: ["pollGroupId", "pollSubject", "pollBody"],
+    where: { senderId: adminUser.sub, pollGroupId: { not: null, notIn: listedGroupIds } },
+    _max: { createdAt: true },
+  });
+  for (const o of orphanPolls) {
+    groups.set(`poll:${o.pollGroupId}`, {
+      subject: o.pollSubject,
+      body: o.pollBody,
+      type: "POLL",
+      priority: "NORMAL",
+      createdAt: o._max.createdAt ?? new Date(0),
+      recipients: [],
+      messageId: o.pollGroupId!,
+      pollGroupId: o.pollGroupId,
+    });
+  }
+
   const result = Array.from(groups.values())
+    .sort((x, y) => y.createdAt.getTime() - x.createdAt.getTime())
     .slice(0, 30)
     .map((g) => ({
       subject: g.subject,
@@ -38,7 +61,9 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
       createdAt: g.createdAt,
       recipientCount: g.recipients.length,
       recipientSummary:
-        g.recipients.length <= 3
+        g.recipients.length === 0
+          ? "Everyone deleted their copy — votes still count"
+          : g.recipients.length <= 3
           ? g.recipients.join(", ")
           : `${g.recipients.slice(0, 2).join(", ")} and ${g.recipients.length - 2} other${g.recipients.length - 2 === 1 ? "" : "s"}`,
       messageId: g.messageId,

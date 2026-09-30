@@ -33,8 +33,21 @@ export const POST = requireRole<RouteContext>("STUDENT", async (req: NextRequest
 
   try {
     await prisma.$transaction([
+      // The poll's name, sender and the chosen option's label are copied onto
+      // the vote, so the result still counts after the person deletes their
+      // copy of the message.
       prisma.pollVote.create({
-        data: { messageId: message.id, optionId: option.id, userId: user.sub },
+        data: {
+          messageId: message.id,
+          optionId: option.id,
+          userId: user.sub,
+          pollGroupId: message.pollGroupId,
+          pollSubject: message.subject,
+          pollBody: message.body,
+          senderId: message.senderId,
+          optionLabel: option.label,
+          optionOrder: option.order,
+        },
       }),
       // Voting counts as reading it — relevant for the SERIOUS blocking
       // check, though polls block on an unvoted state regardless of
