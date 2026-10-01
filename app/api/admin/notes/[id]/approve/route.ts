@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
-import { notifyFollowersOfNewNote } from "@/lib/notify-followers";
 import { queueNoteRender } from "@/lib/render-queue";
+
+// Rendering the pages takes a while (up to ~45s for a big PDF). Vercel stops a
+// function as soon as it has responded, so the render must finish INSIDE this
+// request, and the function needs a time limit long enough for it.
+export const maxDuration = 60;
 
 interface RouteContext {
   params: { id: string };
@@ -13,7 +17,6 @@ export const POST = requireRole<RouteContext>("ADMIN", async (req: NextRequest, 
     where: { id: ctx.params.id },
     include: {
       scribe: { select: { universityId: true } },
-      block: { select: { title: true } },
     },
   });
 
@@ -38,11 +41,19 @@ export const POST = requireRole<RouteContext>("ADMIN", async (req: NextRequest, 
     data: { status: "RENDERING", flaggedForReview: false },
   });
 
-  void queueNoteRender(note.id);
+  // Awaited on purpose: a fire-and-forget render is killed by Vercel the moment
+  // this response is sent, which left approved notes stuck and never live.
+  // queueNoteRender flips the note to LIVE and notifies followers itself; if
+  // rendering fails it puts the note back in this queue with the reason.
+  await queueNoteRender(note.id);
 
-  // The other place a note can reach LIVE — see app/api/scribe/upload for
-  // the direct (non-flagged) path.
-  await notifyFollowersOfNewNote(note.scribeId, note.block.title).catch(() => undefined);
+  const final = await prisma.note.findUnique({ where: { id: note.id }, select: { id: true, status: true } });
+  if (final?.status !== "LIVE") {
+    return NextResponse.json(
+      { error: "Approved, but the pages could not be rendered, so the note is back in the queue. Try approving again." },
+      { status: 502 }
+    );
+  }
 
-  return NextResponse.json({ note: updated });
+  return NextResponse.json({ note: final ?? updated });
 });

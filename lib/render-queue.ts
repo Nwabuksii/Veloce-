@@ -47,9 +47,28 @@ export async function queueNoteRender(noteId: string): Promise<void> {
     });
 
     if (complete && updated.status === "LIVE") {
-      await notifyFollowersOfNewNote(note.scribeId, note.block.title);
+      await notifyFollowersOfNewNote(note.scribeId, note.block.title).catch(() => undefined);
+    } else if (!complete) {
+      await returnToReviewQueue(note.id);
     }
   } catch (err) {
     console.error(`PDF render queue failed for note ${noteId}:`, err);
+    await returnToReviewQueue(noteId);
   }
+}
+
+// A note must never sit in RENDERING with nothing working on it. If the render
+// fails, it goes back to the admin queue (with the reason) so it can be retried
+// with Approve instead of being stuck invisibly.
+async function returnToReviewQueue(noteId: string): Promise<void> {
+  await prisma.note
+    .updateMany({
+      where: { id: noteId, status: "RENDERING" },
+      data: {
+        status: "FLAGGED",
+        flaggedForReview: true,
+        flagReason: "Page rendering failed — approve again to retry",
+      },
+    })
+    .catch((err) => console.error(`Could not return note ${noteId} to the review queue:`, err));
 }

@@ -22,6 +22,10 @@ const UPLOADS_PER_HOUR = 10;
 const PDF_PARSE_TIMEOUT_MS = 30_000;
 const PDF_MAGIC_BYTES = Buffer.from("%PDF-", "ascii");
 
+// The page render runs inside this request (see queueNoteRender) — Vercel
+// would kill it if it were left running after the response.
+export const maxDuration = 60;
+
 export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
   // First thing, before the body is read: an upload is the most expensive
   // request a scribe can make (parse + validate + compare + store + render).
@@ -228,7 +232,7 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
 
     storedRef = null; // the note now owns the file
     if (!flagged) {
-      void queueNoteRender(note.id);
+      await queueNoteRender(note.id);
     }
 
     return NextResponse.json({

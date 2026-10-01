@@ -23,7 +23,7 @@ interface ScribeNote {
 const STATUS_STYLES: Record<string, { cls: string; label: string }> = {
   LIVE: { cls: "live", label: "Live" },
   APPROVED: { cls: "live", label: "Live" },
-  RENDERING: { cls: "review", label: "Rendering" },
+  RENDERING: { cls: "processing", label: "Publishing" },
   FLAGGED: { cls: "review", label: "Under review" },
   PENDING_REVIEW: { cls: "review", label: "Under review" },
   REJECTED: { cls: "rejected", label: "Rejected" },
@@ -64,7 +64,7 @@ export default function ScribeWorkspacePage() {
 
   const totalSales = notes.reduce((sum, n) => sum + n.salesCount, 0);
   const liveCount = notes.filter((n) => isLive(n.status)).length;
-  const inReviewCount = notes.filter((n) => !isLive(n.status) && n.status !== "REJECTED").length;
+  const inReviewCount = notes.filter((n) => n.status === "FLAGGED" || n.status === "PENDING_REVIEW").length;
   const totalReviews = notes.reduce((sum, n) => sum + n.reviewCount, 0);
   // Weighted by review count, so one 5★ on a tiny note doesn't outweigh 40 reviews elsewhere.
   const weightedRating =

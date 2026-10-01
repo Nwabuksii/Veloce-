@@ -2461,3 +2461,31 @@ html:not([data-theme="dark"]) .stat-hero { border-color: var(--ink); }
 @media (max-width: 820px) {
   .student-page .purchase-card { min-height: 0; }
 }
+
+/* ---- Scribe "Your notes" rows on small screens ----
+   Same specificity as the desktop 4-column rule, so it cannot lose to it:
+   title on its own line, Sold + Rating side by side, status and actions below. */
+@media (max-width: 1100px) {
+  .data-row.data-row--studio {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 16px;
+    align-items: start;
+  }
+  .data-row--studio > * { min-width: 0; width: auto; }
+  .data-row--studio > :first-child,
+  .data-row--studio > .row-actions { grid-column: 1 / -1; }
+  .data-row--studio .row-title,
+  .data-row--studio .row-meta { overflow-wrap: anywhere; }
+  .data-row--studio .row-code { white-space: normal; }
+  .data-row--studio .row-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 0;
+    border-bottom: none;
+  }
+  .data-row--studio .row-stat strong { font-size: 16px; }
+  .data-row--studio .row-actions { justify-content: flex-start; }
+}
