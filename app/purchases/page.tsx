@@ -153,8 +153,6 @@ export default function PurchasesPage() {
     return filtered;
   }, [purchases, search, sortBy]);
 
-  const totalSpent = purchases.reduce((sum, p) => sum + p.amountPaid, 0);
-
   return (
     <div className="page-wrap student-page">
       <div className="app-container student-app-container">
@@ -172,10 +170,6 @@ export default function PurchasesPage() {
                 <div className="stat">
                   <div className="stat-num">{purchases.length}</div>
                   <div className="stat-label">Notes owned</div>
-                </div>
-                <div className="stat">
-                  <div className="stat-num">₦{totalSpent.toLocaleString()}</div>
-                  <div className="stat-label">Total spent</div>
                 </div>
               </div>
               <div className="header-actions">
