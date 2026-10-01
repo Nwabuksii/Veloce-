@@ -231,7 +231,15 @@ export default function SettingsPage() {
         saveUser(updatedUser);
         setUser(updatedUser);
       }
-      setAccountStatus("Saved.");
+      if (data.emailChangePending) {
+        // The email only changes once the new address confirms it.
+        setNewEmail(data.user.email);
+        setAccountStatus(
+          `We sent a confirmation link to ${data.pendingEmail}. Your email stays ${data.user.email} until you click it${newPassword ? " (your new password is already saved)" : ""}. We also emailed your current address in case this wasn't you.`
+        );
+      } else {
+        setAccountStatus("Saved.");
+      }
       setCurrentPassword("");
       setNewPassword("");
     } catch (err) {

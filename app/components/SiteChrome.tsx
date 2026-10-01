@@ -12,7 +12,7 @@ import BlockingMessageModal from "@/app/components/BlockingMessageModal";
 
 // Screens that own the whole viewport (split-screen auth, payment
 // hand-off) render without the header/footer.
-const BARE_ROUTES = ["/login", "/signup", "/forgot-password", "/reset-password", "/verify-email", "/payment/callback"];
+const BARE_ROUTES = ["/login", "/signup", "/forgot-password", "/reset-password", "/verify-email", "/confirm-email-change", "/email-change-not-me", "/payment/callback"];
 
 // The two global blocking gates — checked once per navigation, in order:
 // an incomplete academic profile comes first (there's no point asking

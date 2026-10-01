@@ -282,6 +282,7 @@ model User {
   adminSectionViews  AdminSectionView[]   @relation("AdminSectionViews")
   convertedPayments  ConvertedPayment[]
   pollVotes          PollVote[]
+  emailChangeRequests EmailChangeRequest[]
 }
 
 // One-way messages from an Admin to a specific user — e.g. explaining a
@@ -444,6 +445,11 @@ model Note {
   // semicolon-joined, shown as-is in the moderation queue. Null when
   // flaggedForReview is false. See lib/quality-check.ts.
   flagReason String?
+  // Structured version of the above — { reasons: [{code, label}], matches:
+  // [{noteId, similarity, exact}] } — so the moderation queue can group notes
+  // by reason and list the existing notes this one looks like. Null for notes
+  // flagged before this existed. See lib/flag-reasons.ts.
+  flagDetails Json?
 
   // The scribe's own affirmative confirmation, checked at upload time,
   // that this is their original work from attending the lecture — not
@@ -815,4 +821,24 @@ model SecurityEvent {
 model SecurityLogLock {
   id          String   @id
   lockedUntil DateTime
+}
+
+// A pending (or recently completed) email change. The email on the account
+// only changes after the NEW address clicks the confirm link; the OLD address
+// gets a "this wasn't me" link that stays valid for 7 days. Only token hashes
+// are stored. See app/api/account/route.ts and lib/email-change.ts.
+model EmailChangeRequest {
+  id               String    @id @default(uuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  oldEmail         String
+  newEmail         String
+  confirmTokenHash String    @unique
+  revertTokenHash  String    @unique
+  confirmExpiresAt DateTime
+  revertExpiresAt  DateTime
+  confirmedAt      DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([userId])
 }

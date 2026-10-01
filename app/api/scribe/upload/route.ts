@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { saveNoteFile, deleteNoteFile } from "@/lib/storage";
 import { runQualityGate, textFingerprint, MAX_TEXT_CHARS } from "@/lib/quality-check";
+import type { Prisma } from "@prisma/client";
+import type { FlagDetails, FlagMatch } from "@/lib/flag-reasons";
 import { inspectPdf, PdfLimitError } from "@/lib/pdf-render";
 import { rateLimitResponse } from "@/lib/rate-limit";
 import { withTimeout } from "@/lib/async-limits";
@@ -157,22 +159,34 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
         where: { status: { in: ["LIVE", "FLAGGED"] }, block: { courseId: block.courseId } },
         orderBy: { createdAt: "desc" },
         take: SIMILARITY_COMPARE_LIMIT,
-        select: { extractedText: true },
+        select: { id: true, extractedText: true },
       }),
       textHash
-        ? prisma.note.findFirst({
+        ? prisma.note.findMany({
             where: { textHash, status: { in: ["LIVE", "FLAGGED"] }, block: universityScope },
             select: { id: true },
+            take: 5,
           })
-        : null,
+        : [],
     ]);
 
     const result = runQualityGate(
       extractedText,
       recentNotes.map((n) => n.extractedText || ""),
       parsed.info,
-      Boolean(exactDuplicate)
+      exactDuplicate.length > 0,
+      pageCount
     );
+
+    // Which notes this one looks like, so the admin can open and compare
+    // them: identical ones first, then the near matches from this course.
+    const matches: FlagMatch[] = exactDuplicate.map((n) => ({ noteId: n.id, similarity: 1, exact: true }));
+    for (const s of result.similar) {
+      const noteId = recentNotes[s.index].id;
+      if (!matches.some((m) => m.noteId === noteId)) {
+        matches.push({ noteId, similarity: Math.round(s.similarity * 1000) / 1000, exact: false });
+      }
+    }
 
     // A scribe's very first upload is the riskiest moment — they haven't
     // proven anything yet, and the automated checks above only catch
@@ -181,10 +195,13 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
     // of what the automated gate found, on top of whatever it already did.
     const priorUploadCount = await prisma.note.count({ where: { scribeId: user.sub } });
     const reasons = [...result.reasons];
+    const reasonDetails = [...result.reasonDetails];
     if (priorUploadCount === 0) {
       reasons.push("First upload from this scribe — manual review required");
+      reasonDetails.push({ code: "FIRST_UPLOAD", label: "This is the scribe's first upload — every new scribe's first note is checked by hand" });
     }
     const flagged = result.flagged || priorUploadCount === 0;
+    const flagDetails: FlagDetails = { reasons: reasonDetails, matches: matches.slice(0, 8) };
 
     const storedFilename = await saveNoteFile(buffer, file.name);
     storedRef = storedFilename;
@@ -201,6 +218,7 @@ export const POST = requireRole("SCRIBE", async (req: NextRequest, user) => {
         qualityScore: result.qualityScore,
         flaggedForReview: flagged,
         flagReason: reasons.length > 0 ? reasons.join("; ") : null,
+        flagDetails: flagged ? (flagDetails as unknown as Prisma.InputJsonValue) : undefined,
         attestedOriginal: true,
         fulfillsRequestId: fulfilledRequest?.id,
         status: flagged ? "FLAGGED" : "RENDERING",

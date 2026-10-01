@@ -10,7 +10,7 @@
 - **Payments**: Paystack. Checkout is a redirect flow (`initialize` → Paystack-hosted page → `callback` → `verify`), backed by a signed webhook as the resilient, browser-independent confirmation path.
 - **File storage**: Cloudinary (both the original PDFs and the rendered page-image cache).
 - **PDF rendering**: `pdfjs-dist` + `@napi-rs/canvas`, rendered server-side per page, on demand, cached as an image after first render.
-- **Deployment target**: Netlify (`netlify.toml`, `@netlify/plugin-nextjs`). `npm run build` runs `prisma migrate deploy && prisma generate && next build` — migrations apply automatically on every deploy.
+- **Deployment target**: Vercel (`vercel.json`; `netlify.toml` is left over from an earlier host and is ignored). `npm run build` runs `prisma migrate deploy && prisma generate && next build` — migrations apply automatically on every deploy.
 - **Error monitoring**: Sentry, wired through `instrumentation.ts` (see §7).
 
 ## 2. Data model (high level)
@@ -80,7 +80,7 @@ This is the subsystem most worth understanding precisely, because it's the one p
 
 ## 7. What does NOT exist (real constraints, not just unbuilt features)
 
-- **No scheduled/cron jobs anywhere in this project.** Every notification fires synchronously off a specific action (a purchase, a refund, a new upload). Anything time-based — a digest email, a "come back" reminder days later — would need new infrastructure (e.g. a Netlify scheduled function), not just a new route.
+- **No scheduled/cron jobs anywhere in this project.** Every notification fires synchronously off a specific action (a purchase, a refund, a new upload). Anything time-based — a digest email, a "come back" reminder days later — would need new infrastructure (e.g. a Vercel Cron Job), not just a new route.
 - **No Content-Security-Policy** (see §6).
 - **TypeScript build errors are no longer suppressed** (`ignoreBuildErrors` was turned off this pass) **but this has not been verified against a real `next build`** in this environment — there was no network access available to install dependencies and actually run one.
 

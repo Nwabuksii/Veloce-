@@ -38,3 +38,26 @@ describe("runQualityGate", () => {
     expect(() => runQualityGate(huge, [huge], null)).not.toThrow();
   });
 });
+
+describe("runQualityGate reasons and matches", () => {
+  it("reports which existing notes crossed the threshold, closest first", () => {
+    const base = words(200);
+    const r = runQualityGate(base, [words(200, "zzz"), base + " extra", base], null);
+    expect(r.similar.map((s) => s.index)).toEqual([2, 1]);
+    expect(r.reasonDetails.some((d) => d.code === "SIMILAR")).toBe(true);
+  });
+  it("calls an identical re-upload EXACT_DUPLICATE", () => {
+    const r = runQualityGate(words(200), [], null, true);
+    expect(r.reasonDetails.map((d) => d.code)).toContain("EXACT_DUPLICATE");
+  });
+  it("tells scanned/handwritten PDFs apart from merely short ones", () => {
+    expect(runQualityGate(words(10), [], null, false, 12).reasonDetails[0].code).toBe("LOW_TEXT");
+    expect(runQualityGate(words(100), [], null, false, 1).reasonDetails[0].code).toBe("TOO_SHORT");
+    expect(runQualityGate(words(10), [], null).reasonDetails[0].code).toBe("TOO_SHORT");
+  });
+  it("tags slide-software PDFs", () => {
+    const r = runQualityGate(words(200), [], { Producer: "Microsoft PowerPoint" });
+    expect(r.reasonDetails.map((d) => d.code)).toContain("SLIDE_SOFTWARE");
+  });
+});
+

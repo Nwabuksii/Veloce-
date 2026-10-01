@@ -4,7 +4,7 @@ Unzip `veloce-phase4.zip` over the project (on top of Phases 1–3). **Two new m
 
 ## ⚠ Read before deploying
 
-1. **`lib/env.ts` never actually ran.** `ARCHITECTURE.md` says it validates env vars at boot, but nothing called it. It now runs from `instrumentation.ts` (skipped during `next build`). In production the server **refuses to start** if any variable in `REQUIRED_ENV_VARS` is missing (`DIRECT_URL`, `BREVO_API_KEY`, `EMAIL_SENDER_ADDRESS`, `EMAIL_SENDER_NAME`, `SUPPORT_EMAIL`, `NEXT_PUBLIC_APP_URL`... see the file) **or if `JWT_SECRET` is weak.** Check your Netlify environment first, or the deploy comes up dead.
+1. **`lib/env.ts` never actually ran.** `ARCHITECTURE.md` says it validates env vars at boot, but nothing called it. It now runs from `instrumentation.ts` (skipped during `next build`). In production the server **refuses to start** if any variable in `REQUIRED_ENV_VARS` is missing (`DIRECT_URL`, `BREVO_API_KEY`, `EMAIL_SENDER_ADDRESS`, `EMAIL_SENDER_NAME`, `SUPPORT_EMAIL`, `NEXT_PUBLIC_APP_URL`... see the file) **or if `JWT_SECRET` is weak.** Check your Vercel environment variables first, or the deploy comes up dead.
 2. **`JWT_SECRET` must be 32+ characters, not a placeholder, with real variety.** If yours isn't, generate one: `node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"`. Changing it signs every user out once.
 3. **Two-factor is backend-only in this zip.** It is dormant: nobody can enroll until the Settings screen exists, and the login page doesn't yet understand the second step. Those two screens need your current `login/page.tsx` and `settings/page.tsx` (design/layout change — upload them first). Nothing here changes existing behaviour for anyone without MFA.
 
@@ -27,11 +27,11 @@ Rules: at least 32 characters, no placeholder words (`secret`, `password`, `chan
 
 ## C · Security-event logging
 **Files:** `lib/security-log.ts` (new), plus one line in each of: login, reset-password, account (password change), promote, demote, scribe-application approve, appeal approve, ban, unban, payout request/approve/reject/mark-paid, refund approve, and every rate-limit rejection (`rateLimitResponse`).
-- One JSON line per event on stdout: `{"type":"security","event":"admin_login_failed","severity":"alert",...}`. Searchable in Netlify function logs.
+- One JSON line per event on stdout: `{"type":"security","event":"admin_login_failed","severity":"alert",...}`. Searchable in Vercel's runtime logs.
 - Only scalars are written; anything whose key looks like a credential (`password`, `token`, `secret`, `jwt`, `otp`, `recovery`, `cookie`...) is dropped by the logger itself, so a future caller can't leak one by mistake.
 - `alert` events (failed admin logins, a new admin promoted, MFA disabled, failed MFA, replayed-success-after-failed payout) also go to Sentry with only the event name and user id.
 - Failed logins log the **user id, not the email**, and nothing is logged for unknown emails.
-- **Not built:** a database table or admin screen for events. Netlify keeps function logs for a limited time; if you want a permanent, searchable history in the admin area, that's a table + page (say so).
+- **Not built:** a database table or admin screen for events. Vercel keeps runtime logs for a limited time; if you want a permanent, searchable history in the admin area, that's a table + page (say so).
 
 ## D · Payment idempotency
 **Files:** `lib/payout-settlement.ts` (new), `app/api/webhooks/paystack`, `app/api/admin/payouts/[id]/reconcile` (new), `lib/complete-purchase.ts`

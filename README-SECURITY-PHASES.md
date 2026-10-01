@@ -5,7 +5,7 @@ Unzip over the project root. Files are merged in phase order, so where several p
 Per-phase notes are in `docs/security/`.
 
 ## Deploy
-1. Check Netlify env first (Phase 4): `JWT_SECRET` must be 32+ characters and every variable in `lib/env.ts` must exist, or production refuses to start.
+1. Check your Vercel environment variables first (Project → Settings → Environment Variables) (Phase 4): `JWT_SECRET` must be 32+ characters and every variable in `lib/env.ts` must exist, or production refuses to start.
 2. `npx prisma generate && npx tsc --noEmit && npm test`
 3. Deploy (the build runs `prisma migrate deploy`; 6 new migrations).
 4. Run once: `scripts/migrate-note-files-to-private.js` (dry run, then `--commit`), `scripts/backfill-note-text-hash.ts`, `scripts/clean-orphan-note-files.js` (dry run first).
