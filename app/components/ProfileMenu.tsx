@@ -23,19 +23,14 @@ function shortcutsFor(mode: Role, realRole: Role): { label: string; items: Short
     return {
       label: "Admin tools",
       items: [
+        // Moderation, Reports, Finance and Users are already in the top nav;
+        // everything else (scribes, security, feedback, analytics…) is one tap
+        // away on the Admin Dashboard.
         { label: "Admin Dashboard", href: "/admin" },
-        { label: "Moderation Queue", href: "/admin/moderation" },
-        { label: "Reports", href: "/admin/reports" },
         { label: "Applications", href: "/admin/applications" },
         { label: "Appeals", href: "/admin/appeals" },
         { label: "Payouts", href: "/admin/payouts" },
-        { label: "Financial Ledger", href: "/admin/finance" },
-        { label: "Advanced Analytics", href: "/admin/advanced-analytics" },
-        { label: "Manage Users", href: "/admin/users" },
-        { label: "Manage Scribes", href: "/admin/scribes" },
         { label: "Message Users", href: "/admin/messages" },
-        { label: "Security History", href: "/admin/security" },
-        { label: "Feedback Inbox", href: "/admin/feedback" },
       ],
     };
   }
@@ -126,6 +121,7 @@ export default function ProfileMenu({
   const shortcuts = shortcutsFor(mode, currentUser.role);
   const modes = allowedModes(currentUser.role);
   const MODE_LABEL: Record<Role, string> = { STUDENT: "Student", SCRIBE: "Scribe", ADMIN: "Admin" };
+  const ROLE_LABEL = MODE_LABEL; // the account's real role, whichever view they're in
 
   function switchTo(next: Role) {
     setViewMode(next);
@@ -153,7 +149,10 @@ export default function ProfileMenu({
             <div className="dd-user">
               <Avatar name={currentUser.fullName} imageUrl={imageUrl} tone="ink" enlargeOnTap={false} />
               <div className="dd-user-info">
-                <div className="dd-user-name">{currentUser.fullName}</div>
+                <div className="dd-user-name">
+                  <span className="dd-user-name-text">{currentUser.fullName}</span>
+                  <span className="dd-user-role">· {ROLE_LABEL[currentUser.role]}</span>
+                </div>
                 <div className="dd-user-email">{currentUser.email}</div>
               </div>
             </div>

@@ -202,6 +202,16 @@ export default function AdminUsersPage() {
     }
   }
 
+  // Keep the page behind the details sheet from scrolling while it is open.
+  useEffect(() => {
+    if (!selectedUser) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [selectedUser]);
+
   async function openUserDetails(id: string) {
     setSelectedUserId(id);
     setDetailsLoading(true);
@@ -400,6 +410,7 @@ export default function AdminUsersPage() {
               <button className="btn btn-ghost admin-user-modal-close" onClick={() => setSelectedUser(null)}>Close</button>
             </div>
 
+            <div className="admin-user-modal-body">
             <div className="admin-user-stat-grid">
               {[
                 { label: "Department", value: selectedUser.departmentName || "Not set" },
@@ -459,6 +470,7 @@ export default function AdminUsersPage() {
                   </div>
                 ))}
               </div>
+            </div>
             </div>
           </div>
         </div>

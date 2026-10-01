@@ -436,7 +436,9 @@ html[data-theme="dark"] .theme-icon-dark { display: inline; }
 .dd-user { display: flex; align-items: center; gap: 12px; }
 .dd-user .avatar { width: 44px; height: 44px; font-size: 14px; }
 .dd-user-info { min-width: 0; }
-.dd-user-name { font-size: 14.5px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.2px; }
+.dd-user-name { display: flex; align-items: baseline; gap: 6px; min-width: 0; font-size: 14.5px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.2px; }
+.dd-user-name-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-user-role { flex: none; font-size: 12px; font-weight: 600; letter-spacing: 0; color: var(--text-secondary); }
 .dd-user-email { font-size: 12px; color: var(--text-secondary); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dd-section { padding: 8px; }
 .dd-section + .dd-section { border-top: 1px solid var(--border); padding-top: 10px; }
@@ -1529,7 +1531,10 @@ html[data-theme="dark"] .course-card:hover .browse-btn { background: var(--gold)
   to { opacity: 1; }
 }
 
-/* --- Admin > Users > "Details" modal --- */
+/* --- Admin > Users > "Details" modal ---
+   The sheet is a flex column: the header (with Close) stays put and only
+   .admin-user-modal-body scrolls, so there is exactly one scroll area.
+   z-index sits above the sticky site header (100) and the profile dropdown (200). */
 .admin-user-modal-overlay {
   position: fixed;
   inset: 0;
@@ -1538,23 +1543,37 @@ html[data-theme="dark"] .course-card:hover .browse-btn { background: var(--gold)
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  z-index: 30;
+  z-index: 300;
+  overscroll-behavior: contain;
 }
 .admin-user-modal {
   width: min(980px, 100%);
   max-height: 85vh;
-  overflow-y: auto;
+  max-height: 85dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--border-blue);
   border-radius: 18px;
-  padding: 1.25rem;
   box-shadow: 0 16px 50px rgba(0, 0, 0, 0.24);
   position: relative;
 }
 .admin-user-modal-header {
   position: relative;
-  padding-right: 4.5rem;
-  margin-bottom: 1rem;
+  flex: none;
+  padding: 1.25rem 5.75rem 0.9rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.admin-user-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 1rem 1.25rem 1.25rem;
 }
 .admin-user-stat-grid {
   display: grid;
@@ -1567,30 +1586,37 @@ html[data-theme="dark"] .course-card:hover .browse-btn { background: var(--gold)
   border: 1px solid var(--border-blue);
   border-radius: 12px;
   padding: 0.75rem 0.85rem;
+  min-width: 0;
 }
 .admin-user-detail-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1rem;
 }
+.admin-user-detail-grid > * { min-width: 0; overflow-wrap: anywhere; }
 .admin-user-modal-close {
   position: absolute;
-  top: 0;
-  right: 0;
+  top: 1rem;
+  right: 1.25rem;
 }
 @media (max-width: 640px) {
   .admin-user-modal-overlay { padding: 0; align-items: flex-end; }
   .admin-user-modal {
     max-height: 92vh;
+    max-height: 92dvh;
     width: 100%;
     border-radius: 16px 16px 0 0;
-    padding: 1rem;
+  }
+  .admin-user-modal-header { padding: 1rem 5rem 0.75rem 1rem; }
+  .admin-user-modal-header h3 { font-size: 1.05rem; }
+  .admin-user-modal-close { top: 0.75rem; right: 1rem; }
+  .admin-user-modal-body {
+    padding: 0.85rem 1rem;
     padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
   }
-  .admin-user-modal-header { padding-right: 3.4rem; }
-  .admin-user-modal-header h3 { font-size: 1.05rem; }
   .admin-user-stat-grid { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
   .admin-user-stat-card { padding: 0.6rem 0.65rem; }
+  .admin-user-detail-grid { grid-template-columns: 1fr; gap: 0.75rem; }
 }
 /* --- Stat hierarchy: one hero, secondary support --- */
 .stat-hero {
@@ -2123,6 +2149,14 @@ html:not([data-theme="dark"]) .stat-hero { border-color: var(--ink); }
 .request-meta span { display: inline-flex; align-items: center; gap: 4px; }
 .request-meta svg { width: 11px; height: 11px; color: var(--text-muted); }
 .request-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
+.request-details {
+  margin-top: -1px; padding: 12px 16px; font-size: 12.5px; line-height: 1.5; color: var(--text-secondary);
+  background: var(--field-soft); border: 1px solid var(--border); border-radius: 0 0 12px 12px;
+  display: flex; flex-direction: column; gap: 8px; overflow-wrap: anywhere;
+}
+.request-details strong { color: var(--text-primary); font-weight: 600; }
+.request-times { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.request-times span { color: var(--text-muted); }
 
 /* ---- Scribe hub cards + profile header ---- */
 .hub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }

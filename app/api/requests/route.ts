@@ -18,9 +18,31 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
     orderBy: { createdAt: "desc" },
   });
 
+  // The newest 40% of the people who asked for a block, and when each asked —
+  // lets a scribe see whether demand is still arriving or went quiet.
+  // Times only; who asked stays private.
+  const RECENT_SHARE = 0.4;
+  const MAX_TIMES = 20;
+
   const result = requests
+    .map((r) => {
+      const newestFirst = r.votes.map((v) => v.createdAt).sort((a, b) => b.getTime() - a.getTime());
+      const recent = newestFirst.slice(0, Math.ceil(newestFirst.length * RECENT_SHARE));
+      return {
+        recentVotes: {
+          count: recent.length,
+          total: newestFirst.length,
+          from: recent.length ? recent[recent.length - 1] : null,
+          to: recent.length ? recent[0] : null,
+          times: recent.slice(0, MAX_TIMES),
+        },
+        ...r,
+      };
+    })
     .map((r) => ({
       id: r.id,
+      createdAt: r.createdAt,
+      recentVotes: r.recentVotes,
       requestedTitle: r.requestedTitle,
       courseCode: r.course.code,
       courseId: r.courseId,

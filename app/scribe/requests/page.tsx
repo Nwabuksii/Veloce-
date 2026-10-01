@@ -7,6 +7,7 @@ import PageHeader from "@/app/components/PageHeader";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { Icon } from "@/app/components/icons";
 import { friendlyErrorMessage } from "@/lib/api-client";
+import { formatDateTime, timeAgo } from "@/lib/time-ago";
 
 interface RequestView {
   id: string;
@@ -15,6 +16,8 @@ interface RequestView {
   courseCode: string;
   courseName: string;
   voteCount: number;
+  createdAt: string;
+  recentVotes: { count: number; total: number; from: string | null; to: string | null; times: string[] };
 }
 
 export default function ScribeRequestsFeedPage() {
@@ -22,6 +25,7 @@ export default function ScribeRequestsFeedPage() {
   const [requests, setRequests] = useState<RequestView[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
     const user = getStoredUser();
@@ -68,7 +72,8 @@ export default function ScribeRequestsFeedPage() {
 
       <div className="request-list">
         {requests.map((r) => (
-          <div key={r.id} className="request-item">
+          <div key={r.id}>
+          <div className="request-item">
             <div className="vote-block" aria-label={`${r.voteCount} want this`}>
               {Icon.up()}
               <span className="count">{r.voteCount}</span>
@@ -83,9 +88,15 @@ export default function ScribeRequestsFeedPage() {
                 <span>
                   {Icon.users()} {r.voteCount} want this
                 </span>
+                <span title={formatDateTime(r.createdAt)}>
+                  {Icon.clock()} Requested {timeAgo(r.createdAt)}
+                </span>
               </div>
             </div>
             <div className="request-actions">
+              <button className="btn btn-sm btn-ghost" aria-expanded={openId === r.id} onClick={() => setOpenId(openId === r.id ? null : r.id)}>
+                {Icon.eye()} Details
+              </button>
               <button
                 className="btn btn-sm btn-primary"
                 onClick={() => router.push(`/scribe/upload?requestId=${r.id}&courseId=${r.courseId}`)}
@@ -93,6 +104,30 @@ export default function ScribeRequestsFeedPage() {
                 Fulfil this {Icon.arrow()}
               </button>
             </div>
+          </div>
+          {openId === r.id && (
+            <div className="request-details">
+              <div>
+                First requested <strong>{formatDateTime(r.createdAt)}</strong> ({timeAgo(r.createdAt)}).
+              </div>
+              {r.recentVotes.count > 0 && r.recentVotes.from && r.recentVotes.to && (
+                <>
+                  <div>
+                    Most recent 40%: <strong>{r.recentVotes.count}</strong> of {r.recentVotes.total} {r.recentVotes.total === 1 ? "person" : "people"}, between{" "}
+                    <strong>{formatDateTime(r.recentVotes.from)}</strong> and <strong>{formatDateTime(r.recentVotes.to)}</strong>.
+                  </div>
+                  <ul className="request-times">
+                    {r.recentVotes.times.map((t, i) => (
+                      <li key={i}>
+                        {formatDateTime(t)} <span>· {timeAgo(t)}</span>
+                      </li>
+                    ))}
+                    {r.recentVotes.count > r.recentVotes.times.length && <li>+ {r.recentVotes.count - r.recentVotes.times.length} more</li>}
+                  </ul>
+                </>
+              )}
+            </div>
+          )}
           </div>
         ))}
       </div>

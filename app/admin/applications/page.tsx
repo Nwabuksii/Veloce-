@@ -33,6 +33,7 @@ export default function AdminApplicationsPage() {
   const [error, setError] = useState("");
   const [actionMessage, setActionMessage] = useState("");
 
+  const [query, setQuery] = useState("");
   const [course, setCourse] = useState("");
   const [level, setLevel] = useState("");
   const [sort, setSort] = useState<"high" | "low">("high");
@@ -93,9 +94,15 @@ export default function AdminApplicationsPage() {
   );
 
   const visible = useMemo(() => {
-    const list = applications.filter((a) => (!course || a.user.department === course) && (!level || a.user.level === level));
+    const q = query.trim().toLowerCase();
+    const list = applications.filter(
+      (a) =>
+        (!q || a.user.fullName.toLowerCase().includes(q) || a.user.email.toLowerCase().includes(q)) &&
+        (!course || a.user.department === course) &&
+        (!level || a.user.level === level)
+    );
     return list.sort((a, b) => (sort === "high" ? b.score - a.score : a.score - b.score));
-  }, [applications, course, level, sort]);
+  }, [applications, query, course, level, sort]);
 
   const pct = Number(threshold);
   const pctValid = threshold.trim() !== "" && Number.isFinite(pct) && pct >= 0 && pct <= 100;
@@ -153,6 +160,7 @@ export default function AdminApplicationsPage() {
       {applications.length > 0 && (
         <>
           <div className="inline-row" style={{ flexWrap: "wrap", marginBottom: 16 }}>
+            <input className="input" style={{ flex: "1 1 100%" }} type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or email..." aria-label="Search applicants" />
             <select className="select" style={{ flex: "1 1 180px" }} value={course} onChange={(e) => setCourse(e.target.value)} aria-label="Filter by course">
               <option value="">All courses</option>
               {courses.map((c) => (
