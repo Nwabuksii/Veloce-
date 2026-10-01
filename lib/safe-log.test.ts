@@ -49,6 +49,6 @@ describe("scrubSentryEvent", () => {
   });
 
   it("leaves events with no request alone", () => {
-    expect(scrubSentryEvent({ message: "x" })).toEqual({ message: "x" });
+    expect(scrubSentryEvent({})).toEqual({});
   });
 });

@@ -6,6 +6,7 @@ describe("summarizePollResults", () => {
     const rows = [
       {
         messageId: "m-1",
+    pollGroupId: null,
         messageSubject: "Which school are you from?",
         messageBody: "Choose the school you currently attend.",
         optionId: "opt-1",
@@ -18,6 +19,7 @@ describe("summarizePollResults", () => {
       },
       {
         messageId: "m-1",
+    pollGroupId: null,
         messageSubject: "Which school are you from?",
         messageBody: "Choose the school you currently attend.",
         optionId: "opt-1",
@@ -30,6 +32,7 @@ describe("summarizePollResults", () => {
       },
       {
         messageId: "m-1",
+    pollGroupId: null,
         messageSubject: "Which school are you from?",
         messageBody: "Choose the school you currently attend.",
         optionId: "opt-2",
@@ -42,6 +45,7 @@ describe("summarizePollResults", () => {
       },
       {
         messageId: "m-1",
+    pollGroupId: null,
         messageSubject: "Which school are you from?",
         messageBody: "Choose the school you currently attend.",
         optionId: "opt-3",
