@@ -113,6 +113,9 @@ export default function BlockingMessageModal({ onClear }: { onClear: () => void 
           padding: "2rem",
           width: "100%",
           maxWidth: 440,
+          maxHeight: "calc(100dvh - 3rem)",
+          overflowY: "auto",
+          overscrollBehavior: "contain",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.3rem" }}>

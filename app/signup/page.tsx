@@ -16,6 +16,8 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
+  const [resendStatus, setResendStatus] = useState("");
+  const [resending, setResending] = useState(false);
 
   const [focused, setFocused] = useState(false);
   const [wave, setWave] = useState<ShelfWave>(null);
@@ -73,6 +75,23 @@ export default function SignupPage() {
     }
   }
 
+  async function handleResend() {
+    setResendStatus("");
+    setResending(true);
+    try {
+      const data = await apiFetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: submittedEmail }),
+      });
+      setResendStatus(data.message);
+    } catch (err) {
+      setResendStatus(friendlyErrorMessage(err));
+    } finally {
+      setResending(false);
+    }
+  }
+
   return (
     <AuthShell focused={focused} wave={wave} waveKey={waveKey}>
       {submittedEmail ? (
@@ -89,8 +108,12 @@ export default function SignupPage() {
             </p>
           </div>
           <p className="va-cta" style={{ marginTop: 0 }}>
-            Didn&apos;t get it? Check spam, or <a href="/login">go to login</a> to resend it.
+            Didn&apos;t get it? Check spam, then
           </p>
+          <button type="button" className="va-secondary-btn" onClick={handleResend} disabled={resending}>
+            {resending ? "Sending..." : "Resend verification email"}
+          </button>
+          {resendStatus && <p className="va-note">{resendStatus}</p>}
         </>
       ) : (
         <>

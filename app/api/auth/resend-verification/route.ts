@@ -41,12 +41,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // A fresh token, same deadline — resending never pushes expiresAt out
-    // further, it only makes sure the (possibly lost) email goes out again.
-    const verificationToken = randomBytes(32).toString("hex");
-    await prisma.pendingRegistration.update({ where: { id: pending.id }, data: { verificationToken } });
-
-    const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify-email?token=${verificationToken}`;
+    // Same token, same deadline. Issuing a new token on resend used to kill
+    // the link in the first email, so a slow first email that arrived after
+    // the resend said "invalid". Resending never pushes expiresAt out; it
+    // only makes sure the (possibly lost) email goes out again.
+    if (!(await checkRateLimit(`resend-pending:${email}`, 1, RESEND_COOLDOWN_MS))) {
+      return NextResponse.json({ error: "Please wait a minute before requesting another link." }, { status: 429 });
+    }
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "");
+    if (!appUrl) {
+      console.error("NEXT_PUBLIC_APP_URL is not set — cannot build a verification link");
+      return NextResponse.json({ error: "Couldn't send the email — try again shortly." }, { status: 502 });
+    }
+    const verifyUrl = `${appUrl}/verify-email?token=${pending.verificationToken}`;
     const minutesLeft = Math.max(1, Math.ceil((pending.expiresAt.getTime() - Date.now()) / 60000));
 
     try {

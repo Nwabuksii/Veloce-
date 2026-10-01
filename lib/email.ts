@@ -24,7 +24,15 @@ export async function sendEmail(params: {
   html?: string;
   attachments?: EmailAttachment[];
 }): Promise<void> {
+  // A missing key or sender used to go to Brevo as "" / undefined and come
+  // back as an unhelpful 401/400 that callers swallowed. Say what is wrong.
+  if (!process.env.BREVO_API_KEY || !process.env.EMAIL_SENDER_ADDRESS) {
+    throw new Error("Email is not configured: set BREVO_API_KEY and EMAIL_SENDER_ADDRESS");
+  }
+
   const res = await fetch(BREVO_ENDPOINT, {
+    // Without a timeout a slow Brevo call hangs the signup request itself.
+    signal: AbortSignal.timeout(10_000),
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -49,6 +57,6 @@ export async function sendEmail(params: {
 
   if (!res.ok) {
     const data = await res.json().catch(() => null);
-    throw new Error(data?.message || `Failed to send email (${res.status})`);
+    throw new Error(`Brevo rejected the email (${res.status}): ${data?.message || "no message"}`);
   }
 }

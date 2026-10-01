@@ -40,6 +40,13 @@ function normalizeFullName(fullName: string): string {
   return fullName.trim().toLowerCase();
 }
 
+// Brevo/network failures and a missing app URL must never look like success.
+function verifyLink(token: string): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!appUrl) throw new Error("NEXT_PUBLIC_APP_URL is not set — verification links would be broken");
+  return `${appUrl.replace(/\/$/, "")}/verify-email?token=${token}`;
+}
+
 const SIGNUP_MESSAGE = "Check your email to verify your account within the next 10 minutes.";
 
 // Someone signed up with an email that already has an account. The form
@@ -124,8 +131,25 @@ export async function POST(req: NextRequest) {
 
   const stillPendingEmail = await prisma.pendingRegistration.findUnique({ where: { email: normalizedEmail } });
   if (stillPendingEmail) {
-    // A link is already on its way (or lost — "resend" on the login page
-    // covers that). Same answer, nothing new sent.
+    // They signed up again because the first email never showed up. Send the
+    // SAME link again (at most once a minute per address) rather than saying
+    // "check your email" and sending nothing. The stored password and name
+    // are deliberately left untouched — letting a repeat signup overwrite
+    // them would let anyone set the password on someone else's pending signup.
+    if (await checkRateLimit(`signup-resend:${normalizedEmail}`, 1, 60 * 1000)) {
+      const minutesLeft = Math.max(1, Math.ceil((stillPendingEmail.expiresAt.getTime() - Date.now()) / 60000));
+      try {
+        const url = verifyLink(stillPendingEmail.verificationToken);
+        await sendEmail({
+          to: stillPendingEmail.email,
+          subject: "Verify your Veloce account — link expires soon",
+          text: `Confirm your email to finish setting up your account: ${url}\n\nThis link expires in about ${minutesLeft} minute(s).`,
+          html: `<p><a href="${url}">Click here to verify your email</a> and finish setting up your account.</p><p>This link expires in about ${minutesLeft} minute(s).</p>`,
+        });
+      } catch (err) {
+        console.error("Failed to re-send verification email on repeat signup:", err);
+      }
+    }
     return respondGeneric();
   }
   const stillPendingName = await prisma.pendingRegistration.findUnique({ where: { fullNameNormalized } });
@@ -165,9 +189,8 @@ export async function POST(req: NextRequest) {
     throw err;
   }
 
-  const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify-email?token=${verificationToken}`;
-
   try {
+    const verifyUrl = verifyLink(verificationToken);
     await sendEmail({
       to: pending.email,
       subject: "Verify your Veloce account — link expires in 10 minutes",
@@ -175,9 +198,11 @@ export async function POST(req: NextRequest) {
       html: `<p>Welcome to Veloce!</p><p><a href="${verifyUrl}">Click here to verify your email</a> and finish setting up your account.</p><p><strong>This link expires in 10 minutes</strong> — if it lapses, you'll need to sign up again.</p>`,
     });
   } catch (err) {
-    // The pending row exists but no email went out — they can use "resend"
-    // on the login page, as long as they do it within the 10-minute window.
+    // No email went out. Don't tell them to check their inbox: drop the
+    // pending row (so an immediate retry isn't blocked by it) and say so.
     console.error("Failed to send verification email:", err);
+    await prisma.pendingRegistration.delete({ where: { id: pending.id } }).catch(() => {});
+    return NextResponse.json({ error: "We couldn't send your verification email right now. Please try again in a minute." }, { status: 502 });
   }
 
   return respondGeneric();

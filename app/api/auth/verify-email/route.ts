@@ -90,7 +90,10 @@ export async function POST(req: NextRequest) {
   const user = await prisma.user.findUnique({ where: { emailVerificationToken: token } });
 
   if (!user) {
-    return NextResponse.json({ error: "This verification link is invalid." }, { status: 400 });
+    return NextResponse.json(
+      { error: "This verification link is invalid or has already been used. If you already verified, go to the login page and sign in." },
+      { status: 400 }
+    );
   }
 
   if (user.emailVerifiedAt) {

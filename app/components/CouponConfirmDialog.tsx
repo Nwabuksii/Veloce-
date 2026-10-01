@@ -47,6 +47,9 @@ export default function CouponConfirmDialog({ itemLabel, price, creditBalance, c
           boxShadow: "var(--menu-shadow)",
           padding: "1.5rem",
           width: "min(380px, 90vw)",
+          maxHeight: "calc(100dvh - 3rem)",
+          overflowY: "auto",
+          overscrollBehavior: "contain",
         }}
         onClick={(e) => e.stopPropagation()}
       >

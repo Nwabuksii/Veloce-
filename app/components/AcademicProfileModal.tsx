@@ -87,6 +87,9 @@ export default function AcademicProfileModal({
           padding: "2rem",
           width: "100%",
           maxWidth: 420,
+          maxHeight: "calc(100dvh - 3rem)",
+          overflowY: "auto",
+          overscrollBehavior: "contain",
         }}
       >
         <h2>One more thing</h2>
