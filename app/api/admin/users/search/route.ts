@@ -8,6 +8,11 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
   const q = searchParams.get("q")?.trim() || "";
   const role = searchParams.get("role")?.trim() || "all";
   const online = searchParams.get("online")?.trim() || "all";
+  // Pagination is opt-in: callers that don't send `page` (e.g. the admin
+  // messages picker) keep the old "first N matches" behaviour.
+  const paged = searchParams.has("page");
+  const pageSize = 20;
+  const requestedPage = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
 
   const onlineSince = new Date(Date.now() - 5 * 60 * 1000);
   const baseWhere: any = {
@@ -45,6 +50,10 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
 
   const where = baseWhere;
 
+  const matchingCount = paged ? await prisma.user.count({ where }) : 0;
+  const totalPages = Math.max(1, Math.ceil(matchingCount / pageSize));
+  const page = Math.min(requestedPage, totalPages);
+
   const [users, totalUsers, loggedInUsers, studentUsers, scribeUsers, adminUsers] = await Promise.all([
     prisma.user.findMany({
       where,
@@ -70,8 +79,8 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
         following: { select: { id: true } },
         reportsFiled: { select: { id: true } },
       },
-      take: q ? 10 : 50,
-      orderBy: { fullName: "asc" },
+      ...(paged ? { skip: (page - 1) * pageSize, take: pageSize } : { take: q ? 10 : 50 }),
+      orderBy: [{ fullName: "asc" }, { id: "asc" }],
     }),
     prisma.user.count({ where: { universityId: adminUser.universityId } }),
     prisma.user.count({ where: { universityId: adminUser.universityId, lastLoginAt: { not: null } } }),
@@ -81,6 +90,7 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
   ]);
 
   return NextResponse.json({
+    ...(paged ? { pagination: { page, pageSize, totalPages, totalMatching: matchingCount } } : {}),
     stats: {
       total: totalUsers,
       loggedIn: loggedInUsers,

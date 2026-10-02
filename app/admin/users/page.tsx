@@ -66,6 +66,13 @@ interface UserStats {
   admins: number;
 }
 
+interface Pagination {
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  totalMatching: number;
+}
+
 export default function AdminUsersPage() {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -74,6 +81,9 @@ export default function AdminUsersPage() {
   const [results, setResults] = useState<UserResult[]>([]);
   const [stats, setStats] = useState<UserStats>({ total: 0, loggedIn: 0, students: 0, scribes: 0, admins: 0 });
   const [searching, setSearching] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
+  const [pagination, setPagination] = useState<Pagination>({ page: 1, pageSize: 20, totalPages: 1, totalMatching: 0 });
   const [actionMessage, setActionMessage] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -133,39 +143,92 @@ export default function AdminUsersPage() {
     }
   }
 
-  useEffect(() => {
-    setSearching(true);
-    const handle = setTimeout(() => {
-      const params = new URLSearchParams();
-      if (query.trim()) params.set("q", query.trim());
-      if (roleFilter !== "all") params.set("role", roleFilter);
-      if (onlineFilter !== "all") params.set("online", onlineFilter);
-      apiFetch(`/api/admin/users/search${params.toString() ? `?${params.toString()}` : ""}`)
-        .then((data) => {
-          setResults(data.users || []);
-          setStats(data.stats || { total: 0, loggedIn: 0, students: 0, scribes: 0, admins: 0 });
-        })
-        .catch(() => {
-          setResults([]);
-          setStats({ total: 0, loggedIn: 0, students: 0, scribes: 0, admins: 0 });
-        })
-        .finally(() => setSearching(false));
-    }, 250);
-    return () => clearTimeout(handle);
-  }, [query, roleFilter, onlineFilter]);
-
-  function refreshOne(id: string) {
+  function buildSearchUrl(pageNum: number) {
     const params = new URLSearchParams();
     if (query.trim()) params.set("q", query.trim());
     if (roleFilter !== "all") params.set("role", roleFilter);
     if (onlineFilter !== "all") params.set("online", onlineFilter);
-    apiFetch(`/api/admin/users/search${params.toString() ? `?${params.toString()}` : ""}`)
-      .then((data) => {
-        setResults(data.users || []);
-        setStats(data.stats || stats);
-      })
+    params.set("page", String(pageNum));
+    return `/api/admin/users/search?${params.toString()}`;
+  }
+
+  function applyPageData(data: any) {
+    setResults(data.users || []);
+    if (data.stats) setStats(data.stats);
+    if (data.pagination) {
+      setPagination(data.pagination);
+      // The server clamps out-of-range pages, so sync back to what it returned.
+      setPage(data.pagination.page);
+      setPageInput(String(data.pagination.page));
+    }
+  }
+
+  // Any filter/search change goes back to page 1.
+  useEffect(() => {
+    setPage(1);
+    setPageInput("1");
+  }, [query, roleFilter, onlineFilter]);
+
+  useEffect(() => {
+    setSearching(true);
+    const handle = setTimeout(() => {
+      apiFetch(buildSearchUrl(page))
+        .then(applyPageData)
+        .catch(() => {
+          setResults([]);
+          setStats({ total: 0, loggedIn: 0, students: 0, scribes: 0, admins: 0 });
+          setPagination({ page: 1, pageSize: 20, totalPages: 1, totalMatching: 0 });
+        })
+        .finally(() => setSearching(false));
+    }, 250);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, roleFilter, onlineFilter, page]);
+
+  // Re-fetch the current page after a ban/unban so the user stays on the same page.
+  function refreshOne(_id: string) {
+    apiFetch(buildSearchUrl(page))
+      .then(applyPageData)
       .catch(() => {});
   }
+
+  function goToPage(n: number) {
+    const target = Math.min(Math.max(1, Math.floor(n) || 1), pagination.totalPages);
+    setPageInput(String(target));
+    if (target !== page) setPage(target);
+  }
+
+  const pager = (position: "top" | "bottom") => (
+    <div className="panel-row" style={{ alignItems: "center", gap: 12, flexWrap: "wrap", margin: position === "top" ? "0 0 16px" : "16px 0 0" }}>
+      <span className="panel-desc" style={{ margin: 0 }}>
+        Page {pagination.page} of {pagination.totalPages} • {pagination.totalMatching} user{pagination.totalMatching === 1 ? "" : "s"}
+      </span>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <button className="btn btn-ghost" disabled={searching || page <= 1} onClick={() => goToPage(page - 1)}>
+          Previous
+        </button>
+        <input
+          className="input"
+          type="number"
+          min={1}
+          max={pagination.totalPages}
+          value={pageInput}
+          aria-label={`Go to page (${position})`}
+          style={{ width: 80 }}
+          onChange={(e) => setPageInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") goToPage(parseInt(pageInput, 10));
+          }}
+        />
+        <button className="btn btn-ghost" disabled={searching} onClick={() => goToPage(parseInt(pageInput, 10))}>
+          Go
+        </button>
+        <button className="btn btn-ghost" disabled={searching || page >= pagination.totalPages} onClick={() => goToPage(page + 1)}>
+          Next
+        </button>
+      </div>
+    </div>
+  );
 
   async function handleBan(id: string) {
     setActionMessage("");
@@ -308,6 +371,8 @@ export default function AdminUsersPage() {
         </div>
       )}
 
+      {results.length > 0 && pager("top")}
+
       <div className="stack-10">
         {results.map((u) => {
           const isBanned = Boolean(u.bannedAt);
@@ -394,6 +459,8 @@ export default function AdminUsersPage() {
           );
         })}
       </div>
+
+      {results.length > 0 && pager("bottom")}
 
       {selectedUser && (
         <div className="admin-user-modal-overlay" onClick={() => setSelectedUser(null)}>
