@@ -9,6 +9,7 @@ import Avatar from "@/app/components/Avatar";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { PAYOUTS_AUTOMATED } from "@/lib/payout-mode";
+import { displayEmail } from "@/lib/deleted-user";
 
 interface PayoutItem {
   id: string;
@@ -160,7 +161,7 @@ export default function AdminPayoutsPage() {
                   {AIcon.coin()} <strong>₦{p.amount.toLocaleString()}</strong>
                 </span>
                 <span>
-                  {AIcon.mail()} {p.scribe.email}
+                  {AIcon.mail()} {displayEmail(p.scribe.email)}
                 </span>
                 <span>
                   {AIcon.clock()} Requested {new Date(p.requestedAt).toLocaleDateString()}

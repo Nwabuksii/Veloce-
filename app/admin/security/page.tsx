@@ -8,6 +8,7 @@ import { AIcon } from "@/app/components/AdminIcons";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { formatDateDDMMYYYY } from "@/lib/date-format";
+import { displayEmail } from "@/lib/deleted-user";
 
 interface SecurityEventItem {
   id: string;
@@ -198,7 +199,7 @@ export default function AdminSecurityPage() {
                     {e.user && (
                       <span>
                         {AIcon.user()} {e.user.fullName}
-                        {e.user.email ? ` · ${e.user.email}` : ""}
+                        {e.user.email ? ` · ${displayEmail(e.user.email)}` : ""}
                       </span>
                     )}
                     {e.actor && <span>By {e.actor}</span>}

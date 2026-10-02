@@ -33,7 +33,7 @@ const VERIFICATION_TOKEN_TTL_MS = 10 * 60 * 1000; // 10 minutes
 // account — checked as a case-insensitive exact match against the whole
 // display name (so "Admin" and "  admin  " are blocked, but "Admin Okoye"
 // is not).
-const RESERVED_NAMES = new Set(["veloce", "admin", "ceo", "scribe", "student"]);
+const RESERVED_NAMES = new Set(["veloce", "admin", "ceo", "scribe", "student", "deleted user"]);
 
 /** Case-insensitive uniqueness key for a display name — see User.fullNameNormalized. */
 function normalizeFullName(fullName: string): string {

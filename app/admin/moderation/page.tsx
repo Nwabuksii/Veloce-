@@ -9,6 +9,7 @@ import { SkeletonList } from "@/app/components/Skeleton";
 import { friendlyErrorMessage } from "@/lib/api-client";
 import { formatDateDDMMYYYY } from "@/lib/date-format";
 import { GROUP_HELP, GROUP_ORDER, GROUP_TITLES, type FlagCode } from "@/lib/flag-reasons";
+import { displayEmail } from "@/lib/deleted-user";
 
 interface QueueMatch {
   noteId: string;
@@ -154,7 +155,7 @@ export default function ModerationPage() {
                   <div className="request-topic">{n.block.title}</div>
                   <div className="request-meta">
                     <span>
-                      {AIcon.user()} {n.scribe.fullName} ({n.scribe.email})
+                      {AIcon.user()} {n.scribe.fullName} ({displayEmail(n.scribe.email)})
                     </span>
                     <span>
                       Scribe history: {n.scribe.total <= 1 ? "this is their first note" : `${n.scribe.total} notes, ${n.scribe.live} live, ${n.scribe.rejected} rejected`}

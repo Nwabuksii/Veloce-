@@ -8,6 +8,7 @@ import { AIcon } from "@/app/components/AdminIcons";
 import Avatar from "@/app/components/Avatar";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { friendlyErrorMessage } from "@/lib/api-client";
+import { displayEmail } from "@/lib/deleted-user";
 
 interface UserOption {
   id: string;
@@ -270,7 +271,7 @@ export default function AdminMessagesPage() {
                           <Avatar name={u.fullName} imageUrl={u.avatarUrl} size="sm" />
                           <div>
                             <strong>{u.fullName}</strong> · {u.role}
-                            <div className="sub">{u.email}</div>
+                            <div className="sub">{displayEmail(u.email)}</div>
                           </div>
                         </button>
                       ))}

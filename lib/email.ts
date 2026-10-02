@@ -24,6 +24,10 @@ export async function sendEmail(params: {
   html?: string;
   attachments?: EmailAttachment[];
 }): Promise<void> {
+  // Deleted accounts (scripts/delete-user.js) have a non-routable address;
+  // skipping them here keeps every caller from logging a Brevo rejection.
+  if (params.to.toLowerCase().endsWith("@deleted.invalid")) return;
+
   // A missing key or sender used to go to Brevo as "" / undefined and come
   // back as an unhelpful 401/400 that callers swallowed. Say what is wrong.
   if (!process.env.BREVO_API_KEY || !process.env.EMAIL_SENDER_ADDRESS) {

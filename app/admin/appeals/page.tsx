@@ -8,6 +8,7 @@ import { AIcon } from "@/app/components/AdminIcons";
 import Avatar from "@/app/components/Avatar";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { friendlyErrorMessage } from "@/lib/api-client";
+import { displayEmail } from "@/lib/deleted-user";
 
 interface Appeal {
   id: string;
@@ -104,7 +105,7 @@ export default function AdminAppealsPage() {
               </div>
               <div className="person-stats">
                 <span>
-                  {AIcon.mail()} {a.user.email}
+                  {AIcon.mail()} {displayEmail(a.user.email)}
                 </span>
                 {a.user.level && (
                   <span>

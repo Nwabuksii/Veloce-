@@ -8,6 +8,7 @@ import { AIcon } from "@/app/components/AdminIcons";
 import Avatar from "@/app/components/Avatar";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { friendlyErrorMessage } from "@/lib/api-client";
+import { displayEmail } from "@/lib/deleted-user";
 
 interface ScribeView {
   id: string;
@@ -138,7 +139,7 @@ export default function ManageScribesPage() {
                 </button>
               </div>
               <div className="person-stats">
-                <span>{AIcon.mail()} {s.email}</span>
+                <span>{AIcon.mail()} {displayEmail(s.email)}</span>
                 <span>{AIcon.book()} <strong>{s.uploadCount}</strong> upload{s.uploadCount === 1 ? "" : "s"}</span>
               </div>
             </div>

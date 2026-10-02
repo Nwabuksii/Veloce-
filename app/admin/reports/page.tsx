@@ -8,6 +8,7 @@ import { AIcon } from "@/app/components/AdminIcons";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
+import { displayEmail } from "@/lib/deleted-user";
 
 interface ReportItem {
   id: string;
@@ -257,7 +258,7 @@ export default function AdminReportsPage() {
                   {isUser && g.reportedUser && (
                     <>
                       <div className="request-code">
-                        {g.reportedUser.email} · {g.reportedUser.role}
+                        {displayEmail(g.reportedUser.email)} · {g.reportedUser.role}
                       </div>
                       <div className="request-topic">{g.reportedUser.fullName}</div>
                     </>
@@ -332,7 +333,7 @@ export default function AdminReportsPage() {
                       <div key={r.id} className="claim">
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem", flexWrap: "wrap" }}>
                           <div className="claim-meta">
-                            {r.reporter.fullName} ({r.reporter.email}) · {new Date(r.createdAt).toLocaleDateString()}
+                            {r.reporter.fullName} ({displayEmail(r.reporter.email)}) · {new Date(r.createdAt).toLocaleDateString()}
                             {r.type === "REFUND" && r.purchase && (
                               <>
                                 {" "}

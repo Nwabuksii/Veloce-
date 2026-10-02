@@ -9,6 +9,7 @@ import Avatar from "@/app/components/Avatar";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { formatDateDDMMYYYY } from "@/lib/date-format";
 import { isUserOnline } from "@/lib/online";
+import { displayEmail } from "@/lib/deleted-user";
 
 interface UserResult {
   id: string;
@@ -324,7 +325,7 @@ export default function AdminUsersPage() {
                     {online ? "Online" : "Offline"}
                   </span>
                 </div>
-                <div className="person-sub">{u.email}</div>
+                <div className="person-sub">{displayEmail(u.email)}</div>
                 <div className="person-sub">
                   {u.departmentName ? u.departmentName : "Department not set"}
                   {u.level ? ` • ${u.level}` : " • level pending"}
@@ -406,7 +407,7 @@ export default function AdminUsersPage() {
                   {selectedUser.isOnline ? "Online now" : "Offline"}
                 </span>
               </div>
-              <div className="person-sub">{selectedUser.email}</div>
+              <div className="person-sub">{displayEmail(selectedUser.email)}</div>
               <button className="btn btn-ghost admin-user-modal-close" onClick={() => setSelectedUser(null)}>Close</button>
             </div>
 
