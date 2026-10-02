@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import SiteHeader from "@/app/components/SiteHeader";
 import MfaReminder from "@/app/components/MfaReminder";
 import RefundWindowBanner from "@/app/components/RefundWindowBanner";
+import "./tap-fixes.css";
 import { CAMPUS } from "@/lib/campus";
 import { getStoredUser, StoredUser } from "@/lib/client-session";
 import AcademicProfileModal from "@/app/components/AcademicProfileModal";

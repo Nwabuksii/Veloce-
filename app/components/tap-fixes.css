@@ -1,0 +1,12 @@
+/* Taps on phones. Two things made buttons flash white in dark mode:
+   1. the browser's default tap highlight (a light flash over the button);
+   2. :hover sticks after a tap on touch screens, and .btn:hover sets the border
+      to var(--ink), which is cream in dark mode.
+   Fix: no tap highlight, and no hover styling at all on devices that cannot hover. */
+button, a, [role="button"], .btn { -webkit-tap-highlight-color: transparent; }
+
+@media (hover: none) {
+  .btn:hover:not(.btn-primary):not(.btn-dark) { background: transparent; border-color: var(--border-strong); }
+  .btn-primary:hover { background: var(--primary); border-color: var(--primary); }
+  .btn-dark:hover { background: var(--btn-dark); border-color: var(--btn-dark); }
+}

@@ -1,0 +1,39 @@
+/* Block details hero. The old card used var(--ink) with white text, but --ink
+   turns cream in dark mode, so the text and buttons vanished. This one sets
+   its own colours for each theme. */
+.bd-hero {
+  --hero-fg: #f5efe3;
+  --hero-muted: rgba(245, 239, 227, 0.68);
+  --hero-price: #e2c377;
+  --hero-btn-border: rgba(245, 239, 227, 0.4);
+  --hero-btn-hover: rgba(245, 239, 227, 0.12);
+  background: linear-gradient(145deg, #221e18, #14110d);
+  color: var(--hero-fg);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 1.5rem 1.7rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+html[data-theme="dark"] .bd-hero {
+  --hero-fg: var(--text-primary);
+  --hero-muted: var(--text-secondary);
+  --hero-price: var(--accent);
+  --hero-btn-border: var(--border-strong);
+  --hero-btn-hover: var(--stone-light);
+  background: var(--surface);
+  border-color: var(--border-strong);
+}
+.bd-hero-main { min-width: 0; }
+.bd-hero .bd-hero-meta { display: block; font-size: 0.78rem; line-height: 1.5; color: var(--hero-muted); }
+.bd-hero .bd-hero-title { font-size: 1.4rem; margin: 0.15rem 0 0; color: var(--hero-fg); }
+.bd-hero .bd-hero-price { display: inline-block; margin-top: 0.4rem; color: var(--hero-price); }
+.bd-hero-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.bd-hero .btn { color: var(--hero-fg); background: transparent; border-color: var(--hero-btn-border); }
+.bd-hero .btn:hover { color: var(--hero-fg); background: var(--hero-btn-hover); border-color: var(--hero-fg); }
+@media (hover: none) {
+  .bd-hero .btn:hover { background: transparent; border-color: var(--hero-btn-border); }
+}

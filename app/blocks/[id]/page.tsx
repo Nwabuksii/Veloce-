@@ -9,6 +9,7 @@ import { SkeletonList } from "@/app/components/Skeleton";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
 import CouponConfirmDialog from "@/app/components/CouponConfirmDialog";
+import "./block-detail.css";
 import { getEffectivePriceForNote } from "@/lib/pricing";
 
 interface NoteVersion {
@@ -238,31 +239,19 @@ function BlockDetailInner() {
 
         {!loading && !error && (
           <div style={{ marginTop: "1.5rem" }}>
-            <div
-              style={{
-                background: "var(--ink)",
-                color: "white",
-                borderRadius: "12px",
-                padding: "1.5rem 1.7rem",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                flexWrap: "wrap",
-                gap: "0.8rem",
-              }}
-            >
-              <div>
-                <span className="mono" style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.65)" }}>
+            <div className="bd-hero">
+              <div className="bd-hero-main">
+                <span className="mono bd-hero-meta">
                   {universityName ? `${universityName} · ` : ""}{courseCode} · {courseName} · {departmentName}
                 </span>
-                <h2 style={{ fontSize: "1.4rem", marginTop: "0.15rem" }}>{blockTitle}</h2>
-                <span className="price-tag mono" style={{ marginTop: "0.4rem", display: "inline-block", color: "white" }}>
+                <h2 className="bd-hero-title">{blockTitle}</h2>
+                <span className="price-tag mono bd-hero-price">
                   {notes.length > 0
                     ? `From ₦${Math.min(...notes.map((n) => n.price)).toLocaleString()}`
                     : `₦${price.toLocaleString()}`}
                 </span>
               </div>
-              <div style={{ display: "flex", gap: "0.6rem" }}>
+              <div className="bd-hero-actions">
                 <button className="btn" onClick={handleCopyLink}>
                   <i className="fas fa-link"></i> {copyLabel}
                 </button>
