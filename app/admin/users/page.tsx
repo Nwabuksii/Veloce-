@@ -6,6 +6,7 @@ import { getStoredUser } from "@/lib/client-session";
 import AdminPageHeader from "@/app/components/AdminPageHeader";
 import { AIcon } from "@/app/components/AdminIcons";
 import Avatar from "@/app/components/Avatar";
+import Pager from "@/app/components/Pager";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { formatDateDDMMYYYY } from "@/lib/date-format";
 import { isUserOnline } from "@/lib/online";
@@ -242,35 +243,17 @@ export default function AdminUsersPage() {
   }
 
   const pager = (position: "top" | "bottom") => (
-    <div className="panel-row" style={{ alignItems: "center", gap: 12, flexWrap: "wrap", margin: position === "top" ? "0 0 16px" : "16px 0 0" }}>
-      <span className="panel-desc" style={{ margin: 0 }}>
-        Page {pagination.page} of {pagination.totalPages} • {pagination.totalMatching} user{pagination.totalMatching === 1 ? "" : "s"}
-      </span>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <button className="btn btn-ghost" disabled={searching || page <= 1} onClick={() => goToPage(page - 1)}>
-          Previous
-        </button>
-        <input
-          className="input"
-          type="number"
-          min={1}
-          max={pagination.totalPages}
-          value={pageInput}
-          aria-label={`Go to page (${position})`}
-          style={{ width: 80 }}
-          onChange={(e) => setPageInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") goToPage(parseInt(pageInput, 10));
-          }}
-        />
-        <button className="btn btn-ghost" disabled={searching} onClick={() => goToPage(parseInt(pageInput, 10))}>
-          Go
-        </button>
-        <button className="btn btn-ghost" disabled={searching || page >= pagination.totalPages} onClick={() => goToPage(page + 1)}>
-          Next
-        </button>
-      </div>
-    </div>
+    <Pager
+      position={position}
+      page={pagination.page}
+      totalPages={pagination.totalPages}
+      totalMatching={pagination.totalMatching}
+      noun="user"
+      pageInput={pageInput}
+      setPageInput={setPageInput}
+      goToPage={goToPage}
+      disabled={searching}
+    />
   );
 
   async function handleBan(id: string) {

@@ -94,6 +94,7 @@ export const GET = requireRole<RouteContext>(
         avatarUrl: scribe.avatarDisplay === "custom" ? scribe.avatarUrl : null,
         joinedAt: scribe.createdAt,
         schoolName: scribe.university?.name ?? "—",
+        departmentName: scribe.department?.name ?? null,
         currentLevel: scribe.level ?? "Not set",
         isActiveScribe,
         paidSubscriberCount,

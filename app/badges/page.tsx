@@ -5,14 +5,13 @@ import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
 import { BADGE_CATALOGUE, badgeGuide } from "@/lib/badge-guide";
 import BadgeShield from "@/app/components/BadgeShield";
-import ScribeBadges from "@/app/components/ScribeBadges";
+import Link from "next/link";
 import "@/app/components/badges.css";
 import "./badges-page.css";
 
 // Every badge on Veloce and how to earn it. Tap a badge for the details.
 // Badges are never uploaded or claimed: they are handed out automatically
-// when a semester or academic year ends. Scribes also get their own trophy
-// case (with pinning) at the top.
+// when a semester or academic year ends. Scribes get a link to My badges (/scribe/badges) at the top.
 export default function BadgesPage() {
   const router = useRouter();
   const [scribeId, setScribeId] = useState<string | null>(null);
@@ -50,7 +49,11 @@ export default function BadgesPage() {
             </div>
           </div>
 
-          {scribeId && <ScribeBadges scribeId={scribeId} />}
+          {scribeId && (
+            <div className="notice mb-24">
+              Want to choose which badges your profile shows? <Link href="/scribe/badges">Go to My badges</Link>
+            </div>
+          )}
 
           {BADGE_CATALOGUE.map((group) => (
             <div key={group.title} className="panel mb-24">

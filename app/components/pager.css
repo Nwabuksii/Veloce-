@@ -1,0 +1,18 @@
+/* Shared pager (leaderboard, admin users). Prev | page box | Go | Next stays on one row, even on phones. */
+.pager { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.pager-info { margin: 0; text-align: center; }
+.pager-controls { display: flex; flex-wrap: nowrap; align-items: center; justify-content: center; gap: 8px; max-width: 100%; }
+.pager-controls .pager-btn { white-space: nowrap; }
+.pager-controls .pager-input { width: 64px; min-width: 0; text-align: center; }
+.pager--top { margin: 0 0 16px; }
+.pager--bottom { margin: 16px 0 0; }
+@media (min-width: 561px) {
+  .pager { flex-direction: row; justify-content: space-between; }
+  .pager-info { text-align: left; }
+}
+@media (max-width: 560px) {
+  .pager-info { font-size: 12px; }
+  .pager-controls { gap: 5px; }
+  .pager-controls .pager-btn { padding: 0 9px; min-height: 32px; font-size: 12px; }
+  .pager-controls .pager-input { width: 46px; height: 32px; min-height: 0; padding: 0 4px; font-size: 13px; }
+}

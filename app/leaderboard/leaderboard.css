@@ -31,3 +31,5 @@ a.lb-row-link:hover { background: var(--stone-light); border-radius: 10px; }
   .lb-me-rank { font-size: 28px; }
   .lb-row-link { gap: 8px; padding: 10px 4px; }
 }
+.lb-view { flex: 0 0 auto; font-size: 12px; font-weight: 600; color: var(--accent); white-space: nowrap; }
+@media (max-width: 560px) { .lb-view-text { display: none; } .lb-view { font-size: 18px; line-height: 1; } }

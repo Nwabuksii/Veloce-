@@ -18,3 +18,17 @@
 @media (max-width: 560px) {
   .badge-row { gap: 12px; justify-content: center; }
 }
+
+/* Showcase slots: 5 across, filled or shadow. Shrinks to fit one row on phones. */
+.bs-slots { display: grid; gap: 10px; align-items: start; }
+.bs-slot { position: relative; min-width: 0; display: flex; justify-content: center; align-items: flex-start; }
+.bs-slot .badge { max-width: 100%; }
+.bs-slot .badge svg { width: 100%; height: auto; max-width: 84px; }
+.bs-slot.is-empty svg { width: 100%; max-width: 84px; height: auto; fill: var(--stone-light); stroke: var(--border-strong); stroke-width: 2; stroke-dasharray: 5 4; opacity: 0.7; }
+.bs-remove { position: absolute; top: -4px; right: 0; width: 22px; height: 22px; padding: 0; border-radius: 50%; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-primary); font-size: 15px; line-height: 1; cursor: pointer; }
+.bs-remove:disabled { opacity: 0.5; cursor: default; }
+@media (max-width: 560px) {
+  .bs-slots { gap: 6px; }
+  .bs-slot .badge-place { padding: 2px 5px; font-size: 8px; }
+  .bs-slot .badge-date { padding: 1px 5px; font-size: 7.5px; }
+}

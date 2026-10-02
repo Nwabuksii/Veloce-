@@ -179,6 +179,12 @@ export default function ProfileMenu({
               {Icon.trophy()}
               Badges
             </button>
+            {currentUser.role === "SCRIBE" && (
+              <button type="button" className="dd-item" role="menuitem" onClick={() => go("/scribe/badges")}>
+                {Icon.trophy()}
+                My badges
+              </button>
+            )}
             <button type="button" className="dd-item" role="menuitem" onClick={() => go("/settings")}>
               {Icon.gear()}
               Settings

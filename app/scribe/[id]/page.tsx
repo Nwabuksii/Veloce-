@@ -27,6 +27,7 @@ interface Profile {
   avatarUrl: string | null;
   joinedAt: string;
   schoolName: string;
+  departmentName: string | null;
   currentLevel: string;
   isActiveScribe: boolean;
   paidSubscriberCount: number;
@@ -161,7 +162,9 @@ export default function ScribeProfilePage() {
                         {Icon.shield()} {profile.trustLabel}
                       </span>
                       <span className="chip">{Icon.compass()} {profile.schoolName}</span>
-                      <span className="chip">{Icon.book()} {profile.currentLevel}</span>
+                      {profile.departmentName && <span className="chip">{Icon.book()} {profile.departmentName}</span>}
+                      <span className="chip">{Icon.user()} {profile.currentLevel}</span>
+                      <span className="chip">Joined {new Date(profile.joinedAt).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}</span>
                       {!profile.isActiveScribe && <span className="chip is-danger">No longer an active scribe</span>}
                     </div>
                   </div>
