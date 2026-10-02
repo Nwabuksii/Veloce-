@@ -1,0 +1,24 @@
+/* Content moderation page. New file; only uses the app's theme variables.
+   The warning icons had no size, so inside the reason rows they stretched to
+   fill the card. Everything here pins icon sizes and tidies the card layout. */
+.mod-card { display: flex; flex-wrap: wrap; gap: 14px; }
+.mod-card .request-body { flex: 1 1 320px; min-width: 0; }
+.mod-card .request-meta { gap: 6px 14px; margin-bottom: 4px; }
+.mod-card .request-meta span { min-width: 0; overflow-wrap: anywhere; }
+
+.mod-reasons { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.mod-reason { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; border-radius: 10px; font-size: 12.5px; line-height: 1.4; background: var(--bg-warning); color: var(--text-warning); border: 1px solid var(--border); }
+.mod-reason svg { width: 14px; height: 14px; flex: 0 0 14px; margin-top: 2px; }
+.mod-reason span { min-width: 0; overflow-wrap: anywhere; }
+
+.mod-matches { margin-top: 12px; }
+.mod-match { display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; }
+.mod-match-main { flex: 1 1 200px; min-width: 0; }
+.mod-match-title { font-weight: 600; font-size: 0.88rem; overflow-wrap: anywhere; }
+
+.mod-card .request-actions { align-self: flex-start; }
+@media (max-width: 640px) {
+  .mod-card .request-actions { flex-basis: 100%; }
+  .mod-card .request-actions .btn { flex: 1; justify-content: center; }
+  .mod-match .btn { margin-left: auto; }
+}

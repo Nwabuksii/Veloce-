@@ -10,6 +10,7 @@ import { friendlyErrorMessage } from "@/lib/api-client";
 import { formatDateDDMMYYYY } from "@/lib/date-format";
 import { GROUP_HELP, GROUP_ORDER, GROUP_TITLES, type FlagCode } from "@/lib/flag-reasons";
 import { displayEmail } from "@/lib/deleted-user";
+import "./moderation.css";
 
 interface QueueMatch {
   noteId: string;
@@ -146,8 +147,8 @@ export default function ModerationPage() {
 
           <div className="stack-10">
             {g.items.map((n) => (
-              <div key={n.id} className="request-item" style={{ flexWrap: "wrap" }}>
-                <div className="request-body" style={{ minWidth: 0, flex: "1 1 320px" }}>
+              <div key={n.id} className="request-item mod-card">
+                <div className="request-body">
                   <div className="request-code">
                     {n.block.course.code} · uploaded {formatDateDDMMYYYY(new Date(n.createdAt))}
                     {n.pageCount ? ` · ${n.pageCount} page${n.pageCount === 1 ? "" : "s"}` : ""}
@@ -165,11 +166,12 @@ export default function ModerationPage() {
                   </div>
 
                   {n.reasons.length > 0 ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 8 }}>
+                    <div className="mod-reasons">
                       {n.reasons.map((r, i) => (
-                        <span key={i} className="is-warn" style={{ display: "inline-flex", gap: 6, alignItems: "flex-start", fontSize: "0.82rem" }}>
-                          {AIcon.warn()} <span>{r.label}</span>
-                        </span>
+                        <div key={i} className="mod-reason">
+                          {AIcon.warn()}
+                          <span>{r.label}</span>
+                        </div>
                       ))}
                     </div>
                   ) : (
@@ -177,15 +179,15 @@ export default function ModerationPage() {
                   )}
 
                   {n.matches.length > 0 && (
-                    <div style={{ marginTop: 12 }}>
+                    <div className="mod-matches">
                       <div className="form-label" style={{ marginBottom: 6 }}>
                         Looks like {n.matches.length === 1 ? "this note" : `these ${n.matches.length} notes`}
                       </div>
                       <div className="stack-10">
                         {n.matches.map((m) => (
-                          <div key={m.noteId} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 10px" }}>
-                            <div style={{ flex: "1 1 200px", minWidth: 0 }}>
-                              <div style={{ fontWeight: 600, fontSize: "0.88rem" }}>
+                          <div key={m.noteId} className="mod-match">
+                            <div className="mod-match-main">
+                              <div className="mod-match-title">
                                 {m.courseCode} — {m.title}
                               </div>
                               <div className="panel-desc" style={{ margin: 0 }}>

@@ -175,6 +175,10 @@ export default function ProfileMenu({
               Messages
               {unread > 0 && <span className="dd-badge new">{unread > 9 ? "9+" : unread}</span>}
             </button>
+            <button type="button" className="dd-item" role="menuitem" onClick={() => go("/badges")}>
+              {Icon.trophy()}
+              Badges
+            </button>
             <button type="button" className="dd-item" role="menuitem" onClick={() => go("/settings")}>
               {Icon.gear()}
               Settings

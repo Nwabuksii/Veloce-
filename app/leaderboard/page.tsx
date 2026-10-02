@@ -9,10 +9,18 @@ import { timeAgo } from "@/lib/time-ago";
 import { Icon } from "@/app/components/icons";
 import Avatar from "@/app/components/Avatar";
 import { SkeletonList } from "@/app/components/Skeleton";
+import { CATEGORIES, type CategoryId } from "@/lib/badges";
 import "./leaderboard.css";
 
 type Scope = "global" | "school" | "department";
 type Period = "all" | "semester";
+type Category = "overall" | Lowercase<CategoryId>;
+
+// Overall first, then the five badge categories (same names as the badges).
+const CATEGORY_TABS: { id: Category; label: string }[] = [
+  { id: "overall", label: "Overall" },
+  ...(Object.keys(CATEGORIES) as CategoryId[]).map((c) => ({ id: c.toLowerCase() as Category, label: CATEGORIES[c].name })),
+];
 
 interface Entry {
   rank: number;
@@ -29,6 +37,8 @@ interface Entry {
 interface Me {
   finalScore: number;
   ranks: { department: number | null; school: number | null; global: number | null };
+  // Place in the overall ranking and in each category, for the scope and period shown.
+  categoryRanks: Record<Category, number | null>;
   points: { rating: number; purchases: number; reads: number; followers: number; growth: number };
   rankChange: number | null;
   scoreChange: number | null;
@@ -45,6 +55,7 @@ interface Pagination {
 interface LeaderboardData {
   scope: Scope;
   period: Period;
+  category: Category;
   showGlobal: boolean;
   hasDepartment: boolean;
   semester: { label: string } | null;
@@ -56,12 +67,12 @@ interface LeaderboardData {
 }
 
 const SCOPE_LABEL: Record<Scope, string> = { global: "Global", school: "My school", department: "My department" };
-const POINT_ROWS: { key: keyof Me["points"]; label: string }[] = [
-  { key: "rating", label: "Rating" },
-  { key: "purchases", label: "Purchases" },
-  { key: "reads", label: "Notes read" },
-  { key: "followers", label: "Followers" },
-  { key: "growth", label: "Growth" },
+const POINT_ROWS: { key: keyof Me["points"]; label: string; category: Category }[] = [
+  { key: "rating", label: "Rating", category: "rating" },
+  { key: "purchases", label: "Purchases", category: "seller" },
+  { key: "reads", label: "Notes read", category: "read" },
+  { key: "followers", label: "Followers", category: "followed" },
+  { key: "growth", label: "Growth", category: "growth" },
 ];
 
 const fmt = (n: number) => n.toFixed(2);
@@ -71,6 +82,7 @@ export default function LeaderboardPage() {
   const router = useRouter();
   const [scope, setScope] = useState<Scope>("school");
   const [period, setPeriod] = useState<Period>("all");
+  const [category, setCategory] = useState<Category>("overall");
   const [page, setPage] = useState(1);
   const [pageInput, setPageInput] = useState("1");
   const [data, setData] = useState<LeaderboardData | null>(null);
@@ -85,7 +97,7 @@ export default function LeaderboardPage() {
     let cancelled = false;
     setLoading(true);
     setError("");
-    apiFetch<LeaderboardData>(`/api/leaderboard?scope=${scope}&period=${period}&page=${page}`)
+    apiFetch<LeaderboardData>(`/api/leaderboard?scope=${scope}&period=${period}&category=${category}&page=${page}`)
       .then((d) => {
         if (cancelled) return;
         setData(d);
@@ -99,11 +111,12 @@ export default function LeaderboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [scope, period, page]);
+  }, [scope, period, category, page]);
 
-  function pick(next: { scope?: Scope; period?: Period }) {
+  function pick(next: { scope?: Scope; period?: Period; category?: Category }) {
     if (next.scope) setScope(next.scope);
     if (next.period) setPeriod(next.period);
+    if (next.category) setCategory(next.category);
     setPage(1);
   }
 
@@ -148,7 +161,8 @@ export default function LeaderboardPage() {
       </div>
     );
 
-  const myRank = data?.me ? data.me.ranks[data.scope] : null;
+  const myRank = data?.me ? data.me.categoryRanks[data.category] : null;
+  const categoryName = CATEGORY_TABS.find((c) => c.id === data?.category)?.label ?? "Overall";
   const showPager = !!pagination && pagination.totalMatching > 0;
 
   return (
@@ -161,7 +175,9 @@ export default function LeaderboardPage() {
               <h1>
                 Scribe <span className="serif">leaderboard</span>
               </h1>
-              <p>Ranked on sustained quality and sales across many notes, not one lucky hit.</p>
+              <p>
+                Ranked on sustained quality and sales across many notes, not one lucky hit. <Link href="/badges">See the badges you can earn</Link>
+              </p>
             </div>
           </div>
 
@@ -187,33 +203,54 @@ export default function LeaderboardPage() {
             </div>
           )}
 
+          {data && (
+            <div className="lb-categories" role="tablist" aria-label="Ranking by">
+              {CATEGORY_TABS.map((c) => (
+                <button key={c.id} role="tab" aria-selected={category === c.id} className={`btn btn-sm ${category === c.id ? "btn-primary" : "btn-ghost"}`} onClick={() => pick({ category: c.id })}>
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           {error && <div className="auth-error mb-24">{error}</div>}
 
           {data?.me && (
             <div className="panel lb-me mb-24">
               <div className="lb-me-top">
                 <div>
-                  <div className="lb-me-label">Your rank · {SCOPE_LABEL[data.scope].toLowerCase()}</div>
+                  <div className="lb-me-label">
+                    Your rank · {SCOPE_LABEL[data.scope].toLowerCase()} · {categoryName.toLowerCase()}
+                  </div>
                   <div className="lb-me-rank">{myRank != null ? `#${myRank}` : "—"}</div>
                 </div>
                 <div className="lb-me-score">
-                  <div className="lb-me-label">Score</div>
-                  <div className="lb-me-rank">{fmt(data.me.finalScore)}</div>
+                  <div className="lb-me-label">{data.category === "overall" ? "Score" : "Points"}</div>
+                  <div className="lb-me-rank">{fmt(data.category === "overall" ? data.me.finalScore : data.me.points[POINT_ROWS.find((r) => r.category === data.category)!.key])}</div>
                 </div>
               </div>
-              {data.me.rankChange != null && (
+              {data.category !== "overall" && myRank == null && (
+                <p className="panel-desc" style={{ margin: "12px 0 0" }}>
+                  You have no points in {categoryName} yet, so you are not ranked here.
+                </p>
+              )}
+              {data.category === "overall" && data.me.rankChange != null && (
                 <p className="panel-desc lb-change" style={{ margin: "12px 0 0" }}>
                   {data.me.rankChange > 0 ? `Up ${data.me.rankChange} place${data.me.rankChange === 1 ? "" : "s"}` : data.me.rankChange < 0 ? `Down ${-data.me.rankChange} place${data.me.rankChange === -1 ? "" : "s"}` : "Same place as last update"}
                   {data.me.moved.length > 0 && <> — {data.me.moved.map((m) => `${m.metric} ${signed(m.delta)}`).join(", ")}</>}
                 </p>
               )}
               <div className="lb-breakdown">
-                {POINT_ROWS.map((r) => (
-                  <div key={r.key} className="lb-breakdown-item">
-                    <span>{r.label}</span>
-                    <strong>{fmt(data.me!.points[r.key])}</strong>
-                  </div>
-                ))}
+                {POINT_ROWS.map((r) => {
+                  const place = data.me!.categoryRanks[r.category];
+                  return (
+                    <button key={r.key} type="button" className={`lb-breakdown-item${data.category === r.category ? " is-active" : ""}`} onClick={() => pick({ category: r.category })} title={`Show the ${CATEGORY_TABS.find((c) => c.id === r.category)?.label} ranking`}>
+                      <span>{r.label}</span>
+                      <strong>{fmt(data.me!.points[r.key])}</strong>
+                      <span className="lb-breakdown-rank">{place != null ? `#${place}` : "Not ranked"}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -233,7 +270,7 @@ export default function LeaderboardPage() {
                 {data.entries.length === 0 ? (
                   <div className="empty-state">
                     <div className="empty-icon">{Icon.trophy()}</div>
-                    <div className="empty-title">{data.period === "semester" && !data.semester ? "No semester yet" : "No ranked scribes yet"}</div>
+                    <div className="empty-title">{data.period === "semester" && !data.semester ? "No semester yet" : data.category !== "overall" ? `Nobody has ${categoryName} points yet` : "No ranked scribes yet"}</div>
                     <div className="empty-desc">
                       {data.period === "semester" && !data.semester
                         ? "Your school has not started a semester, so there is no semester ranking."

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
 import { badgeTitle } from "@/lib/badges";
@@ -69,12 +70,14 @@ export default function ScribeBadges({ scribeId }: { scribeId: string }) {
         </div>
       ) : badges.length === 0 ? (
         <p className="panel-desc" style={{ margin: 0 }}>
-          No badges yet. Rank in the top 3 on the leaderboard when a semester ends and they will show up here.
+          No badges yet. Rank in the top 3 on the leaderboard when a semester ends and they will show up here.{" "}
+          <Link href="/badges">See how to earn them</Link>
         </p>
       ) : (
         <>
           <p className="panel-desc">
-            Pin up to {maxPinned} to show on your public profile ({pinned.length}/{maxPinned} pinned).
+            Pin up to {maxPinned} to show on your public profile ({pinned.length}/{maxPinned} pinned).{" "}
+            <Link href="/badges">See every badge and how to earn it</Link>
           </p>
           {pinned.length > 0 && (
             <>

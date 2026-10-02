@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/session";
 import { NO_STORE } from "@/lib/cache-policy";
 import { ensureFreshLeaderboard } from "@/lib/leaderboard-snapshot";
 import { ALL_TIME_KEY, semesterKey, type PreviousSnapshot } from "@/lib/leaderboard-rank";
+import { CATEGORIES, type CategoryId } from "@/lib/badges";
 
 const PAGE_SIZE = 20;
 const POINT_LABELS = {
@@ -19,7 +20,10 @@ const POINT_LABELS = {
 // Reads snapshots only — the scores are recomputed by the nightly job, which
 // ensureFreshLeaderboard() kicks off (at most once a day) if it is overdue.
 //
-// GET /api/leaderboard?scope=global|school|department&period=all|semester&page=N
+// GET /api/leaderboard?scope=global|school|department&period=all|semester&category=overall|rating|seller|read|followed|growth&page=N
+// A category ranks scribes by that one metric's points (only scribes above 0
+// appear); ties fall back to the overall order, the same rule the category
+// badges use. No category (or "overall") is the total-score ranking.
 // A scope the viewer can't use (global with one school, department without
 // one) falls back to "school"; the response says which scope it really used.
 export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
@@ -27,6 +31,8 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
   const period = params.get("period") === "semester" ? "semester" : "all";
   const requestedScope = params.get("scope");
   const requestedPage = Math.max(1, parseInt(params.get("page") || "1", 10) || 1);
+  const CATEGORY_IDS = Object.keys(CATEGORIES) as CategoryId[];
+  const category = CATEGORY_IDS.find((c) => c.toLowerCase() === params.get("category")) ?? null;
 
   await ensureFreshLeaderboard();
 
@@ -60,6 +66,7 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
   const base = {
     scope,
     period,
+    category: category ? category.toLowerCase() : "overall",
     showGlobal,
     hasDepartment,
     semester,
@@ -86,19 +93,31 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
     [rankField]: { not: null },
   };
 
-  const totalMatching = await prisma.leaderboardSnapshot.count({ where });
+  // The list: everyone in scope, or (for a category) only those with points in it.
+  const pointsField = category ? CATEGORIES[category].points : "finalScore";
+  const listWhere: Prisma.LeaderboardSnapshotWhereInput = category ? { ...where, [pointsField]: { gt: 0 } } : where;
+  const orderBy: Prisma.LeaderboardSnapshotOrderByWithRelationInput[] = category
+    ? [{ [pointsField]: "desc" }, { [rankField]: "asc" }]
+    : [{ [rankField]: "asc" }];
+
+  const totalMatching = await prisma.leaderboardSnapshot.count({ where: listWhere });
   const totalPages = Math.max(1, Math.ceil(totalMatching / PAGE_SIZE));
   const page = Math.min(requestedPage, totalPages);
 
   const [rows, mine] = await Promise.all([
     prisma.leaderboardSnapshot.findMany({
-      where,
-      orderBy: { [rankField]: "asc" },
+      where: listWhere,
+      orderBy,
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
       select: {
         scribeId: true,
         finalScore: true,
+        ratingPoints: true,
+        purchasePoints: true,
+        readPoints: true,
+        followerPoints: true,
+        growthPoints: true,
         rankDepartment: true,
         rankSchool: true,
         rankGlobal: true,
@@ -119,14 +138,15 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
     }),
   ]);
 
-  const entries = rows.map((r) => ({
-    rank: r[rankField] as number,
+  const entries = rows.map((r, i) => ({
+    // Category ranks are simply the position in the list; overall uses the stored rank.
+    rank: category ? (page - 1) * PAGE_SIZE + i + 1 : (r[rankField] as number),
     scribeId: r.scribeId,
     name: r.scribe.fullName,
     avatarUrl: r.scribe.avatarDisplay === "custom" ? r.scribe.avatarUrl : null,
     university: r.scribe.university.name,
     department: r.scribe.department?.name ?? null,
-    score: r.finalScore,
+    score: r[pointsField],
     isMe: r.scribeId === user.sub,
     // Profiles are university-scoped, so only same-school scribes are openable.
     canOpenProfile: r.scribe.universityId === viewer.universityId,
@@ -152,9 +172,29 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
           .map((k) => ({ metric: POINT_LABELS[k], delta: Math.round((mine[k] - prev[k]) * 100) / 100 }))
           .filter((m) => m.delta !== 0)
       : [];
+    // The viewer's place in every category (and overall) for this scope and
+    // period: 1 + the scribes with more points, or the same points and a
+    // better overall position. Null when they have no points in it.
+    const myOverall = mine[rankField];
+    const categoryRanks: Record<string, number | null> = { overall: myOverall };
+    await Promise.all(
+      CATEGORY_IDS.map(async (id) => {
+        const field = CATEGORIES[id].points;
+        if (mine[field] <= 0 || myOverall == null) {
+          categoryRanks[id.toLowerCase()] = null;
+          return;
+        }
+        const ahead = await prisma.leaderboardSnapshot.count({
+          where: { ...where, OR: [{ [field]: { gt: mine[field] } }, { [field]: mine[field], [rankField]: { lt: myOverall } }] },
+        });
+        categoryRanks[id.toLowerCase()] = ahead + 1;
+      }),
+    );
+
     me = {
       finalScore: mine.finalScore,
       ranks,
+      categoryRanks,
       points,
       // positive = moved up that many places
       rankChange: prev && prevRank != null && currentRank != null ? prevRank - currentRank : null,

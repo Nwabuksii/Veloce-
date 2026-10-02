@@ -119,11 +119,14 @@ export default function BadgeShield({
   periodType,
   periodKey,
   size = 96,
+  datePill,
 }: {
   badgeKey: string;
   periodType: "ALL_TIME" | "SEMESTER" | "YEAR";
   periodKey: string;
   size?: number;
+  // Catalogue only: text for the date pill instead of a real date.
+  datePill?: string;
 }) {
   const uid = useId().replace(/:/g, "");
   const b = parseBadgeKey(badgeKey);
@@ -139,7 +142,7 @@ export default function BadgeShield({
 
   const placeText = consecutive ? "2x Dept. Leader" : placeLabel(b.place as Place);
   const tone = consecutive ? "purple" : b.place === 1 ? "gold" : b.place === 2 ? "silver" : "bronze";
-  const date = badgeLabel(periodType, periodKey);
+  const date = datePill ?? badgeLabel(periodType, periodKey);
   const title = `${badgeTitle(badgeKey)} · ${date}`;
 
   return (
