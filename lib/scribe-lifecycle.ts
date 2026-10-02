@@ -63,7 +63,7 @@ export async function sendWelcomeMessage(
     },
     scribe: {
       subject: "You're now a Scribe!",
-      body: "Congrats — your application was approved. You can now upload notes to any block, track sales from your Scribe dashboard, and start building a following.",
+      body: "Congrats, your application was approved! Log out and log back in for Scribe access to take effect, then you can start uploading notes.",
     },
     admin: {
       subject: "You've been made an Admin",
