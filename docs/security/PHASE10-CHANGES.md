@@ -21,6 +21,7 @@ Drop these files over the project (same paths). No database migration, no new de
 | `app/api/auth/resend-verification/route.ts` | Re-sends the **same** link instead of making a new token (the old way killed the link in the first email). One resend a minute per address. |
 | `app/api/auth/verify-email/route.ts` | Clearer message when a link is unknown or already used. |
 | `app/signup/page.tsx` | "Resend verification email" button on the check-your-email screen. |
+| `scripts/delete-user.js` (new) | Testing-only "delete user, keep their records" tool. See below. |
 | `app/globals.css` | **Full file, built on the phase 9 fix version.** Replaces your current one. Changes: Manage Users details sheet, dropdown name/role, request details panel. |
 
 Notes
@@ -41,3 +42,13 @@ Notes
 4. **Resend killed the first link:** fixed (same token).
 5. **Not fixable in code, check in Brevo:** Transactional > Logs (delivered / soft bounce / blocked), the sender is verified, the sending domain has SPF/DKIM/DMARC set up (a Gmail/Yahoo sender address will often land in spam or be rejected by school mail), and the free plan's 300 emails/day limit.
 6. **Worth deciding:** the link lives only 10 minutes and school mail servers can delay messages. Opening the link verifies immediately, so an email security scanner that opens links can use it up before the student does. A "Confirm my email" button on the page would prevent that. Not changed.
+
+## Deleting a test user (records stay)
+```
+ALLOW_USER_DELETE=true node scripts/delete-user.js student@example.com            # dry run: shows what stays
+ALLOW_USER_DELETE=true node scripts/delete-user.js student@example.com --commit    # does it
+```
+- The person becomes "Deleted user": name, email, photo, bank details, password, two-factor and sessions are removed, and the email can be used to sign up again.
+- Purchases, reviews, feedback, votes, follows and messages stay, so every scribe count, earning and ledger total is unchanged.
+- Admin accounts and already-deleted accounts are refused. Without `ALLOW_USER_DELETE=true` it does nothing: don't set it once you launch.
+- Prisma Studio will still refuse to delete a user who has purchases. That is intentional.
