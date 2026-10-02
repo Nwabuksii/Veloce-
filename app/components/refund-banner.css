@@ -1,0 +1,6 @@
+/* Refund-window reminder bar. Theme variables only. */
+.refund-banner { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; padding: 8px 14px; background: var(--accent-glow); border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text-primary); text-align: center; }
+.refund-banner-text { min-width: 0; }
+.refund-banner-link { font-weight: 600; color: var(--accent); white-space: nowrap; }
+.refund-banner-x { border: 0; background: none; color: var(--text-secondary); font-size: 18px; line-height: 1; cursor: pointer; padding: 0 4px; }
+@media (max-width: 560px) { .refund-banner { font-size: 12px; gap: 8px; padding: 8px 10px; } }

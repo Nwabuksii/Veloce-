@@ -22,9 +22,12 @@ function PaymentCallbackContent() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ reference }),
     })
-      .then(() => {
+      .then((data: { purchase?: { id: string } | null; convertedToCredit?: boolean }) => {
         setStatus("Payment confirmed — unlocking your block...");
-        setTimeout(() => router.push("/dashboard"), 1200);
+        // The confirmation screen explains the refund window. Straight to the
+        // dashboard only when there is no purchase to show (charge became credit).
+        const next = data?.purchase && !data.convertedToCredit ? `/payment/complete?purchase=${data.purchase.id}` : "/dashboard";
+        router.replace(next);
       })
       .catch((err) => setStatus(friendlyErrorMessage(err)));
   }, [params, router]);

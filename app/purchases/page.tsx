@@ -46,6 +46,7 @@ export default function PurchasesPage() {
   const [refundReason, setRefundReason] = useState("");
   const [refundSubmitting, setRefundSubmitting] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const [highlightId, setHighlightId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"recent" | "oldest" | "title" | "scribe">("recent");
 
@@ -66,10 +67,22 @@ export default function PurchasesPage() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to load purchases");
         setPurchases(data.purchases || []);
+        // Arrived from the refund reminder (?refund=<purchaseId>): open that form.
+        const target = new URLSearchParams(window.location.search).get("refund");
+        if (target && (data.purchases || []).some((p: PurchaseView) => p.purchaseId === target)) {
+          setRefundingId(target);
+          setHighlightId(target);
+        }
       })
       .catch((err) => setError(friendlyErrorMessage(err)))
       .finally(() => setLoading(false));
   }, [router]);
+
+  // Once the card exists, bring it into view.
+  useEffect(() => {
+    if (!highlightId || loading) return;
+    document.getElementById(`purchase-${highlightId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlightId, loading]);
 
   function setDraftRating(purchaseId: string, rating: number) {
     setDrafts((prev) => ({
@@ -222,7 +235,7 @@ export default function PurchasesPage() {
                 const windowOpen = minutesSince <= REFUND_WINDOW_MINUTES;
 
                 return (
-                  <article className="purchase-card" key={p.purchaseId}>
+                  <article className="purchase-card" key={p.purchaseId} id={`purchase-${p.purchaseId}`} style={highlightId === p.purchaseId ? { outline: "2px solid var(--accent)", outlineOffset: 2 } : undefined}>
                     <div className="spine" style={{ "--spine-color": spineTone(p.blockTitle) } as React.CSSProperties}>
                       <span className="spine-code">{p.courseCode}</span>
                     </div>

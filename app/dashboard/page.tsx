@@ -198,7 +198,7 @@ function CatalogPage() {
 
       if (data.freeViaCoupon) {
         toast.success("Credit used — no charge!");
-        router.push(`/notes/${data.noteId}/read`);
+        router.push(`/payment/complete?purchase=${data.purchaseId}`);
         return;
       }
 

@@ -1,5 +1,6 @@
 import type { Prisma, Purchase } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { sendRefundWindowEmail } from "@/lib/refund-email";
 
 interface CompletePurchaseParams {
   reference: string; // Paystack's reference for THIS charge
@@ -61,7 +62,7 @@ export async function completePurchase(params: CompletePurchaseParams): Promise<
   };
 
   try {
-    return await prisma.$transaction(async (tx): Promise<CompletePurchaseResult> => {
+    const result = await prisma.$transaction(async (tx): Promise<CompletePurchaseResult> => {
       // Already handled this exact charge (the other of verify/webhook got here first).
       const alreadyConverted = await tx.convertedPayment.findUnique({ where: { paystackRef: reference } });
       if (alreadyConverted) {
@@ -113,6 +114,11 @@ export async function completePurchase(params: CompletePurchaseParams): Promise<
       });
       return { purchase, convertedToCredit: false };
     });
+    // Only the call that actually created the purchase gets here with a
+    // purchase and no credit conversion (the verify/webhook loser lands in the
+    // P2002 branch below), so the refund-window email goes out exactly once.
+    if (result.purchase && !result.convertedToCredit) await sendRefundWindowEmail(result.purchase.id);
+    return result;
   } catch (err: any) {
     // Two writers raced on the same reference (verify + webhook at once):
     // the loser's whole transaction rolled back, so hand back what the winner did.

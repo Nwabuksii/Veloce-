@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { initializeTransaction } from "@/lib/paystack";
 import { rateLimitResponse } from "@/lib/rate-limit";
+import { sendRefundWindowEmail } from "@/lib/refund-email";
 import { computeScribeCut, getEffectivePriceForNote, planCreditRedemption } from "@/lib/pricing";
 
 export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
@@ -198,7 +199,9 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
         ],
       });
 
-      return NextResponse.json({ freeViaCoupon: true, noteId: purchase.noteId });
+      await sendRefundWindowEmail(purchase.id);
+
+      return NextResponse.json({ freeViaCoupon: true, noteId: purchase.noteId, purchaseId: purchase.id });
     }
 
     // Not fully covered by credit (or no credit at all) — Paystack is

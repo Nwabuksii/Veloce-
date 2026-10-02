@@ -10,7 +10,6 @@ import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
 import CouponConfirmDialog from "@/app/components/CouponConfirmDialog";
 import { getEffectivePriceForNote } from "@/lib/pricing";
-import "./block-details.css";
 
 interface NoteVersion {
   noteId: string;
@@ -144,7 +143,7 @@ function BlockDetailInner() {
 
       if (data.freeViaCoupon) {
         toast.success("Credit used — no charge!");
-        router.push(`/notes/${data.noteId}/read`);
+        router.push(`/payment/complete?purchase=${data.purchaseId}`);
         return;
       }
 
@@ -226,332 +225,298 @@ function BlockDetailInner() {
   }
 
   return (
-    <div className="page-wrap block-detail-page">
-      <div className="app-container block-detail-container">
+    <div className="page-wrap">
+      <div className="app-container" style={{ maxWidth: 640 }}>
         <PageHeader title="Block details" subtitle="Compare versions, read reviews and unlock notes.">
-          <button className="btn block-back-btn" onClick={() => router.push("/dashboard")}>
-            <i className="fas fa-arrow-left"></i> Catalog
-          </button>
+          <button className="btn" onClick={() => router.push("/dashboard")}>
+              <i className="fas fa-arrow-left"></i> Catalog
+            </button>
         </PageHeader>
 
-        {loading && (
-          <div className="block-loading">
-            <SkeletonList rows={4} />
-          </div>
-        )}
-
-        {error && !loading && (
-          <section className="block-error-card">
-            <div className="block-error-icon">!</div>
-            <h2>We couldn't load this block</h2>
-            <p>{error}</p>
-            <button className="btn btn-primary" onClick={() => router.push("/dashboard")}>Go back</button>
-          </section>
-        )}
+        {loading && <SkeletonList rows={3} />}
+        {error && <div className="auth-error" style={{ marginTop: "1rem" }}>{error}</div>}
 
         {!loading && !error && (
-          <main className="block-detail-content">
-            <section className="block-hero">
-              <div className="block-hero-copy">
-                <div className="block-kicker">
-                  {universityName ? `${universityName} · ` : ""}{courseCode || "COURSE"} · {courseName || "Course"}
-                </div>
-                <h1>{blockTitle}</h1>
-                <div className="block-hero-meta">
-                  {departmentName && <span>{departmentName}</span>}
-                  {topics.slice(0, 4).map((topic) => (
-                    <span key={topic} className="block-pill">{topic}</span>
-                  ))}
-                </div>
+          <div style={{ marginTop: "1.5rem" }}>
+            <div
+              style={{
+                background: "var(--ink)",
+                color: "white",
+                borderRadius: "12px",
+                padding: "1.5rem 1.7rem",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                flexWrap: "wrap",
+                gap: "0.8rem",
+              }}
+            >
+              <div>
+                <span className="mono" style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.65)" }}>
+                  {universityName ? `${universityName} · ` : ""}{courseCode} · {courseName} · {departmentName}
+                </span>
+                <h2 style={{ fontSize: "1.4rem", marginTop: "0.15rem" }}>{blockTitle}</h2>
+                <span className="price-tag mono" style={{ marginTop: "0.4rem", display: "inline-block", color: "white" }}>
+                  {notes.length > 0
+                    ? `From ₦${Math.min(...notes.map((n) => n.price)).toLocaleString()}`
+                    : `₦${price.toLocaleString()}`}
+                </span>
               </div>
-
-              <div className="block-hero-actions">
-                <button className="btn block-hero-btn" onClick={handleCopyLink}>
+              <div style={{ display: "flex", gap: "0.6rem" }}>
+                <button className="btn" onClick={handleCopyLink}>
                   <i className="fas fa-link"></i> {copyLabel}
                 </button>
-                <button className="btn block-hero-btn" onClick={() => setReporting((v) => !v)}>
+                <button className="btn" onClick={() => setReporting((v) => !v)}>
                   <i className="fas fa-flag"></i> Report
                 </button>
               </div>
-            </section>
+            </div>
 
             {reporting && (
-              <form onSubmit={handleReportSubmit} className="block-report-panel">
-                <label>
-                  Why are you reporting this block?
+              <form onSubmit={handleReportSubmit} style={{ marginTop: "1rem", background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "1rem", padding: "1rem", display: "flex", flexDirection: "column", gap: "0.7rem" }}>
+                <label style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+                  Why are you reporting this block? (wrong/stolen content, low quality, etc.)
                 </label>
                 <textarea
                   value={reportReason}
                   onChange={(e) => setReportReason(e.target.value)}
                   rows={3}
                   placeholder="Explain what's wrong with this block..."
+                  style={{ padding: "0.6rem", borderRadius: "0.6rem", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem" }}
                 />
-                <div className="block-inline-actions">
+                <div style={{ display: "flex", gap: "0.6rem" }}>
                   <button className="btn btn-primary" type="submit" disabled={reportSubmitting}>
                     {reportSubmitting ? "Submitting..." : "Submit report"}
                   </button>
-                  <button className="btn" type="button" onClick={() => setReporting(false)}>Cancel</button>
+                  <button className="btn" type="button" onClick={() => setReporting(false)}>
+                    Cancel
+                  </button>
                 </div>
               </form>
             )}
-
             {reportStatus && !reporting && (
-              <p className="block-success-message">{reportStatus}</p>
+              <p style={{ color: "var(--text-success)", marginTop: "0.6rem", fontSize: "0.85rem" }}>{reportStatus}</p>
             )}
 
-            <section className="block-stats">
-              <div className="block-stat">
-                <span>Purchases</span>
-                <strong>{purchaseCount.toLocaleString()}</strong>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                gap: "0.75rem",
+                marginTop: "1rem",
+              }}
+            >
+              <div style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "0.8rem", padding: "0.8rem" }}>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Purchases</div>
+                <div style={{ fontSize: "1.2rem", fontWeight: 700, marginTop: "0.25rem" }}>{purchaseCount.toLocaleString()}</div>
               </div>
-              <div className="block-stat">
-                <span>Versions</span>
-                <strong>{liveNoteCount}</strong>
+              <div style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "0.8rem", padding: "0.8rem" }}>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Versions</div>
+                <div style={{ fontSize: "1.2rem", fontWeight: 700, marginTop: "0.25rem" }}>{liveNoteCount}</div>
               </div>
-              <div className="block-stat">
-                <span>Rating</span>
-                <strong>{blockAvgRating != null ? blockAvgRating.toFixed(1) : "New"}</strong>
-                <small>{blockRatingCount > 0 ? `${blockRatingCount} review${blockRatingCount === 1 ? "" : "s"}` : "No reviews yet"}</small>
-              </div>
-              <div className="block-stat">
-                <span>Topics</span>
-                <strong>{topics.length}</strong>
-              </div>
-            </section>
-
-            <div className="block-detail-grid">
-              <section className="block-main-column">
-                <div className="block-section-heading">
-                  <div>
-                    <span className="block-eyebrow">The ledger</span>
-                    <h2>Available versions</h2>
-                  </div>
-                  <span className="block-count">{notes.length} version{notes.length === 1 ? "" : "s"}</span>
+              <div style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "0.8rem", padding: "0.8rem" }}>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Rating</div>
+                <div style={{ fontSize: "1.2rem", fontWeight: 700, marginTop: "0.25rem" }}>
+                  {blockAvgRating != null ? `${blockAvgRating.toFixed(1)}` : "New"}
                 </div>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginTop: "0.1rem" }}>
+                  {blockRatingCount > 0 ? `${blockRatingCount} review${blockRatingCount === 1 ? "" : "s"}` : "No reviews yet"}
+                </div>
+              </div>
+              <div style={{ background: "var(--surface)", border: "1px solid var(--border-blue)", borderRadius: "0.8rem", padding: "0.8rem" }}>
+                <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Topics</div>
+                <div style={{ fontSize: "1.2rem", fontWeight: 700, marginTop: "0.25rem" }}>{topics.length}</div>
+              </div>
+            </div>
 
-                {topics.length > 0 && (
-                  <div className="block-topic-list">
-                    {topics.map((topic) => <span key={topic} className="block-topic">{topic}</span>)}
-                  </div>
-                )}
+            {topics.length > 0 && (
+              <div style={{ marginTop: "1rem", display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+                {topics.map((t) => (
+                  <span key={t} className="seal" style={{ background: "var(--stone-light)", color: "var(--text-secondary)" }}>
+                    {t}
+                  </span>
+                ))}
+              </div>
+            )}
 
-                {notes.length === 0 && (
-                  <div className="block-empty">
-                    <div className="block-empty-mark">—</div>
-                    <h3>No live notes for this topic yet.</h3>
-                    <p>Check back later for notes uploaded by scribes.</p>
-                  </div>
-                )}
+            <h3 style={{ marginTop: "1.5rem", fontSize: "1.05rem" }}>
+              <i className="fas fa-file-alt" style={{ color: "var(--text-info)" }}></i> Available versions
+            </h3>
 
-                <div className="block-version-list">
-                  {notes.map((n, index) => {
-                    const trustStyle = TRUST_STYLES[n.trustLevel] || TRUST_STYLES.NEW;
-                    return (
-                      <article
-                        key={n.noteId}
-                        className={`block-version-card ${n.noteId === highlightNoteId ? "is-highlighted" : ""}`}
-                      >
-                        <div className="block-version-topline">
-                          <span className="block-version-number">VERSION {String(index + 1).padStart(2, "0")}</span>
-                          {n.noteId === highlightNoteId && <span className="block-shared-badge">Shared with you</span>}
-                          {n.isRequestFulfillment && <span className="block-fixed-badge">Fixed request price</span>}
-                        </div>
+            {notes.length === 0 && (
+              <p style={{ color: "var(--text-secondary)", marginTop: "0.6rem" }}>No live notes for this topic yet.</p>
+            )}
 
-                        <div className="block-version-body">
-                          <div className="block-scribe-row">
-                            <Avatar name={n.scribeName} imageUrl={n.scribeAvatarUrl} size="sm" />
-                            <div className="block-scribe-copy">
-                              <button className="block-scribe-name" onClick={() => router.push(`/scribe/${n.scribeId}`)}>
-                                {n.scribeName}
-                              </button>
-                              <div className="block-scribe-meta">
-                                <span className="block-trust" style={{ background: trustStyle.bg, color: trustStyle.color }}>
-                                  {n.trustLabel}
-                                </span>
-                                {n.scribeLevel && <span>Level {n.scribeLevel}</span>}
-                                <span>{new Date(n.uploadedAt).toLocaleDateString()}</span>
-                              </div>
-                            </div>
+            <div className="ledger-list" style={{ marginTop: "0.8rem", gridTemplateColumns: "1fr" }}>
+              {notes.map((n) => {
+                const trustStyle = TRUST_STYLES[n.trustLevel] || TRUST_STYLES.NEW;
+                return (
+                  <div
+                    key={n.noteId}
+                    className="ledger-row"
+                    style={
+                      n.noteId === highlightNoteId
+                        ? { background: "var(--bg-info)", borderColor: "var(--text-info)" }
+                        : undefined
+                    }
+                  >
+                    <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", alignItems: "flex-start", gap: "0.7rem", width: "100%" }}>
+                      <Avatar name={n.scribeName} imageUrl={n.scribeAvatarUrl} size="sm" />
+                      <div style={{ minWidth: 0 }}>
+                        {n.noteId === highlightNoteId && (
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-info)", fontWeight: 600, marginBottom: "0.2rem" }}>
+                            <i className="fas fa-share"></i> Shared with you
                           </div>
-
-                          <div className="block-version-rating">
-                            <span className="block-stars">{"★".repeat(Math.max(0, Math.round(n.noteAvgRating ?? 0)))}</span>
-                            <span>{n.noteAvgRating != null ? `${n.noteAvgRating.toFixed(1)} (${n.noteRatingCount})` : "No ratings yet"}</span>
-                          </div>
-                        </div>
-
-                        <div className="block-version-details">
-                          <div className="block-detail-item">
-                            <span>Pages</span>
-                            <strong>{n.pageCount != null ? n.pageCount : "—"}</strong>
-                          </div>
-                          <div className="block-detail-item">
-                            <span>Bought</span>
-                            <strong>{n.purchaseCount.toLocaleString()}</strong>
-                          </div>
-                          <div className="block-detail-item">
-                            <span>Original</span>
-                            <strong>{n.attestedOriginal ? "Attested" : "Not attested"}</strong>
-                          </div>
+                        )}
+                        <button
+                          onClick={() => router.push(`/scribe/${n.scribeId}`)}
+                          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontWeight: 600, color: "var(--text-primary)" }}
+                        >
+                          {n.scribeName}
+                        </button>
+                        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginTop: "0.3rem", flexWrap: "wrap" }}>
+                          <span className="seal" style={{ background: trustStyle.bg, color: trustStyle.color }}>
+                            {n.trustLabel}
+                          </span>
+                          {n.isRequestFulfillment && <span className="seal">Fixed request price</span>}
+                          <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                            <i className="fas fa-bag-shopping"></i> {n.purchaseCount.toLocaleString()} bought
+                          </span>
                           <button
-                            className="block-details-toggle"
-                            onClick={() => setDetailsOpenFor((cur) => cur === n.noteId ? null : n.noteId)}
+                            onClick={() => setReviewsOpenFor((cur) => (cur === n.noteId ? null : n.noteId))}
+                            style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.8rem", color: "var(--text-secondary)", textDecoration: "underline" }}
                           >
-                            {detailsOpenFor === n.noteId ? "Hide details" : "Details"}
-                            <i className={`fas fa-chevron-${detailsOpenFor === n.noteId ? "up" : "down"}`}></i>
+                            <i className="fas fa-star" style={{ color: "var(--star)" }}></i>{" "}
+                            {n.noteAvgRating != null ? `${n.noteAvgRating.toFixed(1)} (${n.noteRatingCount})` : "No ratings yet"}
+                          </button>
+                          <button
+                            onClick={() => setReportingNoteId((cur) => (cur === n.noteId ? null : n.noteId))}
+                            style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.8rem", color: "var(--text-secondary)" }}
+                          >
+                            <i className="fas fa-flag"></i> Report this version
+                          </button>
+                          <button
+                            onClick={() => setDetailsOpenFor((cur) => (cur === n.noteId ? null : n.noteId))}
+                            style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: "0.8rem", color: "var(--text-secondary)" }}
+                          >
+                            <i className={`fas fa-chevron-${detailsOpenFor === n.noteId ? "up" : "down"}`}></i> Details
                           </button>
                         </div>
-
                         {detailsOpenFor === n.noteId && (
-                          <div className="block-expanded-details">
+                          <div
+                            style={{
+                              marginTop: "0.5rem",
+                              padding: "0.6rem 0.8rem",
+                              background: "var(--stone-light)",
+                              borderRadius: "0.5rem",
+                              fontSize: "0.78rem",
+                              color: "var(--text-secondary)",
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "0.25rem",
+                            }}
+                          >
                             {n.scribeLevel && <span>Level at upload: {n.scribeLevel}</span>}
                             <span>Uploaded {new Date(n.uploadedAt).toLocaleDateString()}</span>
                             <span>{n.pageCount != null ? `${n.pageCount} page${n.pageCount === 1 ? "" : "s"}` : "Page count not yet available"}</span>
                             <span>
                               {n.attestedOriginal ? (
-                                <><i className="fas fa-check"></i> Scribe attested this is their own original work</>
-                              ) : "No originality attestation on file"}
+                                <>
+                                  <i className="fas fa-check" style={{ color: "var(--text-success)" }}></i> Scribe attested this is
+                                  their own original work
+                                </>
+                              ) : (
+                                "No originality attestation on file"
+                              )}
                             </span>
                           </div>
                         )}
+                      </div>
+                    </div>
 
-                        <div className="block-version-footer">
-                          <div className="block-version-footer-links">
-                            <button onClick={() => setReviewsOpenFor((cur) => cur === n.noteId ? null : n.noteId)}>
-                              <i className="fas fa-star"></i> Reviews
-                            </button>
-                            <button onClick={() => setReportingNoteId((cur) => cur === n.noteId ? null : n.noteId)}>
-                              <i className="fas fa-flag"></i> Report
-                            </button>
-                          </div>
+                    {n.owned ? (
+                      <button className="btn btn-primary" onClick={() => router.push(`/notes/${n.noteId}/read`)}>
+                        <i className="fas fa-book-open"></i> Read
+                      </button>
+                    ) : (
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => handleBuyClick(n.noteId)}
+                        disabled={purchasingNoteId === n.noteId}
+                      >
+                        <i className={creditBalance != null && creditBalance > 0 ? "fas fa-ticket" : "fas fa-lock"}></i>{" "}
+                        {purchasingNoteId === n.noteId
+                          ? "Redirecting..."
+                          : creditBalance != null && creditBalance > 0
+                            ? creditBalance >= n.price
+                              ? "Use credit (free)"
+                              : `Use ₦${creditBalance.toLocaleString()} credit — pay ₦${(n.price - creditBalance).toLocaleString()}`
+                            : `Buy for ₦${n.price.toLocaleString()}`}
+                      </button>
+                    )}
 
-                          <div className="block-price-action">
-                            <div className="block-price">
-                              <span>{n.owned ? "Owned" : "Price"}</span>
-                              <strong>{n.owned ? "—" : `₦${n.price.toLocaleString()}`}</strong>
-                            </div>
-                            {n.owned ? (
-                              <button className="btn btn-primary" onClick={() => router.push(`/notes/${n.noteId}/read`)}>
-                                <i className="fas fa-book-open"></i> Read
-                              </button>
-                            ) : (
-                              <button
-                                className="btn btn-primary"
-                                onClick={() => handleBuyClick(n.noteId)}
-                                disabled={purchasingNoteId === n.noteId}
-                              >
-                                <i className={creditBalance != null && creditBalance > 0 ? "fas fa-ticket" : "fas fa-lock"}></i>{" "}
-                                {purchasingNoteId === n.noteId
-                                  ? "Redirecting..."
-                                  : creditBalance != null && creditBalance > 0
-                                    ? creditBalance >= n.price
-                                      ? "Use credit (free)"
-                                      : `Use ₦${creditBalance.toLocaleString()} credit — pay ₦${(n.price - creditBalance).toLocaleString()}`
-                                    : `Buy for ₦${n.price.toLocaleString()}`}
-                              </button>
-                            )}
-                          </div>
+                    {reviewsOpenFor === n.noteId && (
+                      <NoteReviews
+                        noteId={n.noteId}
+                        owned={n.owned}
+                        purchaseId={n.purchaseId}
+                        myReview={n.myReview}
+                        onReviewed={(rating, comment) =>
+                          setNotes((prev) => prev.map((note) => (note.noteId === n.noteId ? { ...note, myReview: { rating, comment } } : note)))
+                        }
+                      />
+                    )}
+
+                    {reportingNoteId === n.noteId && (
+                      <form
+                        onSubmit={(e) => handleNoteReportSubmit(e, n.noteId)}
+                        style={{ borderTop: "1px solid var(--border-blue)", paddingTop: "0.7rem", display: "flex", flexDirection: "column", gap: "0.6rem" }}
+                      >
+                        <label style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
+                          Why are you reporting {n.scribeName}&apos;s version specifically?
+                        </label>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+                          {[
+                            "Not genuine — looks copied from slides/a textbook, not real lecture notes",
+                            "Incomplete or missing pages",
+                            "Doesn't match what this block is supposed to cover",
+                          ].map((preset) => (
+                            <button
+                              key={preset}
+                              type="button"
+                              className="btn"
+                              style={{ fontSize: "0.75rem", padding: "0.3rem 0.6rem" }}
+                              onClick={() => setNoteReportReason(preset)}
+                            >
+                              {preset}
+                            </button>
+                          ))}
                         </div>
-
-                        {reviewsOpenFor === n.noteId && (
-                          <NoteReviews
-                            noteId={n.noteId}
-                            owned={n.owned}
-                            purchaseId={n.purchaseId}
-                            myReview={n.myReview}
-                            onReviewed={(rating, comment) =>
-                              setNotes((prev) => prev.map((note) => (
-                                note.noteId === n.noteId ? { ...note, myReview: { rating, comment } } : note
-                              )))
-                            }
-                          />
-                        )}
-
-                        {reportingNoteId === n.noteId && (
-                          <form
-                            onSubmit={(e) => handleNoteReportSubmit(e, n.noteId)}
-                            className="block-note-report"
-                          >
-                            <label>Why are you reporting {n.scribeName}&apos;s version specifically?</label>
-                            <div className="block-report-presets">
-                              {[
-                                "Not genuine — looks copied from slides/a textbook, not real lecture notes",
-                                "Incomplete or missing pages",
-                                "Doesn't match what this block is supposed to cover",
-                              ].map((preset) => (
-                                <button
-                                  key={preset}
-                                  type="button"
-                                  className="btn"
-                                  onClick={() => setNoteReportReason(preset)}
-                                >
-                                  {preset}
-                                </button>
-                              ))}
-                            </div>
-                            <textarea
-                              value={noteReportReason}
-                              onChange={(e) => setNoteReportReason(e.target.value)}
-                              rows={2}
-                              placeholder="Explain what's wrong with this specific version..."
-                            />
-                            <div className="block-inline-actions">
-                              <button className="btn btn-primary" type="submit" disabled={noteReportSubmitting}>
-                                {noteReportSubmitting ? "Submitting..." : "Submit report"}
-                              </button>
-                              <button className="btn" type="button" onClick={() => setReportingNoteId(null)}>Cancel</button>
-                            </div>
-                          </form>
-                        )}
-
-                        {noteReportStatus?.noteId === n.noteId && (
-                          <p className="block-success-message">{noteReportStatus.message}</p>
-                        )}
-                      </article>
-                    );
-                  })}
-                </div>
-              </section>
-
-              <aside className="block-side-column">
-                <div className="block-purchase-card">
-                  <span className="block-eyebrow">Access this block</span>
-                  <h2>Choose a version</h2>
-                  <p>Compare the available notes below and unlock the version that fits your needs.</p>
-                  <div className="block-starting-price">
-                    <span>Starting from</span>
-                    <strong>
-                      {notes.length > 0
-                        ? `₦${Math.min(...notes.map((n) => n.price)).toLocaleString()}`
-                        : `₦${price.toLocaleString()}`}
-                    </strong>
+                        <textarea
+                          value={noteReportReason}
+                          onChange={(e) => setNoteReportReason(e.target.value)}
+                          rows={2}
+                          placeholder="Explain what's wrong with this specific version..."
+                          style={{ padding: "0.5rem", borderRadius: "0.6rem", border: "1px solid var(--border-blue)", fontFamily: "inherit", fontSize: "0.85rem", background: "var(--surface)", color: "var(--text-primary)" }}
+                        />
+                        <div style={{ display: "flex", gap: "0.6rem" }}>
+                          <button className="btn btn-primary" type="submit" disabled={noteReportSubmitting}>
+                            {noteReportSubmitting ? "Submitting..." : "Submit report"}
+                          </button>
+                          <button className="btn" type="button" onClick={() => setReportingNoteId(null)}>
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                    {noteReportStatus?.noteId === n.noteId && (
+                      <p style={{ color: "var(--text-success)", fontSize: "0.8rem" }}>{noteReportStatus.message}</p>
+                    )}
                   </div>
-                  <div className="block-side-rule"></div>
-                  <div className="block-side-stat"><span>Course</span><strong>{courseCode || "—"}</strong></div>
-                  <div className="block-side-stat"><span>Department</span><strong>{departmentName || "—"}</strong></div>
-                  <div className="block-side-stat"><span>University</span><strong>{universityName || "—"}</strong></div>
-                  <div className="block-side-rule"></div>
-                  <p className="block-side-note">
-                    <i className="fas fa-shield-halved"></i> Payments are handled through Veloce checkout.
-                  </p>
-                </div>
-
-                <div className="block-about-card">
-                  <span className="block-eyebrow">About this block</span>
-                  <h3>{blockTitle}</h3>
-                  <p>
-                    {courseName ? `${courseName} notes from ${departmentName || "the department"}. ` : ""}
-                    {topics.length > 0 ? `Covers ${topics.slice(0, 4).join(", ")}${topics.length > 4 ? " and more." : "."}` : "Compare verified student notes and reviews."}
-                  </p>
-                  <div className="block-about-list">
-                    <div><span>Live versions</span><strong>{liveNoteCount}</strong></div>
-                    <div><span>Total purchases</span><strong>{purchaseCount.toLocaleString()}</strong></div>
-                    <div><span>Block rating</span><strong>{blockAvgRating != null ? `${blockAvgRating.toFixed(1)} / 5` : "New"}</strong></div>
-                  </div>
-                </div>
-              </aside>
+                );
+              })}
             </div>
-          </main>
+          </div>
         )}
       </div>
 
@@ -614,7 +579,7 @@ function NoteReviews({
   }
 
   return (
-    <div className="block-note-reviews">
+    <div style={{ borderTop: "1px solid var(--border-blue)", paddingTop: "0.7rem" }}>
       {/* Second door to leave a review — the first is the Purchases page.
           Only the actual buyer sees this, and only until they've reviewed. */}
       {owned && purchaseId && (

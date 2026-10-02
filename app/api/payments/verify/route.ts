@@ -40,7 +40,7 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
       return NextResponse.json({ error: "Payment metadata mismatch" }, { status: 400 });
     }
 
-    const purchase = await completePurchase({
+    const result = await completePurchase({
       reference,
       amountPaid: tx.amount / 100,
       buyerId: user.sub,
@@ -50,7 +50,7 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
       creditApplied: metadata.creditApplied ?? 0,
     });
 
-    return NextResponse.json({ purchase });
+    return NextResponse.json({ purchase: result.purchase, convertedToCredit: result.convertedToCredit });
   } catch (err) {
     console.error("Payment verify failed:", err);
     return NextResponse.json({ error: "We couldn't verify this payment yet — please try again in a moment." }, { status: 500 });
