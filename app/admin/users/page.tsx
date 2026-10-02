@@ -103,6 +103,18 @@ export default function AdminUsersPage() {
   const [levelBusy, setLevelBusy] = useState(false);
   const [levelMessage, setLevelMessage] = useState("");
 
+  const [semesterStatus, setSemesterStatus] = useState<{
+    current: { academicYear: string; number: number; startsAt: string } | null;
+    next: { academicYear: string; number: number } | null;
+    locked: boolean;
+    lockedUntil: string | null;
+  } | null>(null);
+  const [semesterBusy, setSemesterBusy] = useState(false);
+  const [semesterMessage, setSemesterMessage] = useState("");
+  // Only used for the very first semester, when there's nothing to continue from.
+  const [firstYear, setFirstYear] = useState("");
+  const [firstNumber, setFirstNumber] = useState(1);
+
   useEffect(() => {
     const user = getStoredUser();
     if (!user) {
@@ -120,6 +132,37 @@ export default function AdminUsersPage() {
       .then((data) => setLevelStatus(data))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    apiFetch("/api/admin/university/start-semester")
+      .then((data) => setSemesterStatus(data))
+      .catch(() => {});
+  }, []);
+
+  async function handleStartSemester() {
+    const target = semesterStatus?.next ?? { academicYear: firstYear.trim(), number: firstNumber };
+    if (
+      !confirm(
+        `This starts semester ${target.academicYear} · S${target.number} and closes the current one. The semester leaderboard resets and semester badges are awarded for the one that ended. Continue?`
+      )
+    ) {
+      return;
+    }
+    setSemesterBusy(true);
+    setSemesterMessage("");
+    try {
+      const data = await apiFetch("/api/admin/university/start-semester", {
+        method: "POST",
+        body: JSON.stringify(semesterStatus?.next ? {} : { academicYear: firstYear.trim(), number: firstNumber }),
+      });
+      setSemesterMessage(`Done — ${data.academicYear} · S${data.number} has started.`);
+      setSemesterStatus(await apiFetch("/api/admin/university/start-semester"));
+    } catch (err) {
+      setSemesterMessage(friendlyErrorMessage(err));
+    } finally {
+      setSemesterBusy(false);
+    }
+  }
 
   async function handleAdvanceLevel() {
     if (
@@ -331,6 +374,46 @@ export default function AdminUsersPage() {
         </button>
       </div>
       {levelMessage && <div className="notice">{levelMessage}</div>}
+
+      <div className="panel panel-row mb-24">
+        <div>
+          <div className="row-title">Start a new semester</div>
+          <p className="panel-desc">
+            Closes the current semester and starts the next one, which resets the semester leaderboard.
+            {semesterStatus?.current &&
+              ` Current: ${semesterStatus.current.academicYear} · S${semesterStatus.current.number}.`}
+            {semesterStatus?.next && ` Next: ${semesterStatus.next.academicYear} · S${semesterStatus.next.number}.`}
+            {semesterStatus && !semesterStatus.current && " No semester has been started yet — enter the first one."}
+            {semesterStatus?.locked &&
+              semesterStatus.lockedUntil &&
+              ` Available again after ${new Date(semesterStatus.lockedUntil).toLocaleDateString()}.`}
+          </p>
+          {semesterStatus && !semesterStatus.current && (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+              <input
+                className="input"
+                placeholder="26/27"
+                value={firstYear}
+                maxLength={5}
+                style={{ width: 100 }}
+                onChange={(e) => setFirstYear(e.target.value)}
+              />
+              <select className="input" value={firstNumber} onChange={(e) => setFirstNumber(Number(e.target.value))}>
+                <option value={1}>Semester 1</option>
+                <option value={2}>Semester 2</option>
+              </select>
+            </div>
+          )}
+        </div>
+        <button
+          className="btn btn-primary"
+          disabled={!semesterStatus || semesterStatus.locked || semesterBusy}
+          onClick={handleStartSemester}
+        >
+          {semesterBusy ? "Working…" : "Start new semester"}
+        </button>
+      </div>
+      {semesterMessage && <div className="notice">{semesterMessage}</div>}
 
       <p className="panel-desc">
         Search any student, scribe, or admin at your university to review their academic profile, login history, and activity. Admins cannot be banned or demoted here; those changes must be made directly in the database.

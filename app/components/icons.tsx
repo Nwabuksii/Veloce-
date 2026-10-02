@@ -108,6 +108,13 @@ export const Icon: Record<string, () => ReactElement> = {
       <path d="M21 3L10.5 13.5M21 3l-7 18-3.5-7.5L3 10z" {...stroke(1.7)} strokeLinejoin="round" />
     </svg>
   ),
+  // trophy — the header's Leaderboard button
+  trophy: () => (
+    <svg {...S} aria-hidden="true">
+      <path d="M7 4h10v5a5 5 0 0 1-10 0V4zM12 14v4M8 21h8M12 18v3" {...stroke(1.7)} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3" {...stroke(1.7)} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
   // speech bubble — the template's "Messages" icon
   message: () => (
     <svg {...S} aria-hidden="true">

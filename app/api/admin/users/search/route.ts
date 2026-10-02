@@ -54,6 +54,10 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
   const totalPages = Math.max(1, Math.ceil(matchingCount / pageSize));
   const page = Math.min(requestedPage, totalPages);
 
+  const pageArgs: { skip?: number; take: number } = paged
+    ? { skip: (page - 1) * pageSize, take: pageSize }
+    : { take: q ? 10 : 50 };
+
   const [users, totalUsers, loggedInUsers, studentUsers, scribeUsers, adminUsers] = await Promise.all([
     prisma.user.findMany({
       where,
@@ -79,7 +83,7 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
         following: { select: { id: true } },
         reportsFiled: { select: { id: true } },
       },
-      ...(paged ? { skip: (page - 1) * pageSize, take: pageSize } : { take: q ? 10 : 50 }),
+      ...pageArgs,
       orderBy: [{ fullName: "asc" }, { id: "asc" }],
     }),
     prisma.user.count({ where: { universityId: adminUser.universityId } }),

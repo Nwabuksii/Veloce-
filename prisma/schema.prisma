@@ -46,6 +46,9 @@ model University {
   // one-time "you can switch in Settings now" notice. Unused while there's
   // only one university; see the note on User.catalogScope.
   wentLocalAt DateTime?
+
+  // Semester calendar for the scribe leaderboard (see Semester below).
+  semesters Semester[]
 }
 
 model Department {
@@ -272,6 +275,8 @@ model User {
   payouts            Payout[]
   following          Follow[]             @relation("Following") // scribes this user follows
   followers          Follow[]             @relation("Followers") // followers of this user (meaningful when role = SCRIBE)
+  leaderboardScores  LeaderboardSnapshot[] // meaningful when role = SCRIBE
+  badges             ScribeBadge[] // meaningful when role = SCRIBE
   reportsFiled       Report[]             @relation("ReportsFiled")
   reportsReceived    Report[]             @relation("ReportsReceived")
 
@@ -841,4 +846,95 @@ model EmailChangeRequest {
   createdAt        DateTime  @default(now())
 
   @@index([userId])
+}
+
+
+// ─── Scribe leaderboard ──────────────────────────────────────────────────
+// A semester is opened by the admin "Start new semester" action (see
+// app/api/admin/university/start-semester/route.ts). The semester with
+// endsAt = null is the active one; starting the next one closes it.
+// academicYear is stored as "26/27", number is 1 or 2 — together they give
+// the badge label "26/27 · S1".
+model Semester {
+  id           String     @id @default(uuid())
+  universityId String
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  academicYear String // "26/27"
+  number       Int // 1 or 2
+  startsAt     DateTime   @default(now())
+  endsAt       DateTime?
+  createdAt    DateTime   @default(now())
+
+  @@unique([universityId, academicYear, number])
+  @@index([universityId, startsAt])
+}
+
+enum LeaderboardPeriod {
+  ALL_TIME
+  SEMESTER
+  YEAR
+}
+
+// One row per scribe per period, rewritten by the nightly job. periodKey is
+// "all" for ALL_TIME, "26/27-S1" for SEMESTER, "26/27" for YEAR. Points are
+// stored per metric so the page can show a breakdown and break ties in the
+// agreed order (rating, purchases, followers, reads, growth).
+// reachedScoreAt is the hidden last tie-break: when the scribe first
+// reached their current finalScore.
+model LeaderboardSnapshot {
+  id             String            @id @default(uuid())
+  scribeId       String
+  scribe         User              @relation(fields: [scribeId], references: [id], onDelete: Cascade)
+  universityId   String
+  departmentId   String?
+  periodType     LeaderboardPeriod
+  periodKey      String
+  ratingPoints   Float             @default(0)
+  purchasePoints Float             @default(0)
+  readPoints     Float             @default(0)
+  followerPoints Float             @default(0)
+  growthPoints   Float             @default(0)
+  finalScore     Float             @default(0)
+  reachedScoreAt DateTime          @default(now())
+  rankDepartment Int?
+  rankSchool     Int?
+  rankGlobal     Int?
+  computedAt     DateTime          @default(now())
+  // The scribe's numbers from the run before this one ({ finalScore, the five
+  // point values, the three ranks, computedAt }) — lets the page say "up 3
+  // places, +2 sales". Only replaced once it is at least 12 hours old, so a
+  // manual refresh doesn't wipe the comparison.
+  previous       Json?
+
+  @@unique([scribeId, periodType, periodKey])
+  @@index([periodType, periodKey, universityId, finalScore], map: "LeaderboardSnapshot_periodType_periodKey_universityId_fina_idx")
+  @@index([periodType, periodKey, finalScore])
+}
+
+// A badge a scribe has earned. badgeKey names the badge and its place, e.g.
+// "DEPARTMENT_2", "SCHOOL_1", "GLOBAL_3", "CONSECUTIVE_DEPARTMENT",
+// "CATEGORY_RATING_1". The label printed on it ("26/27 · S1" or "2026") is
+// worked out in code from periodType + periodKey. pinnedAt is set when the
+// scribe pins it to their public profile (at most 5 at a time — enforced in
+// the pin API, not the database).
+model ScribeBadge {
+  id         String            @id @default(uuid())
+  scribeId   String
+  scribe     User              @relation(fields: [scribeId], references: [id], onDelete: Cascade)
+  badgeKey   String
+  periodType LeaderboardPeriod
+  periodKey  String
+  awardedAt  DateTime          @default(now())
+  pinnedAt   DateTime?
+
+  @@unique([scribeId, badgeKey, periodType, periodKey])
+  @@index([scribeId, pinnedAt])
+}
+
+// Single row — makes sure only one server instance builds the leaderboard
+// snapshots at a time, and remembers when they last finished.
+model LeaderboardLock {
+  id          String    @id
+  lockedUntil DateTime
+  lastRunAt   DateTime?
 }

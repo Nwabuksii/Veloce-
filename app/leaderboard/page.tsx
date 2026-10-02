@@ -1,0 +1,283 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { getStoredUser } from "@/lib/client-session";
+import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
+import { timeAgo } from "@/lib/time-ago";
+import { Icon } from "@/app/components/icons";
+import Avatar from "@/app/components/Avatar";
+import { SkeletonList } from "@/app/components/Skeleton";
+import "./leaderboard.css";
+
+type Scope = "global" | "school" | "department";
+type Period = "all" | "semester";
+
+interface Entry {
+  rank: number;
+  scribeId: string;
+  name: string;
+  avatarUrl: string | null;
+  university: string;
+  department: string | null;
+  score: number;
+  isMe: boolean;
+  canOpenProfile: boolean;
+}
+
+interface Me {
+  finalScore: number;
+  ranks: { department: number | null; school: number | null; global: number | null };
+  points: { rating: number; purchases: number; reads: number; followers: number; growth: number };
+  rankChange: number | null;
+  scoreChange: number | null;
+  moved: { metric: string; delta: number }[];
+}
+
+interface Pagination {
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  totalMatching: number;
+}
+
+interface LeaderboardData {
+  scope: Scope;
+  period: Period;
+  showGlobal: boolean;
+  hasDepartment: boolean;
+  semester: { label: string } | null;
+  viewerIsScribe: boolean;
+  updatedAt: string | null;
+  entries: Entry[];
+  me: Me | null;
+  pagination: Pagination;
+}
+
+const SCOPE_LABEL: Record<Scope, string> = { global: "Global", school: "My school", department: "My department" };
+const POINT_ROWS: { key: keyof Me["points"]; label: string }[] = [
+  { key: "rating", label: "Rating" },
+  { key: "purchases", label: "Purchases" },
+  { key: "reads", label: "Notes read" },
+  { key: "followers", label: "Followers" },
+  { key: "growth", label: "Growth" },
+];
+
+const fmt = (n: number) => n.toFixed(2);
+const signed = (n: number) => `${n > 0 ? "+" : ""}${fmt(n)}`;
+
+export default function LeaderboardPage() {
+  const router = useRouter();
+  const [scope, setScope] = useState<Scope>("school");
+  const [period, setPeriod] = useState<Period>("all");
+  const [page, setPage] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
+  const [data, setData] = useState<LeaderboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!getStoredUser()) router.push("/login");
+  }, [router]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError("");
+    apiFetch<LeaderboardData>(`/api/leaderboard?scope=${scope}&period=${period}&page=${page}`)
+      .then((d) => {
+        if (cancelled) return;
+        setData(d);
+        // The server may fall back to another scope / clamp the page.
+        if (d.scope !== scope) setScope(d.scope);
+        if (d.pagination.page !== page) setPage(d.pagination.page);
+        setPageInput(String(d.pagination.page));
+      })
+      .catch((err) => !cancelled && setError(friendlyErrorMessage(err)))
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [scope, period, page]);
+
+  function pick(next: { scope?: Scope; period?: Period }) {
+    if (next.scope) setScope(next.scope);
+    if (next.period) setPeriod(next.period);
+    setPage(1);
+  }
+
+  function goToPage(n: number) {
+    const total = data?.pagination.totalPages ?? 1;
+    const target = Math.min(Math.max(1, Math.floor(n) || 1), total);
+    setPageInput(String(target));
+    if (target !== page) setPage(target);
+  }
+
+  const pagination = data?.pagination;
+  const pager = (position: "top" | "bottom") =>
+    pagination && (
+      <div className="panel-row" style={{ alignItems: "center", gap: 12, flexWrap: "wrap", margin: position === "top" ? "0 0 16px" : "16px 0 0" }}>
+        <span className="panel-desc" style={{ margin: 0 }}>
+          Page {pagination.page} of {pagination.totalPages} • {pagination.totalMatching} scribe{pagination.totalMatching === 1 ? "" : "s"}
+        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <button className="btn btn-ghost" disabled={loading || page <= 1} onClick={() => goToPage(page - 1)}>
+            Previous
+          </button>
+          <input
+            className="input"
+            type="number"
+            min={1}
+            max={pagination.totalPages}
+            value={pageInput}
+            aria-label={`Go to page (${position})`}
+            style={{ width: 80 }}
+            onChange={(e) => setPageInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") goToPage(parseInt(pageInput, 10));
+            }}
+          />
+          <button className="btn btn-ghost" disabled={loading} onClick={() => goToPage(parseInt(pageInput, 10))}>
+            Go
+          </button>
+          <button className="btn btn-ghost" disabled={loading || page >= pagination.totalPages} onClick={() => goToPage(page + 1)}>
+            Next
+          </button>
+        </div>
+      </div>
+    );
+
+  const myRank = data?.me ? data.me.ranks[data.scope] : null;
+  const showPager = !!pagination && pagination.totalMatching > 0;
+
+  return (
+    <div className="page-wrap student-page">
+      <div className="app-container student-app-container">
+        <section className="page-view is-active">
+          <div className="page-header">
+            <div className="page-header-left">
+              <span className="eyebrow">Scribes</span>
+              <h1>
+                Scribe <span className="serif">leaderboard</span>
+              </h1>
+              <p>Ranked on sustained quality and sales across many notes, not one lucky hit.</p>
+            </div>
+          </div>
+
+          {data && (
+            <div className="lb-controls">
+              <div className="tabs" role="tablist" aria-label="Section">
+                {(["global", "school", "department"] as Scope[])
+                  .filter((s) => (s === "global" ? data.showGlobal : s === "department" ? data.hasDepartment : true))
+                  .map((s) => (
+                    <button key={s} role="tab" aria-selected={scope === s} className={`tab${scope === s ? " is-active" : ""}`} onClick={() => pick({ scope: s })}>
+                      {SCOPE_LABEL[s]}
+                    </button>
+                  ))}
+              </div>
+              <div className="tabs" role="tablist" aria-label="Time frame">
+                <button role="tab" aria-selected={period === "all"} className={`tab${period === "all" ? " is-active" : ""}`} onClick={() => pick({ period: "all" })}>
+                  All-time
+                </button>
+                <button role="tab" aria-selected={period === "semester"} className={`tab${period === "semester" ? " is-active" : ""}`} onClick={() => pick({ period: "semester" })}>
+                  This semester{data.semester ? ` · ${data.semester.label}` : ""}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {error && <div className="auth-error mb-24">{error}</div>}
+
+          {data?.me && (
+            <div className="panel lb-me mb-24">
+              <div className="lb-me-top">
+                <div>
+                  <div className="lb-me-label">Your rank · {SCOPE_LABEL[data.scope].toLowerCase()}</div>
+                  <div className="lb-me-rank">{myRank != null ? `#${myRank}` : "—"}</div>
+                </div>
+                <div className="lb-me-score">
+                  <div className="lb-me-label">Score</div>
+                  <div className="lb-me-rank">{fmt(data.me.finalScore)}</div>
+                </div>
+              </div>
+              {data.me.rankChange != null && (
+                <p className="panel-desc lb-change" style={{ margin: "12px 0 0" }}>
+                  {data.me.rankChange > 0 ? `Up ${data.me.rankChange} place${data.me.rankChange === 1 ? "" : "s"}` : data.me.rankChange < 0 ? `Down ${-data.me.rankChange} place${data.me.rankChange === -1 ? "" : "s"}` : "Same place as last update"}
+                  {data.me.moved.length > 0 && <> — {data.me.moved.map((m) => `${m.metric} ${signed(m.delta)}`).join(", ")}</>}
+                </p>
+              )}
+              <div className="lb-breakdown">
+                {POINT_ROWS.map((r) => (
+                  <div key={r.key} className="lb-breakdown-item">
+                    <span>{r.label}</span>
+                    <strong>{fmt(data.me!.points[r.key])}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {data && !data.me && data.viewerIsScribe && !loading && (
+            <div className="notice mb-24">You are not ranked here yet. Scribes appear once they have at least one live note.</div>
+          )}
+
+          {loading && !data ? (
+            <SkeletonList rows={6} />
+          ) : (
+            data && (
+              <div className="panel" style={{ opacity: loading ? 0.6 : 1 }}>
+                {data.updatedAt && <p className="panel-desc">Updated {timeAgo(data.updatedAt)}. Rankings refresh daily.</p>}
+                {showPager && pager("top")}
+
+                {data.entries.length === 0 ? (
+                  <div className="empty-state">
+                    <div className="empty-icon">{Icon.trophy()}</div>
+                    <div className="empty-title">{data.period === "semester" && !data.semester ? "No semester yet" : "No ranked scribes yet"}</div>
+                    <div className="empty-desc">
+                      {data.period === "semester" && !data.semester
+                        ? "Your school has not started a semester, so there is no semester ranking."
+                        : "Scribes show up here once they have a live note."}
+                    </div>
+                  </div>
+                ) : (
+                  <ol className="lb-list">
+                    {data.entries.map((e) => {
+                      const inner = (
+                        <>
+                          <span className={`lb-rank${e.rank <= 3 ? ` lb-rank-${e.rank}` : ""}`}>{e.rank}</span>
+                          <Avatar name={e.name} imageUrl={e.avatarUrl} size="sm" enlargeOnTap={false} />
+                          <span className="lb-who">
+                            <span className="lb-name">
+                              {e.name}
+                              {e.isMe && <span className="chip lb-you">You</span>}
+                            </span>
+                            <span className="lb-meta">{[data.scope === "global" ? e.university : null, e.department].filter(Boolean).join(" · ")}</span>
+                          </span>
+                          <span className="lb-score">{fmt(e.score)}</span>
+                        </>
+                      );
+                      return (
+                        <li key={e.scribeId} className={`lb-row${e.isMe ? " is-me" : ""}`}>
+                          {e.canOpenProfile ? (
+                            <Link href={`/scribe/${e.scribeId}`} className="lb-row-link">
+                              {inner}
+                            </Link>
+                          ) : (
+                            <div className="lb-row-link">{inner}</div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ol>
+                )}
+
+                {showPager && pager("bottom")}
+              </div>
+            )
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}

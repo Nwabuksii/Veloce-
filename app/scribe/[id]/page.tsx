@@ -5,10 +5,11 @@ import { useRouter, useParams } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
 import PageHeader from "@/app/components/PageHeader";
 import Avatar from "@/app/components/Avatar";
-import { SkeletonList } from "@/app/components/Skeleton";
 import { friendlyErrorMessage, apiFetch } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
 import { Icon } from "@/app/components/icons";
+import ScribeBadges from "@/app/components/ScribeBadges";
+import { SkeletonList } from "@/app/components/Skeleton";
 
 interface ProfileBlock {
   noteId: string;
@@ -239,6 +240,8 @@ export default function ScribeProfilePage() {
               <span className="delta flat">{Icon.book()} live packs</span>
             </div>
           </div>
+
+          <ScribeBadges scribeId={scribeId} />
 
           <h2 className="panel-title section-title">{Icon.book()} Live notes</h2>
 

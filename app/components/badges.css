@@ -1,0 +1,20 @@
+/* Badge art + trophy case. New file; only uses the app's theme variables. */
+.badge { margin: 0; display: inline-flex; flex-direction: column; align-items: center; gap: 6px; }
+.badge svg { display: block; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.35)); }
+.badge figcaption { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.badge-place { padding: 3px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; color: #2a1d02; }
+.badge-place--gold { background: linear-gradient(180deg, #ffe27a, #e4a928); }
+.badge-place--silver { background: linear-gradient(180deg, #f3f7ff, #a9b9de); color: #14264d; }
+.badge-place--bronze { background: linear-gradient(180deg, #ffb48a, #d9743a); color: #3a1206; }
+.badge-place--purple { background: linear-gradient(180deg, #d4b4ff, #8a56e0); color: #200c44; }
+.badge-date { padding: 2px 11px; border-radius: 999px; font-size: 10.5px; font-weight: 600; white-space: nowrap; color: #dfe7f7; background: #0c1730; border: 1px solid #2b3d66; }
+
+.badge-row { display: flex; flex-wrap: wrap; gap: 18px 22px; align-items: flex-start; }
+.badge-card { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg-page); min-width: 128px; }
+.badge-card.is-pinned { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-glow); }
+.badge-card-name { font-size: 12px; text-align: center; color: var(--text-secondary); line-height: 1.35; }
+.badge-sub { font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-secondary); margin: 18px 0 12px; }
+.badge-sub:first-of-type { margin-top: 0; }
+@media (max-width: 560px) {
+  .badge-row { gap: 12px; justify-content: center; }
+}

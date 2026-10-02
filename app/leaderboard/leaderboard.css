@@ -1,0 +1,28 @@
+/* Leaderboard page — new file, only uses the app's existing theme variables. */
+.lb-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.lb-me-top { display: flex; justify-content: space-between; gap: 16px; align-items: flex-end; }
+.lb-me-label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; }
+.lb-me-rank { font-family: var(--font-serif), Georgia, serif; font-size: 34px; line-height: 1.1; color: var(--text-primary); }
+.lb-me-score { text-align: right; }
+.lb-breakdown { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-top: 16px; }
+.lb-breakdown-item { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-page); font-size: 12px; color: var(--text-secondary); }
+.lb-breakdown-item strong { font-size: 15px; color: var(--text-primary); }
+.lb-list { list-style: none; margin: 0; padding: 0; }
+.lb-row { border-top: 1px solid var(--border-light); }
+.lb-row:first-child { border-top: none; }
+.lb-row.is-me { background: var(--accent-glow); border-radius: 10px; }
+.lb-row-link { display: flex; align-items: center; gap: 12px; padding: 12px 8px; color: inherit; text-decoration: none; min-width: 0; }
+a.lb-row-link:hover { background: var(--stone-light); border-radius: 10px; }
+.lb-rank { flex: 0 0 34px; text-align: center; font-weight: 700; font-size: 14px; color: var(--text-secondary); }
+.lb-rank-1 { color: #b8924a; font-size: 17px; }
+.lb-rank-2 { color: #8c8c8c; font-size: 16px; }
+.lb-rank-3 { color: #a8693a; font-size: 16px; }
+.lb-who { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.lb-name { font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-meta { font-size: 12px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-you { margin-left: 8px; padding: 2px 8px; font-size: 10.5px; }
+.lb-score { font-family: var(--font-mono), ui-monospace, monospace; font-weight: 700; font-size: 14px; color: var(--text-primary); }
+@media (max-width: 560px) {
+  .lb-me-rank { font-size: 28px; }
+  .lb-row-link { gap: 8px; padding: 10px 4px; }
+}

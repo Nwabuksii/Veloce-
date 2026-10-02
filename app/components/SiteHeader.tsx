@@ -165,6 +165,9 @@ export default function SiteHeader() {
                     ₦{credit.toLocaleString()}
                   </div>
                 )}
+                <Link href="/leaderboard" className="icon-btn" aria-label="Leaderboard" title="Leaderboard">
+                  {Icon.trophy()}
+                </Link>
                 <Link href="/messages" className="icon-btn" aria-label={unread > 0 ? `Messages (${unread} unread)` : "Messages"} title="Messages">
                   {Icon.message()}
                   {unread > 0 && <span className="badge">{unread > 9 ? "9+" : unread}</span>}
