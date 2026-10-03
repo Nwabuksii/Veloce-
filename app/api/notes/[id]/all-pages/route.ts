@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
-import { checkNoteAccess } from "@/lib/note-access";
+import { checkNoteAccess, markNoteOpened } from "@/lib/note-access";
 import { readNoteFile } from "@/lib/storage";
 import { getPdfPageCount, renderPdfPagesToImages, stampWatermark, PdfLimitError } from "@/lib/pdf-render";
 import { rateLimitResponse } from "@/lib/rate-limit";
@@ -52,6 +52,8 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
   if (note.status !== "LIVE" && !isOwner && !isModerator) {
     return NextResponse.json({ error: "This note isn't available right now" }, { status: 409 });
   }
+
+  await markNoteOpened(user.sub, note.id);
 
   const viewer = await prisma.user.findUnique({
     where: { id: user.sub },

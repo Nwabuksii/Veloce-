@@ -34,6 +34,11 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
         // those out of browse/search entirely until there's really
         // something to sell.
         notes: { some: { status: "LIVE" } },
+        // Blocks flagged by report volume (POTENTIAL_MALICIOUS or
+        // ADMIN_REVIEW, see lib/block-moderation.ts) stay out of browse and
+        // search. Existing buyers still see them under Purchases, and the
+        // block page itself still opens by direct link, with a warning.
+        moderationStatus: "NORMAL",
         ...(level ? { level: { equals: level } } : {}),
         ...(q
           ? {

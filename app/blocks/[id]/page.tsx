@@ -77,6 +77,9 @@ function BlockDetailInner() {
   const [pendingCouponNoteId, setPendingCouponNoteId] = useState<string | null>(null);
   const [couponConfirming, setCouponConfirming] = useState(false);
   const [selfBuyNoteId, setSelfBuyNoteId] = useState<string | null>(null);
+  const [moderationStatus, setModerationStatus] = useState<"NORMAL" | "POTENTIAL_MALICIOUS" | "ADMIN_REVIEW">("NORMAL");
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [clearingFlag, setClearingFlag] = useState(false);
 
   useEffect(() => {
     const user = getStoredUser();
@@ -85,6 +88,7 @@ function BlockDetailInner() {
       router.push(`/login?returnTo=${encodeURIComponent(here)}`);
       return;
     }
+    setIsAdmin(user.role === "ADMIN");
     load();
     fetch("/api/account")
       .then((res) => res.json())
@@ -108,6 +112,7 @@ function BlockDetailInner() {
         setLiveNoteCount(data.liveNoteCount ?? 0);
         setBlockAvgRating(data.avgRating ?? null);
         setBlockRatingCount(data.ratingCount ?? 0);
+        setModerationStatus(data.moderationStatus ?? "NORMAL");
         // A shared link points at one specific scribe's version — when
         // that's the case, put it first so the person who followed the
         // link lands directly on it instead of having to find it among
@@ -121,6 +126,19 @@ function BlockDetailInner() {
       })
       .catch((err) => setError(friendlyErrorMessage(err)))
       .finally(() => setLoading(false));
+  }
+
+  async function handleClearFlag() {
+    setClearingFlag(true);
+    try {
+      await apiFetch(`/api/admin/blocks/${blockId}/clear-flag`, { method: "POST" });
+      setModerationStatus("NORMAL");
+      toast.success("Flag cleared. This block is back in the catalog.");
+    } catch (err) {
+      toast.error(friendlyErrorMessage(err));
+    } finally {
+      setClearingFlag(false);
+    }
   }
 
   async function handleCopyLink() {
@@ -280,6 +298,40 @@ function BlockDetailInner() {
                 </button>
               </div>
             </section>
+
+            {moderationStatus !== "NORMAL" && (
+              <section
+                role="alert"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  flexWrap: "wrap",
+                  padding: "12px 16px",
+                  borderRadius: 12,
+                  background: moderationStatus === "ADMIN_REVIEW" ? "var(--bg-danger)" : "var(--bg-warning)",
+                  color: moderationStatus === "ADMIN_REVIEW" ? "var(--text-danger)" : "var(--text-warning)",
+                }}
+              >
+                <div>
+                  <strong>
+                    <i className="fas fa-triangle-exclamation"></i>{" "}
+                    {moderationStatus === "ADMIN_REVIEW" ? "Under admin review" : "Potentially malicious"}
+                  </strong>
+                  <div style={{ fontSize: 14, marginTop: 2 }}>
+                    {moderationStatus === "ADMIN_REVIEW"
+                      ? "Most buyers have reported this block and an admin is looking into it."
+                      : "Several buyers have reported this block. Look carefully before you unlock anything."}
+                  </div>
+                </div>
+                {isAdmin && (
+                  <button className="btn" onClick={handleClearFlag} disabled={clearingFlag}>
+                    {clearingFlag ? "Clearing..." : "Clear flag"}
+                  </button>
+                )}
+              </section>
+            )}
 
             {reporting && (
               <form onSubmit={handleReportSubmit} className="block-report-panel">

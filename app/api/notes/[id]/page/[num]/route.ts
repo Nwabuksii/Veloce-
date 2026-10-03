@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
-import { checkNoteAccess } from "@/lib/note-access";
+import { checkNoteAccess, markNoteOpened } from "@/lib/note-access";
 import { readNoteFile, saveNotePageImage } from "@/lib/storage";
 import { getPdfPageCount, renderPdfPageToImage, stampWatermark } from "@/lib/pdf-render";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -60,17 +60,7 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
     return NextResponse.json({ error: "Page not found" }, { status: 404 });
   }
 
-  // Marks "the buyer actually started reading this" the first time only —
-  // updateMany's WHERE (buyerId + firstOpenedAt: null) makes this a no-op
-  // on every later page view, and it only ever matches a real purchase
-  // row, so an admin or the scribe just previewing their own note (who
-  // reach this point via checkNoteAccess's other two access paths, with
-  // no Purchase row at all) never sets it. Powers the "you haven't opened
-  // this yet" nudge on the purchases page.
-  await prisma.purchase.updateMany({
-    where: { buyerId: user.sub, noteId: note.id, refundedAt: null, firstOpenedAt: null },
-    data: { firstOpenedAt: new Date() },
-  });
+  await markNoteOpened(user.sub, note.id);
 
   const viewer = await prisma.user.findUnique({
     where: { id: user.sub },

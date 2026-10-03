@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { rateLimitResponse } from "@/lib/rate-limit";
+import { evaluateBlockModeration } from "@/lib/block-moderation";
 
 interface RouteContext {
   params: { id: string };
@@ -71,6 +72,10 @@ export const POST = requireRole<RouteContext>("STUDENT", async (req: NextRequest
     }
     throw err;
   }
+
+  // Reports on a single version count toward the block's moderation status
+  // too, the same as reports on the block itself.
+  await evaluateBlockModeration(note.blockId);
 
   return NextResponse.json({ report });
 });

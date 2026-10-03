@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import { readNoteFile, saveNotePageImage } from "./storage";
 import { getPdfPageCount, renderPdfPagesToImages } from "./pdf-render";
 import { notifyFollowersOfNewNote } from "./notify-followers";
+import { notifyRequestersNoteLive } from "./notify-requesters";
 import { refreshLeaderboardSoon } from "./leaderboard-snapshot";
 
 export function isRenderComplete(pageCount: number, renderedCount: number): boolean {
@@ -49,6 +50,7 @@ export async function queueNoteRender(noteId: string): Promise<void> {
 
     if (complete && updated.status === "LIVE") {
       await notifyFollowersOfNewNote(note.scribeId, note.block.title).catch(() => undefined);
+      await notifyRequestersNoteLive(note.id).catch(() => undefined);
       // A scribe's first live note is what puts them on the leaderboard. Awaited
       // on purpose (a fire-and-forget job is killed by Vercel once the response
       // is sent); throttled to once every few minutes and never throws.

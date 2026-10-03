@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
-import { checkNoteAccess } from "@/lib/note-access";
+import { checkNoteAccess, markNoteOpened } from "@/lib/note-access";
 import { readNoteFile } from "@/lib/storage";
 import { getPdfPageCount } from "@/lib/pdf-render";
 
@@ -25,6 +25,8 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
   if (!allowed) {
     return NextResponse.json({ error: "You don't have access to this note" }, { status: 403 });
   }
+
+  await markNoteOpened(user.sub, note.id);
 
   let pageCount = note.pageCount;
   if (!pageCount) {

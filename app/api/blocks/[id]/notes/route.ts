@@ -140,6 +140,7 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
 
   const response = NextResponse.json({
     blockTitle: block.title,
+    moderationStatus: block.moderationStatus ?? "NORMAL",
     price: blockPrice,
     courseName: block.course.name,
     courseCode: block.course.code,
