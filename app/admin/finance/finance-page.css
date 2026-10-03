@@ -1,0 +1,14 @@
+/* Finance deep-dive pages (Revenue analysis, Advanced analytics).
+   A wide chart scrolls sideways inside its own card, but it must never make
+   the page itself wider — that is what dragged the sticky top bar sideways
+   and left a gap beside it. */
+.finance-page { min-width: 0; max-width: 100%; overflow-x: clip; }
+
+/* A bare "1fr" grid column can't shrink below its content's width, so a card
+   holding a wide chart stretched the whole page. minmax(0, …) lets the column
+   shrink and the chart scroll inside the card instead. */
+.finance-page .two-col { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); }
+.finance-page .two-col > * { min-width: 0; }
+@media (max-width: 1100px) {
+  .finance-page .two-col { grid-template-columns: minmax(0, 1fr); }
+}

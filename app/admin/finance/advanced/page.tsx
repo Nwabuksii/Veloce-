@@ -1,6 +1,7 @@
 "use client";
 
 import "./split-chart.css";
+import "../finance-page.css";
 import { ReactElement, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
@@ -160,7 +161,7 @@ export default function AdminFinanceAdvancedPage() {
   }, [router]);
 
   return (
-    <div className="page-wrap">
+    <div className="page-wrap finance-page">
       <AdminPageHeader
         section="Deep dive"
         title="Advanced"

@@ -11,6 +11,7 @@ import { StatCard } from "@/app/components/FinanceOverview";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import type { FinanceAnalysis, SourceRow } from "@/lib/finance-analysis";
 import "./analysis.css";
+import "../finance-page.css";
 
 const naira = (n: number) => `₦${Math.round(n).toLocaleString()}`;
 
@@ -71,7 +72,7 @@ export default function FinanceAnalysisPage() {
   const fan = (target: number): (number | null)[] => [...history.map((_, i) => (i === lastIdx ? history[i] : null)), target];
 
   return (
-    <div className="page-wrap">
+    <div className="page-wrap finance-page">
       <AdminPageHeader
         section="Deep dive"
         title="Revenue"
