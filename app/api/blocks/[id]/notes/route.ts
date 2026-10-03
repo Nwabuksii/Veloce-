@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
 import { computeTrustLevel } from "@/lib/trust-level";
-import { getEffectivePriceForNote } from "@/lib/pricing";
+import { getBlockPriceForBuyer } from "@/lib/pricing";
 
 interface RouteContext {
   params: { id: string };
@@ -19,7 +19,7 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
     include: {
       course: { include: { department: { include: { university: true } } } },
       topics: { orderBy: { order: "asc" } },
-      purchases: { select: { id: true } },
+      purchases: { where: { refundedAt: null }, select: { id: true } },
       notes: {
         where: { status: "LIVE" },
         include: {
@@ -41,7 +41,7 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
   const [salesByScribe, ratingsByScribe, rejectedByScribe, myPurchases] = await Promise.all([
     prisma.purchase.findMany({
       where: { note: { scribeId: { in: scribeIds } } },
-      select: { noteId: true, note: { select: { scribeId: true } } },
+      select: { noteId: true, refundedAt: true, note: { select: { scribeId: true } } },
     }),
     prisma.review.findMany({
       where: { note: { scribeId: { in: scribeIds } } },
@@ -58,16 +58,14 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
   ]);
 
   const purchaseByNoteId = new Map(myPurchases.map((p) => [p.noteId, p]));
-  const fulfilledRequestIds = block.notes
-    .map((n) => n.fulfillsRequestId)
-    .filter((id): id is string => Boolean(id));
-  const myRequestVotes = fulfilledRequestIds.length
-    ? await prisma.requestVote.findMany({
-        where: { requestId: { in: fulfilledRequestIds }, studentId: user.sub },
-        select: { requestId: true },
-      })
-    : [];
-  const myVotedRequestIds = new Set(myRequestVotes.map((v) => v.requestId));
+  const buyerRequestedBlock = Boolean(
+    await prisma.requestVote.findFirst({
+      where: { studentId: user.sub, request: { blockId } },
+      select: { id: true },
+    })
+  );
+  // One price for every version in the block (₦900 for voters of its request).
+  const blockPrice = getBlockPriceForBuyer({ basePrice: block.price, buyerRequestedBlock });
 
   const salesCountByScribe = new Map<string, number>();
   // Per VERSION, not per scribe — a scribe's second upload of the same
@@ -78,7 +76,7 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
   const salesCountByNote = new Map<string, number>();
   for (const p of salesByScribe) {
     salesCountByScribe.set(p.note.scribeId, (salesCountByScribe.get(p.note.scribeId) ?? 0) + 1);
-    salesCountByNote.set(p.noteId, (salesCountByNote.get(p.noteId) ?? 0) + 1);
+    if (!p.refundedAt) salesCountByNote.set(p.noteId, (salesCountByNote.get(p.noteId) ?? 0) + 1);
   }
   const ratingsSumByScribe = new Map<string, { sum: number; count: number }>();
   for (const r of ratingsByScribe) {
@@ -135,23 +133,14 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
       owned: Boolean(myPurchase),
       purchaseId: myPurchase?.id ?? null,
       myReview: myPurchase?.review ? { rating: myPurchase.review.rating, comment: myPurchase.review.comment } : null,
-      // The actual charge depends on whether the viewing student voted for
-      // that request. A non-requester still pays the block's regular price,
-      // and the payment route enforces the same logic in one place.
-      price: getEffectivePriceForNote({
-        basePrice: block.price,
-        fulfillsRequestId: n.fulfillsRequestId,
-        buyerVotedForRequest: myVotedRequestIds.has(n.fulfillsRequestId ?? ""),
-      }),
-      // Only a buyer who actually requested this block before publication
-      // should see the fixed-request price label.
-      isRequestFulfillment: Boolean(n.fulfillsRequestId && myVotedRequestIds.has(n.fulfillsRequestId)),
+      price: blockPrice,
+      isRequestFulfillment: buyerRequestedBlock,
     };
   });
 
   const response = NextResponse.json({
     blockTitle: block.title,
-    price: block.price,
+    price: blockPrice,
     courseName: block.course.name,
     courseCode: block.course.code,
     departmentName: block.course.department.name,

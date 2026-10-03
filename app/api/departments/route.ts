@@ -13,4 +13,4 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
   });
 
   return NextResponse.json({ departments });
-});
+}, { allowIncompleteProfile: true });

@@ -82,7 +82,11 @@ export const GET = requireRole<RouteContext>("STUDENT", async (req: NextRequest,
 
   // Look for an already-rendered base image for this exact page first —
   // this is the expensive step we only ever want to do once per page.
-  if (note.status !== "LIVE") {
+  // Same exemption as all-pages: the owning scribe and a same-university
+  // admin may read a non-LIVE note (checkNoteAccess already vetted them).
+  const isOwner = note.scribeId === user.sub;
+  const isModerator = user.role === "ADMIN" && note.scribe.universityId === user.universityId;
+  if (note.status !== "LIVE" && !isOwner && !isModerator) {
     return NextResponse.json({ error: "This note is still rendering and isn't available yet" }, { status: 409 });
   }
 

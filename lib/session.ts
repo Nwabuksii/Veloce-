@@ -45,7 +45,9 @@ export function getSessionUser(req: NextRequest): TokenPayload | null {
  */
 export function requireRole<Ctx = unknown>(
   minRole: UserRole,
-  handler: (req: NextRequest, user: TokenPayload, ctx: Ctx) => Promise<NextResponse>
+  handler: (req: NextRequest, user: TokenPayload, ctx: Ctx) => Promise<NextResponse>,
+  // Only the routes the academic-profile gate itself needs pass this.
+  opts: { allowIncompleteProfile?: boolean } = {}
 ) {
   return async (req: NextRequest, ctx: Ctx): Promise<NextResponse> => {
     const claims = getSessionUser(req);
@@ -59,12 +61,12 @@ export function requireRole<Ctx = unknown>(
     // proves the account still exists, and returns the CURRENT role and
     // session version — the token's own copies of those are only a snapshot
     // from login time and are never trusted for authorization.
-    let dbUser: { role: UserRole; universityId: string; sessionVersion: number };
+    let dbUser: { role: UserRole; universityId: string; sessionVersion: number; departmentId: string | null; level: string | null };
     try {
       dbUser = await prisma.user.update({
         where: { id: claims.sub },
         data: { lastSeenAt: new Date() },
-        select: { role: true, universityId: true, sessionVersion: true },
+        select: { role: true, universityId: true, sessionVersion: true, departmentId: true, level: true },
       });
     } catch (err: any) {
       if (err?.code === "P2025") {
@@ -101,6 +103,19 @@ export function requireRole<Ctx = unknown>(
 
     if (!hasRole(user.role, minRole)) {
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
+    }
+
+    // Students and scribes must finish their academic profile first (admins
+    // are exempt, same as the on-screen gate in SiteChrome).
+    if (
+      !opts.allowIncompleteProfile &&
+      (dbUser.role === "STUDENT" || dbUser.role === "SCRIBE") &&
+      !(dbUser.departmentId && dbUser.level)
+    ) {
+      return NextResponse.json(
+        { error: "Complete your department and level first.", profileIncomplete: true },
+        { status: 403 }
+      );
     }
 
     // Everything behind a login is personal, so by default nothing is

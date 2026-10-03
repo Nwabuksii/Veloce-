@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/session";
 import { initializeTransaction } from "@/lib/paystack";
 import { rateLimitResponse } from "@/lib/rate-limit";
 import { sendRefundWindowEmail } from "@/lib/refund-email";
-import { computeScribeCut, getEffectivePriceForNote, planCreditRedemption } from "@/lib/pricing";
+import { computeScribeCut, getBlockPriceForBuyer, planCreditRedemption } from "@/lib/pricing";
 
 export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
   // Each call to Paystack creates a transaction on their side, so an
@@ -72,29 +72,16 @@ export const POST = requireRole("STUDENT", async (req: NextRequest, user) => {
 
     const reference = `veloce_${randomUUID()}`;
 
-    // Fixed pricing is a thank-you for the student(s) who actually
-    // requested this note — not a discount for every buyer of a
-    // request-fulfilling block. See lib/pricing.ts and RequestVote.
-    let discountApplied = false;
-
-    const noteWithRequest = await prisma.note.findUnique({
-      where: { id: note.id },
-      select: { fulfillsRequestId: true },
-    });
-
-    const buyerVotedForRequest = Boolean(
-      noteWithRequest?.fulfillsRequestId &&
-        (await prisma.requestVote.findUnique({
-          where: { requestId_studentId: { requestId: noteWithRequest.fulfillsRequestId, studentId: user.sub } },
-        }))
+    // ₦900 is a thank-you for students who voted for the request this block
+    // fulfils, and applies to every version in it. See lib/pricing.ts.
+    const buyerRequestedBlock = Boolean(
+      await prisma.requestVote.findFirst({
+        where: { studentId: user.sub, request: { blockId: block.id } },
+        select: { id: true },
+      })
     );
-
-    const amountToCharge = getEffectivePriceForNote({
-      basePrice: block.price,
-      fulfillsRequestId: noteWithRequest?.fulfillsRequestId ?? null,
-      buyerVotedForRequest,
-    });
-    discountApplied = buyerVotedForRequest && Boolean(noteWithRequest?.fulfillsRequestId);
+    const amountToCharge = getBlockPriceForBuyer({ basePrice: block.price, buyerRequestedBlock });
+    const discountApplied = buyerRequestedBlock;
 
     // Refund credit is real cash Veloce already holds (see lib/pricing.ts)
     // — unlimited, never expires, leftovers carry forward — applied as a

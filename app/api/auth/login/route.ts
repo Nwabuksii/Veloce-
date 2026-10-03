@@ -9,8 +9,9 @@ import { signMfaChallenge } from "@/lib/mfa";
 import { logSecurityEvent, requestIp } from "@/lib/security-log";
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().toLowerCase().email(),
   password: z.string(),
+  keepSignedIn: z.boolean().optional(),
 });
 
 // A real bcrypt hash of a throwaway string, made once per server instance.
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { email, password } = parsed.data;
+  const { email, password, keepSignedIn = true } = parsed.data;
 
   const user = await prisma.user.findUnique({ where: { email } });
 
@@ -111,7 +112,7 @@ export async function POST(req: NextRequest) {
   // Nothing is reset or recorded yet — failed attempts keep counting until
   // the second step succeeds.
   if (user.mfaEnabledAt) {
-    return NextResponse.json({ mfaRequired: true, mfaToken: signMfaChallenge(user.id) });
+    return NextResponse.json({ mfaRequired: true, mfaToken: signMfaChallenge(user.id) }); // client re-sends keepSignedIn with the code
   }
 
   // Correct password — clear any accumulated failed attempts and record the
@@ -130,7 +131,7 @@ export async function POST(req: NextRequest) {
     role: user.role,
     universityId: user.universityId,
     sv: user.sessionVersion,
-  });
+  }, keepSignedIn);
 
   const res = NextResponse.json({
     user: {
@@ -145,6 +146,6 @@ export async function POST(req: NextRequest) {
       level: user.level ?? null,
     },
   });
-  res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions());
+  res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(undefined, keepSignedIn));
   return res;
 }

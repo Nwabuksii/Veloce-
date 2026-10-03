@@ -49,6 +49,11 @@ export default function ScribeApplyPage() {
       .then(async (res) => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to load application status");
+        if (data.eligible === false) {
+          setCanApply(false);
+          router.replace(data.demoted ? "/scribe/appeal" : getStoredUser()?.role === "SCRIBE" ? "/scribe" : "/dashboard");
+          return;
+        }
         setApplication(data.application);
         setCanApply(data.canApply);
         setRetryAt(data.retryAt);

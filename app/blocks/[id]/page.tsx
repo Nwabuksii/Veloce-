@@ -9,7 +9,7 @@ import { SkeletonList } from "@/app/components/Skeleton";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
 import CouponConfirmDialog from "@/app/components/CouponConfirmDialog";
-import { getEffectivePriceForNote } from "@/lib/pricing";
+import ConfirmDialog from "@/app/components/ConfirmDialog";
 import "./block-details.css";
 
 interface NoteVersion {
@@ -76,6 +76,7 @@ function BlockDetailInner() {
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [pendingCouponNoteId, setPendingCouponNoteId] = useState<string | null>(null);
   const [couponConfirming, setCouponConfirming] = useState(false);
+  const [selfBuyNoteId, setSelfBuyNoteId] = useState<string | null>(null);
 
   useEffect(() => {
     const user = getStoredUser();
@@ -133,13 +134,13 @@ function BlockDetailInner() {
     setTimeout(() => setCopyLabel("Copy link"), 2000);
   }
 
-  async function handlePurchase(noteId: string) {
+  async function handlePurchase(noteId: string, confirmSelfPurchase = false) {
     setPurchasingNoteId(noteId);
     try {
       const data = await apiFetch("/api/payments/initialize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blockId, noteId }),
+        body: JSON.stringify({ blockId, noteId, confirmSelfPurchase }),
       });
 
       if (data.freeViaCoupon) {
@@ -150,8 +151,13 @@ function BlockDetailInner() {
 
       window.location.href = data.authorizationUrl;
     } catch (err) {
-      toast.error(friendlyErrorMessage(err));
       setPurchasingNoteId(null);
+      // The server asks for a second "yes" when a scribe buys their own note.
+      if ((err as { data?: { needsSelfPurchaseConfirm?: boolean } }).data?.needsSelfPurchaseConfirm) {
+        setSelfBuyNoteId(noteId);
+        return;
+      }
+      toast.error(friendlyErrorMessage(err));
     }
   }
 
@@ -554,6 +560,22 @@ function BlockDetailInner() {
           </main>
         )}
       </div>
+
+      {selfBuyNoteId && (
+        <ConfirmDialog
+          title="This is your own note"
+          confirmLabel="Yes, buy it"
+          onConfirm={() => {
+            const id = selfBuyNoteId;
+            setSelfBuyNoteId(null);
+            handlePurchase(id, true);
+          }}
+          onCancel={() => setSelfBuyNoteId(null)}
+        >
+          You&apos;re the scribe of this version. Buying it works like any other sale — you&apos;ll pay the full price and
+          it counts as a normal purchase. Continue?
+        </ConfirmDialog>
+      )}
 
       {pendingCouponNoteId && creditBalance != null && (
         <CouponConfirmDialog

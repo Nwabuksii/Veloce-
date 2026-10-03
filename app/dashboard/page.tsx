@@ -9,6 +9,7 @@ import { friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
 import { SkeletonList } from "@/app/components/Skeleton";
 import CouponConfirmDialog from "@/app/components/CouponConfirmDialog";
+import ConfirmDialog from "@/app/components/ConfirmDialog";
 import { CAMPUS } from "@/lib/campus";
 import { LEVELS, matchesLevelFilter, inferLevelFromCourseCode } from "@/lib/academic";
 
@@ -92,6 +93,7 @@ function CatalogPage() {
   const [pickerTrustFilter, setPickerTrustFilter] = useState("");
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [pendingCouponBuy, setPendingCouponBuy] = useState<{ block: BlockView; noteId?: string } | null>(null);
+  const [selfBuy, setSelfBuy] = useState<{ block: BlockView; noteId?: string } | null>(null);
   const [couponConfirming, setCouponConfirming] = useState(false);
 
   // Typing in the search field updates the URL (?q=) after a short pause;
@@ -182,16 +184,21 @@ function CatalogPage() {
     return list;
   }, [blocks, program, level, sort]);
 
-  async function handlePurchaseClick(block: BlockView, noteId?: string) {
+  async function handlePurchaseClick(block: BlockView, noteId?: string, confirmSelfPurchase = false) {
     try {
       const res = await fetch("/api/payments/initialize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ blockId: block.id, noteId }),
+        body: JSON.stringify({ blockId: block.id, noteId, confirmSelfPurchase }),
       });
       const data = await res.json();
 
       if (!res.ok) {
+        // The server asks for a second "yes" when a scribe buys their own note.
+        if (data.needsSelfPurchaseConfirm) {
+          setSelfBuy({ block, noteId });
+          return;
+        }
         toast.error(data.error || "Could not start checkout");
         return;
       }
@@ -635,6 +642,22 @@ function CatalogPage() {
             })()}
           </div>
         </div>
+      )}
+
+      {selfBuy && (
+        <ConfirmDialog
+          title="This is your own note"
+          confirmLabel="Yes, buy it"
+          onConfirm={() => {
+            const { block, noteId } = selfBuy;
+            setSelfBuy(null);
+            handlePurchaseClick(block, noteId, true);
+          }}
+          onCancel={() => setSelfBuy(null)}
+        >
+          You&apos;re the scribe of this note. Buying it works like any other sale — you&apos;ll pay the full price and it
+          counts as a normal purchase. Continue?
+        </ConfirmDialog>
       )}
 
       {pendingCouponBuy && creditBalance != null && (

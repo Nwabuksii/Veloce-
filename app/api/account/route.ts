@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
 const updateSchema = z
   .object({
     currentPassword: z.string().min(1, "Enter your current password").optional(),
-    newEmail: z.string().email().optional(),
+    newEmail: z.string().trim().toLowerCase().email().optional(),
     newPassword: passwordSchema.optional(),
     theme: z.enum(["light", "dark"]).optional(),
     // Which icon shows for this person — "custom" only works if they've
@@ -61,7 +61,7 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
   }
 
   return NextResponse.json({ user: dbUser });
-});
+}, { allowIncompleteProfile: true });
 
 export const PATCH = requireRole("STUDENT", async (req: NextRequest, user) => {
   const parsed = updateSchema.safeParse(await req.json());

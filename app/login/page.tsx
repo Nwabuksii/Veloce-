@@ -83,7 +83,7 @@ function LoginForm() {
       const data = await apiFetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, keepSignedIn }),
       });
 
       if (data.mfaRequired) {
@@ -139,7 +139,7 @@ function LoginForm() {
       const data = await apiFetch("/api/auth/mfa/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mfaToken, code }),
+        body: JSON.stringify({ mfaToken, code, keepSignedIn }),
       });
       finishLogin(data);
     } catch (err) {

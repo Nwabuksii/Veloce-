@@ -25,13 +25,15 @@ export interface TokenPayload {
 
 export const SESSION_COOKIE = "veloce_session";
 
-export function sessionCookieOptions(maxAgeSeconds: number = TOKEN_EXPIRY_SECONDS) {
+// keepSignedIn=false drops maxAge: a browser-session cookie that goes when the
+// browser closes (the token inside also lasts 1 day instead of 7).
+export function sessionCookieOptions(maxAgeSeconds: number = TOKEN_EXPIRY_SECONDS, keepSignedIn = true) {
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax" as const,
     path: "/",
-    maxAge: maxAgeSeconds,
+    ...(keepSignedIn ? { maxAge: maxAgeSeconds } : {}),
   };
 }
 
@@ -52,8 +54,8 @@ export async function verifyPassword(plain: string, hash: string): Promise<boole
 // request and checks `sv` against User.sessionVersion, so neither a stale
 // role nor a token issued before a password change/demotion/ban is trusted.
 
-export function signToken(payload: TokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
+export function signToken(payload: TokenPayload, keepSignedIn = true): string {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: keepSignedIn ? TOKEN_EXPIRY : "1d" });
 }
 
 export function verifyToken(token: string): TokenPayload | null {

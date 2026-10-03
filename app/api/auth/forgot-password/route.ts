@@ -10,7 +10,7 @@ const RESEND_COOLDOWN_MS = 60 * 1000;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour — shorter than email verification's 24h, since a live reset link is a more sensitive thing to leave valid for long
 
 const forgotSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().toLowerCase().email(),
 });
 
 export async function POST(req: NextRequest) {

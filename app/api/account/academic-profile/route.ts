@@ -33,4 +33,4 @@ export const PATCH = requireRole("STUDENT", async (req: NextRequest, user) => {
   });
 
   return NextResponse.json({ departmentId: updated.departmentId, level: updated.level });
-});
+}, { allowIncompleteProfile: true });

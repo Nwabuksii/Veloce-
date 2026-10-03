@@ -3,7 +3,7 @@ import {
   computeScribeCut,
   computePlatformCut,
   effectivePrice,
-  getEffectivePriceForNote,
+  getBlockPriceForBuyer,
   planCreditRedemption,
   SCRIBE_CUT,
   REQUEST_FULFILLED_PRICE,
@@ -51,31 +51,14 @@ describe("the split: scribe ₦600, platform = total − ₦600", () => {
   });
 });
 
-describe("getEffectivePriceForNote", () => {
-  it("uses the request-fulfillment price only for the buyer who actually voted for that request", () => {
-    expect(
-      getEffectivePriceForNote({
-        basePrice: 1000,
-        fulfillsRequestId: "req-1",
-        buyerVotedForRequest: true,
-      })
-    ).toBe(900);
+describe("getBlockPriceForBuyer", () => {
+  it("charges ₦900 only to a buyer who voted for the block's request", () => {
+    expect(getBlockPriceForBuyer({ basePrice: 1000, buyerRequestedBlock: true })).toBe(900);
+    expect(getBlockPriceForBuyer({ basePrice: 1000, buyerRequestedBlock: false })).toBe(1000);
+  });
 
-    expect(
-      getEffectivePriceForNote({
-        basePrice: 1000,
-        fulfillsRequestId: "req-1",
-        buyerVotedForRequest: false,
-      })
-    ).toBe(1000);
-
-    expect(
-      getEffectivePriceForNote({
-        basePrice: 1000,
-        fulfillsRequestId: null,
-        buyerVotedForRequest: true,
-      })
-    ).toBe(1000);
+  it("never raises a price that is already below ₦900", () => {
+    expect(getBlockPriceForBuyer({ basePrice: 500, buyerRequestedBlock: true })).toBe(500);
   });
 });
 

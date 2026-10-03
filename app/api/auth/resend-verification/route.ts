@@ -9,7 +9,7 @@ const RESEND_COOLDOWN_MS = 60 * 1000; // 60 seconds
 const LEGACY_VERIFICATION_TOKEN_TTL_MS = 10 * 60 * 1000;
 
 const resendSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().toLowerCase().email(),
 });
 
 export async function POST(req: NextRequest) {

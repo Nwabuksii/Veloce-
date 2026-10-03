@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/session";
-import { REQUEST_FULFILLED_PRICE } from "@/lib/pricing";
+import { getBlockPriceForBuyer } from "@/lib/pricing";
 
 // Returns blocks within the student's own university, with an "unlocked"
 // flag based on whether they've already purchased it, and a "discountEligible"
@@ -49,12 +49,11 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
       include: {
         course: { include: { department: { include: { university: true } } } },
         topics: { orderBy: { order: "asc" } },
-        purchases: { select: { id: true } },
+        purchases: { where: { refundedAt: null }, select: { id: true } },
         notes: {
           where: { status: "LIVE" },
           select: {
             id: true,
-            fulfillsRequestId: true,
             scribeId: true,
             scribe: { select: { fullName: true } },
             scribeLevelAtUpload: true,
@@ -73,20 +72,15 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
     // fulfillment price is a thank-you for the person(s) who requested it,
     // not a discount for every future buyer of that block. See lib/pricing.ts.
     prisma.requestVote.findMany({
-      where: { studentId: user.sub },
-      select: { requestId: true },
+      where: { studentId: user.sub, request: { blockId: { not: null } } },
+      select: { request: { select: { blockId: true } } },
     }),
   ]);
 
   const purchasedIds = new Set(purchases.map((p) => p.blockId));
-  const myRequestIds = new Set(myVotes.map((v) => v.requestId));
+  const myRequestedBlockIds = new Set(myVotes.map((v) => v.request.blockId));
 
   const result = blocks.map((b) => {
-    // Block-level approximation: if this block has several scribe versions
-    // and only some fulfill a request this student voted for, the exact
-    // price still depends on which version gets bought — same caveat as
-    // before, just now also gated on "did THIS student ask for it".
-    const hasFulfillmentPricing = b.notes.some((n) => n.fulfillsRequestId && myRequestIds.has(n.fulfillsRequestId));
     const scribe = b.notes[0];
     // Block-level rating for the catalog card: every review across all of
     // this block's live versions, so a block with competing uploads shows
@@ -106,7 +100,9 @@ export const GET = requireRole("STUDENT", async (req: NextRequest, user) => {
       id: b.id,
       title: b.title,
       price: b.price,
-      discountedPrice: hasFulfillmentPricing ? REQUEST_FULFILLED_PRICE : null,
+      discountedPrice: myRequestedBlockIds.has(b.id)
+        ? getBlockPriceForBuyer({ basePrice: b.price, buyerRequestedBlock: true })
+        : null,
       courseName: b.course.name,
       courseCode: b.course.code,
       universityName: b.course.department.university.name,

@@ -32,21 +32,19 @@ export function computePlatformCut(price: number, _legacyIsRequestFulfillment?: 
 }
 
 /**
- * The actual price a buyer sees and pays for a specific note version.
- * A request-fulfillment price is only a real discount for the student who
- * voted on that exact request; everyone else still pays the block's base price.
+ * The price a buyer pays for ANY version in a block: ₦900 if they voted for
+ * the request that block fulfils, otherwise the block's base price. Same
+ * number for every version in the block, so the catalog, the version picker
+ * and checkout can never disagree.
  */
-export function getEffectivePriceForNote({
+export function getBlockPriceForBuyer({
   basePrice,
-  fulfillsRequestId,
-  buyerVotedForRequest,
+  buyerRequestedBlock,
 }: {
   basePrice: number;
-  fulfillsRequestId: string | null;
-  buyerVotedForRequest: boolean;
+  buyerRequestedBlock: boolean;
 }): number {
-  if (fulfillsRequestId && buyerVotedForRequest) return REQUEST_FULFILLED_PRICE;
-  return basePrice;
+  return buyerRequestedBlock ? Math.min(basePrice, REQUEST_FULFILLED_PRICE) : basePrice;
 }
 
 /** The real price of a purchase — cash actually charged plus whatever credit was applied toward it. */

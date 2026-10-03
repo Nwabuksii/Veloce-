@@ -10,7 +10,7 @@ import { checkRateLimit, ipKeyFrom } from "@/lib/rate-limit";
 
 const signupSchema = z
   .object({
-    email: z.string().email(),
+    email: z.string().trim().toLowerCase().email(),
     password: passwordSchema,
     fullName: z.string().min(2),
     universitySlug: z.string(), // e.g. "babcock" — which campus they belong to

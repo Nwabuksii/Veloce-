@@ -17,6 +17,7 @@ import { logSecurityEvent, requestIp } from "@/lib/security-log";
 const verifySchema = z.object({
   mfaToken: z.string().min(1),
   code: z.string().min(1).max(32),
+  keepSignedIn: z.boolean().optional(),
 });
 
 const MAX_ATTEMPTS = 5;
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
     role: user.role,
     universityId: user.universityId,
     sv: user.sessionVersion,
-  });
+  }, parsed.data.keepSignedIn ?? true);
 
   // Same response shape as a normal login, so the login page's existing
   // success handling (save user, redirect by role) works unchanged.
@@ -97,6 +98,6 @@ export async function POST(req: NextRequest) {
       level: user.level ?? null,
     },
   });
-  res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions());
+  res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(undefined, parsed.data.keepSignedIn ?? true));
   return res;
 }

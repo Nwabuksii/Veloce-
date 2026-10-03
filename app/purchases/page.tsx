@@ -181,7 +181,7 @@ export default function PurchasesPage() {
             <div className="page-header-right">
               <div className="stat-strip">
                 <div className="stat">
-                  <div className="stat-num">{purchases.length}</div>
+                  <div className="stat-num">{purchases.filter((p) => !p.refunded).length}</div>
                   <div className="stat-label">Notes owned</div>
                 </div>
               </div>
