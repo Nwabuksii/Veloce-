@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { SCRIBE_SHARE, PLATFORM_SHARE, computeScribeCut, computePlatformCut, effectivePrice, EARNINGS_HOLD_MINUTES } from "@/lib/pricing";
+import { computeScribeCut, computePlatformCut, effectivePrice, EARNINGS_HOLD_MINUTES } from "@/lib/pricing";
 import { saleStatus } from "@/lib/withdrawal";
 
 // Shared by both /api/admin/finance (the plain ledger) and
@@ -122,8 +122,10 @@ export async function getFinanceData(universityId: string) {
     platformRevenue,
     scribePool,
     transactionCount: cashRetained.length,
-    scribeSharePercent: Math.round(SCRIBE_SHARE * 100),
-    platformSharePercent: Math.round(PLATFORM_SHARE * 100),
+    // The real split of confirmed sales (the rule is a fixed ₦600 to the scribe,
+    // so the percentage depends on the sales mix).
+    scribeSharePercent: platformRevenue + scribePool > 0 ? Math.round((scribePool / (platformRevenue + scribePool)) * 100) : 0,
+    platformSharePercent: platformRevenue + scribePool > 0 ? Math.round((platformRevenue / (platformRevenue + scribePool)) * 100) : 0,
     creditIssued,
     creditRedeemed,
     creditOutstanding,

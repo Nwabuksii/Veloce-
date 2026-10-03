@@ -5,11 +5,8 @@ import {
   effectivePrice,
   getEffectivePriceForNote,
   planCreditRedemption,
-  SCRIBE_SHARE,
-  PLATFORM_SHARE,
+  SCRIBE_CUT,
   REQUEST_FULFILLED_PRICE,
-  REQUEST_FULFILLED_SCRIBE_CUT,
-  REQUEST_FULFILLED_PLATFORM_CUT,
 } from "./pricing";
 
 // These are deliberately narrow, pure-function tests — no database, no
@@ -18,53 +15,39 @@ import {
 // zero-setup-cost logic to protect, since a wrong number here has no
 // compiler error to catch it — only a wrong dollar amount somewhere real.
 
-describe("revenue split constants", () => {
-  it("scribe and platform shares always sum to 1", () => {
-    expect(SCRIBE_SHARE + PLATFORM_SHARE).toBe(1);
+describe("the split: scribe ₦600, platform = total − ₦600", () => {
+  it("the scribe cut is a fixed ₦600", () => {
+    expect(SCRIBE_CUT).toBe(600);
+    expect(computeScribeCut(1000)).toBe(600);
+    expect(computeScribeCut(900)).toBe(600);
+    expect(computeScribeCut(50000)).toBe(600);
   });
 
-  it("the fixed request-fulfillment split sums to the fixed price", () => {
-    expect(REQUEST_FULFILLED_SCRIBE_CUT + REQUEST_FULFILLED_PLATFORM_CUT).toBe(REQUEST_FULFILLED_PRICE);
-  });
-});
-
-describe("computeScribeCut", () => {
-  it("is always exactly 600 for a request-fulfillment sale, regardless of price", () => {
-    expect(computeScribeCut(900, true)).toBe(600);
-    expect(computeScribeCut(0, true)).toBe(0);
-    expect(computeScribeCut(50000, true)).toBe(600);
+  it("a free purchase splits nothing", () => {
+    expect(computeScribeCut(0)).toBe(0);
+    expect(computePlatformCut(0)).toBe(0);
   });
 
-  it("is exactly 600 for a normal (non-fulfillment) sale, regardless of price", () => {
-    expect(computeScribeCut(1000, false)).toBe(600);
-    expect(computeScribeCut(999, false)).toBe(600);
-    expect(computeScribeCut(900, false)).toBe(600);
-    expect(computeScribeCut(0, false)).toBe(0);
-  });
-});
-
-describe("computePlatformCut", () => {
-  it("is 300 on the ₦900 request-fulfillment sale, and the rest of the price when the buyer paid full price", () => {
-    expect(computePlatformCut(900, true)).toBe(300);
-    // A request-fulfilling note bought by someone who did not vote on the request: they pay ₦1,000, so the platform keeps ₦400.
-    expect(computePlatformCut(1000, true)).toBe(400);
+  it("the platform keeps the total minus the scribe cut", () => {
+    expect(computePlatformCut(1000)).toBe(400);
+    expect(computePlatformCut(900)).toBe(300);
+    expect(computePlatformCut(999)).toBe(399);
   });
 
-  it("is the remainder of the actual sale after the scribe cut for a normal sale", () => {
-    expect(computePlatformCut(1000, false)).toBe(400);
-    expect(computePlatformCut(999, false)).toBe(399);
-    expect(computePlatformCut(900, false)).toBe(300);
+  it("the request-fulfilled price splits ₦600 / ₦300", () => {
+    expect(computeScribeCut(REQUEST_FULFILLED_PRICE) + computePlatformCut(REQUEST_FULFILLED_PRICE)).toBe(REQUEST_FULFILLED_PRICE);
+    expect(computePlatformCut(REQUEST_FULFILLED_PRICE)).toBe(300);
   });
 
-  it("always sums exactly back to the live sale amount for real sales", () => {
-    const amounts = [900, 999, 1000, 50000];
-    for (const amount of amounts) {
-      for (const isFulfillment of [true, false]) {
-        const scribeCut = computeScribeCut(amount, isFulfillment);
-        const platformCut = computePlatformCut(amount, isFulfillment);
-        expect(scribeCut + platformCut).toBe(amount); // nothing paid goes unaccounted for
-      }
+  it("scribe cut + platform cut always equals what was paid", () => {
+    for (const amount of [900, 999, 1000, 1500, 50000]) {
+      expect(computeScribeCut(amount) + computePlatformCut(amount)).toBe(amount);
     }
+  });
+
+  it("ignores the old request-fulfillment flag", () => {
+    expect(computeScribeCut(1000, true)).toBe(computeScribeCut(1000, false));
+    expect(computePlatformCut(1000, true)).toBe(computePlatformCut(1000, false));
   });
 });
 

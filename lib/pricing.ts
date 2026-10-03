@@ -1,60 +1,34 @@
-// The product rule we are using is deliberately fixed for each sale tier:
-// - regular sale: scribe gets ₦600, platform keeps the remainder of the sale
-// - request-fulfilled sale: the buyer pays a fixed ₦900 total, so the scribe
-//   keeps ₦600 and the platform keeps ₦300
-//
-// This is centralized here so the transaction ledger, payout logic, and buyer-
-// facing pricing all read from one source of truth.
-export const NORMAL_SCRIBE_CUT = 600;
-export const NORMAL_PLATFORM_CUT = 400;
-export const SCRIBE_SHARE = NORMAL_SCRIBE_CUT / 1000;
-export const PLATFORM_SHARE = NORMAL_PLATFORM_CUT / 1000;
+// THE SPLIT — one rule, used everywhere (ledger, finance pages, scribe
+// earnings, withdrawals, analytics):
+//   scribe cut   = ₦600 per sale (a fixed amount, not a percentage)
+//   platform cut = total paid − scribe cut
+// So a ₦1,000 sale is ₦600 / ₦400, and a ₦900 request-discounted sale is
+// ₦600 / ₦300. Both cuts are always worked out per purchase, from the full
+// price (cash + credit), never from a percentage of a total.
+export const SCRIBE_CUT = 600;
 
-// Founder-set fixed pricing for any note that fulfills a student request
-// (Note.fulfillsRequestId is set) — but only for the student(s) who actually
-// requested it (has a RequestVote on that request). Everyone else still pays
-// the scribe's normal block price. For an eligible buyer, the sale is fixed at
-// ₦900 total: ₦600 to the scribe and ₦300 to the platform.
+// Founder-set fixed price for a note that fulfils a student request — but only
+// for the student(s) who actually requested it (has a RequestVote on that
+// request). Everyone else still pays the scribe's normal block price.
 export const REQUEST_FULFILLED_PRICE = 900;
-export const REQUEST_FULFILLED_SCRIBE_CUT = 600;
-export const REQUEST_FULFILLED_PLATFORM_CUT = 300;
 
 /**
- * The scribe's cut of one purchase, given the FULL price actually paid for
- * it — cash and credit combined (see effectivePrice below). Fixed ₦600 if
- * the note fulfilled a request, otherwise the normal 60% share.
- *
- * Pass the price, never `amountPaid` alone — a purchase paid wholly or
- * partly with credit has `amountPaid` less than its real price (0 for a
- * fully-credit purchase), and computing the scribe's cut off that alone
- * would shortchange them. Using the combined price instead means this one
- * formula is correct for every purchase, cash, credit, or a mix of both,
- * with no special case needed for credit — a ₦1,000 fulfillment-tier sale
- * and a ₦900 one both land on exactly ₦600 either way, since the
- * fulfillment tier is a fixed cut, not a percentage.
- *
- * Always compute per-purchase (never as one aggregate `gross * SCRIBE_SHARE`
- * across many purchases) — mixing fixed-price and percentage-price sales
- * into a single aggregate multiply would misallocate money on both sides.
+ * The scribe's cut of one purchase: ₦600, or 0 for a free purchase. Pass the
+ * FULL price (cash + credit, see effectivePrice below), not `amountPaid` alone.
+ * The second argument is ignored — it is only kept so older callers still compile.
  */
-export function computeScribeCut(price: number, isRequestFulfillment: boolean): number {
-  if (price <= 0) return 0;
-  return isRequestFulfillment ? REQUEST_FULFILLED_SCRIBE_CUT : NORMAL_SCRIBE_CUT;
+export function computeScribeCut(price: number, _legacyIsRequestFulfillment?: boolean): number {
+  return price > 0 ? SCRIBE_CUT : 0;
 }
 
 /**
- * The platform keeps whatever was actually paid after the scribe's fixed ₦600.
- * For the ₦900 request-discounted sale that is ₦300; for a ₦1,000 sale it is
- * ₦400 — including when the note fulfils a request but the buyer did not vote
- * for it and so paid the full block price (only the voters get ₦900).
- *
- * This used to return a flat ₦300 for every sale of a request-fulfilling note,
- * which silently dropped ₦100 from the platform's figure on each of those
- * non-voter sales. Now scribe cut + platform cut always equals the price paid.
+ * The platform's cut of one purchase: everything paid after the scribe's ₦600.
+ * Scribe cut + platform cut always equals the price paid. The second argument
+ * is ignored (kept so older callers still compile).
  */
-export function computePlatformCut(price: number, isRequestFulfillment: boolean): number {
+export function computePlatformCut(price: number, _legacyIsRequestFulfillment?: boolean): number {
   if (price <= 0) return 0;
-  return Math.max(0, price - computeScribeCut(price, isRequestFulfillment));
+  return Math.max(0, price - computeScribeCut(price));
 }
 
 /**

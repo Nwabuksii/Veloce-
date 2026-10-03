@@ -1,0 +1,16 @@
+/* Revenue analysis page. Theme variables only. */
+.fa-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.fa-three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.fa-sources { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+.fa-source-top { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--text-primary); }
+.fa-source-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fa-source-name small { color: var(--text-secondary); }
+.fa-source-bar { height: 6px; margin: 5px 0 3px; border-radius: 99px; background: var(--bg-page); overflow: hidden; }
+.fa-source-bar span { display: block; height: 100%; border-radius: 99px; background: var(--gold); }
+.fa-source small { font-size: 11.5px; color: var(--text-secondary); }
+.fa-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 8px; }
+.fa-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 620px; }
+.fa-table th { text-align: left; padding: 8px 10px; font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+.fa-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--text-primary); white-space: nowrap; }
+@media (max-width: 900px) { .fa-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fa-three { grid-template-columns: 1fr; } }
+@media (max-width: 480px) { .fa-cards { grid-template-columns: 1fr; } }

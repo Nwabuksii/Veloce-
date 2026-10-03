@@ -167,6 +167,9 @@ export default function AdminFinanceAdvancedPage() {
         serif="analytics"
         subtitle="The full financial ledger, plus escrow — money not yet the scribe's or the platform's."
       >
+        <button className="btn btn-primary" onClick={() => router.push("/admin/finance/analysis")}>
+          {AIcon.trend()} Revenue analysis
+        </button>
         <button className="btn btn-ghost" onClick={() => router.push("/admin/finance")}>
           {AIcon.back()} Financial ledger
         </button>

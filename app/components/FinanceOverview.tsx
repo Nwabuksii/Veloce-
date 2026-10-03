@@ -101,8 +101,8 @@ export default function FinanceOverview({ data, children }: { data: FinanceOverv
     <>
       <div className="three-col">
         <StatCard label="Gross revenue" value={`₦${data.grossRevenue.toLocaleString()}`} sub={`${data.transactionCount} transactions total`} />
-        <StatCard label="Platform fee" value={`₦${data.platformRevenue.toLocaleString()}`} sub="₦400 for normal sales · ₦300 for request-discounted sales" />
-        <StatCard label="Scribe payout" value={`₦${data.scribePool.toLocaleString()}`} sub="₦600 per confirmed sale, split across scribes" />
+        <StatCard label="Platform fee" value={`₦${data.platformRevenue.toLocaleString()}`} sub="Total paid minus the ₦600 scribe cut, on each confirmed sale" />
+        <StatCard label="Scribe payout" value={`₦${data.scribePool.toLocaleString()}`} sub="₦600 per confirmed sale, shared out to the scribes who made them" />
       </div>
 
       <div className="section-head">

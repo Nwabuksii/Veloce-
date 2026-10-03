@@ -54,8 +54,8 @@ function cutFor(p: { amountPaid: number; creditApplied: number }, isFulfillment:
  * an admin. Until then it sits in getPendingEarnings() instead. This is
  * deliberately what backs withdrawal eligibility (via getAvailableBalance
  * below) — money a buyer can still get back isn't really "earned" yet.
- * Computed per-purchase, not as one `gross * SCRIBE_SHARE` aggregate — a
- * request-fulfillment sale earns a fixed ₦600 regardless of price, a
+ * Computed per-purchase — every sale earns the scribe a fixed ₦600 (see
+ * SCRIBE_CUT in lib/pricing.ts) whatever its price, a
  * credit-redeemed sale earns its cut off the combined cash+credit price
  * (see effectivePrice in lib/pricing.ts) despite amountPaid alone possibly
  * being 0, and refunded purchases earn nothing at all — because under the

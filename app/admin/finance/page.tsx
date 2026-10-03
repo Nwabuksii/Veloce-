@@ -51,6 +51,9 @@ export default function AdminFinancePage() {
   return (
     <div className="page-wrap">
       <AdminPageHeader section="Ledger" title="Financial" serif="ledger" subtitle="Payments, payouts and refunds across the platform.">
+        <button className="btn btn-ghost" onClick={() => router.push("/admin/finance/analysis")}>
+          {AIcon.trend()} Revenue analysis
+        </button>
         <button className="btn btn-ghost" onClick={() => router.push("/admin/finance/advanced")}>
           {AIcon.trend()} Advanced analytics
         </button>
