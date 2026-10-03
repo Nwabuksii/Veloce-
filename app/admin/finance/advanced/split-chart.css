@@ -1,0 +1,16 @@
+/* Revenue split chart: two bars per month, each with its own colour.
+   Platform = gold, Scribes = green, so they can't be confused. */
+.split-legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 4px 0 6px; font-size: 12px; color: var(--text-secondary); }
+.split-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.split-key { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.split-key.is-platform, .split-bar.is-platform { background: var(--gold); }
+.split-key.is-scribe, .split-bar.is-scribe { background: var(--text-success, #3a6b4a); }
+.split-empty { margin: 6px 0 0; font-size: 12.5px; color: var(--text-secondary); }
+.split-chart { display: flex; align-items: flex-end; gap: 8px; height: 190px; padding: 12px 2px 0; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
+.split-col { flex: 1; min-width: 58px; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; }
+.split-bars { display: flex; align-items: flex-end; gap: 4px; }
+.split-bar-wrap { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px; }
+.split-bar { width: 20px; border-radius: 5px 5px 2px 2px; transition: height 0.8s cubic-bezier(0.2, 0.9, 0.2, 1); }
+.split-val { font-size: 9px; line-height: 1; color: var(--text-secondary); font-family: var(--font-mono), ui-monospace, monospace; white-space: nowrap; }
+.split-label { font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; }
+@media (max-width: 560px) { .split-bar { width: 16px; } .split-col { min-width: 50px; } }

@@ -118,11 +118,13 @@ export const POST = requireRole("ADMIN", async (req: NextRequest, adminUser) => 
       } catch (err) {
         console.error("semester badge award failed", err instanceof Error ? err.message : "unknown");
       }
-      try {
-        await runLeaderboardSnapshot({ force: true });
-      } catch (err) {
-        console.error("new semester snapshot failed", err instanceof Error ? err.message : "unknown");
-      }
+    }
+    // Always build the new semester's board, including the very first semester
+    // (there is no closing semester then), so it is not empty until tomorrow.
+    try {
+      await runLeaderboardSnapshot({ force: true });
+    } catch (err) {
+      console.error("new semester snapshot failed", err instanceof Error ? err.message : "unknown");
     }
     return NextResponse.json({ academicYear: created.academicYear, number: created.number, badgesAwarded });
   } catch {

@@ -33,3 +33,5 @@ a.lb-row-link:hover { background: var(--stone-light); border-radius: 10px; }
 }
 .lb-view { flex: 0 0 auto; font-size: 12px; font-weight: 600; color: var(--accent); white-space: nowrap; }
 @media (max-width: 560px) { .lb-view-text { display: none; } .lb-view { font-size: 18px; line-height: 1; } }
+
+.lb-updated-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }

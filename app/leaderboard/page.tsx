@@ -89,10 +89,34 @@ export default function LeaderboardPage() {
   const [data, setData] = useState<LeaderboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshMessage, setRefreshMessage] = useState("");
+  const [reloadTick, setReloadTick] = useState(0);
 
   useEffect(() => {
-    if (!getStoredUser()) router.push("/login");
+    const user = getStoredUser();
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    setIsAdmin(user.role === "ADMIN");
   }, [router]);
+
+  // Admins only: rebuild the rankings now instead of waiting for the daily refresh.
+  async function refreshRankings() {
+    setRefreshing(true);
+    setRefreshMessage("");
+    try {
+      await apiFetch("/api/admin/leaderboard/refresh", { method: "POST" });
+      setReloadTick((t) => t + 1);
+      setRefreshMessage("Rankings refreshed.");
+    } catch (err) {
+      setRefreshMessage(friendlyErrorMessage(err));
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -112,7 +136,7 @@ export default function LeaderboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [scope, period, category, page]);
+  }, [scope, period, category, page, reloadTick]);
 
   function pick(next: { scope?: Scope; period?: Period; category?: Category }) {
     if (next.scope) setScope(next.scope);
@@ -247,7 +271,17 @@ export default function LeaderboardPage() {
           ) : (
             data && (
               <div className="panel" style={{ opacity: loading ? 0.6 : 1 }}>
-                {data.updatedAt && <p className="panel-desc">Updated {timeAgo(data.updatedAt)}. Rankings refresh daily.</p>}
+                <div className="lb-updated-row">
+                  <p className="panel-desc" style={{ margin: 0 }}>
+                    {data.updatedAt ? `Updated ${timeAgo(data.updatedAt)}. ` : ""}Rankings refresh daily, and shortly after a scribe's note goes live.
+                  </p>
+                  {isAdmin && (
+                    <button className="btn btn-ghost btn-sm" onClick={refreshRankings} disabled={refreshing}>
+                      {refreshing ? "Refreshing…" : "Refresh rankings now"}
+                    </button>
+                  )}
+                </div>
+                {refreshMessage && <div className="notice">{refreshMessage}</div>}
                 {showPager && pager("top")}
 
                 {data.entries.length === 0 ? (

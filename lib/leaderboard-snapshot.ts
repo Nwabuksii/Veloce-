@@ -232,16 +232,17 @@ export type SnapshotRunResult =
   | { ran: true; periods: number; scribes: number }
   | { ran: false; reason: "fresh" | "busy" };
 
-// Runs the job unless it already ran in the last 24 hours (force skips that
-// check) or another instance is running it.
-export async function runLeaderboardSnapshot(opts: { force?: boolean } = {}): Promise<SnapshotRunResult> {
+// Runs the job unless it already ran recently (24 hours by default; pass
+// minAgeMs for a shorter window; force skips the check) or another instance
+// is running it.
+export async function runLeaderboardSnapshot(opts: { force?: boolean; minAgeMs?: number } = {}): Promise<SnapshotRunResult> {
   const now = new Date();
   const lock = await prisma.leaderboardLock.upsert({
     where: { id: LOCK_ID },
     create: { id: LOCK_ID, lockedUntil: new Date(0) },
     update: {},
   });
-  if (!opts.force && lock.lastRunAt && now.getTime() - lock.lastRunAt.getTime() < FRESH_MS) {
+  if (!opts.force && lock.lastRunAt && now.getTime() - lock.lastRunAt.getTime() < (opts.minAgeMs ?? FRESH_MS)) {
     return { ran: false, reason: "fresh" };
   }
   const claimed = await prisma.leaderboardLock.updateMany({
@@ -273,5 +274,19 @@ export async function ensureFreshLeaderboard(): Promise<void> {
     await runLeaderboardSnapshot();
   } catch (err) {
     console.error("leaderboard snapshot failed", err instanceof Error ? err.message : "unknown");
+  }
+}
+
+// How soon after one run another may be triggered by an event (a note going live).
+const EVENT_REFRESH_MIN_MS = 5 * 60 * 1000;
+
+// For events that change who is ranked (a note going live): rebuild, but at
+// most once every few minutes however many notes go live. Never throws, so it
+// can sit in another request without being able to break it.
+export async function refreshLeaderboardSoon(): Promise<void> {
+  try {
+    await runLeaderboardSnapshot({ minAgeMs: EVENT_REFRESH_MIN_MS });
+  } catch (err) {
+    console.error("leaderboard refresh after note went live failed", err instanceof Error ? err.message : "unknown");
   }
 }

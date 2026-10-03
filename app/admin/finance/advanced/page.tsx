@@ -1,5 +1,6 @@
 "use client";
 
+import "./split-chart.css";
 import { ReactElement, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUser } from "@/lib/client-session";
@@ -93,24 +94,35 @@ function BarChart({ title, description, data, formatValue }: {
 
 function SplitChart({ data }: { data: Array<{ label: string; platform: number; scribe: number }> }) {
   const max = Math.max(1, ...data.map((item) => Math.max(item.platform, item.scribe)));
+  const hasData = data.some((item) => item.platform > 0 || item.scribe > 0);
+  const naira = (n: number) => `₦${n.toLocaleString()}`;
   return (
     <div className="panel">
       <h2 className="panel-title">{AIcon.chart()} Revenue split</h2>
-      <p className="panel-desc">Confirmed monthly revenue split between platform and scribe earnings.</p>
-      <div className="chart-wrap chart-dual" aria-label="Monthly platform and scribe revenue split">
+      <p className="panel-desc">
+        Each month, how confirmed sales money is divided: what the platform keeps versus what scribes earn. Sales still inside the refund window or awaiting a refund decision are not counted yet.
+      </p>
+      <div className="split-legend">
+        <span><i className="split-key is-platform" /> Platform</span>
+        <span><i className="split-key is-scribe" /> Scribes</span>
+      </div>
+      {!hasData && <p className="split-empty">No confirmed sales yet. Bars appear once a sale passes its refund window.</p>}
+      <div className="split-chart" role="img" aria-label="Monthly platform and scribe revenue split">
         {data.map((item) => (
-          <div className="chart-col" key={item.label}>
-            <div className="chart-dual-bars">
-              <div className="chart-bar" title={`Platform ₦${item.platform.toLocaleString()}`} style={{ height: `${Math.max(4, (item.platform / max) * 110)}px` }} />
-              <div className="chart-bar chart-bar-secondary" title={`Scribes ₦${item.scribe.toLocaleString()}`} style={{ height: `${Math.max(4, (item.scribe / max) * 110)}px` }} />
+          <div className="split-col" key={item.label}>
+            <div className="split-bars">
+              <div className="split-bar-wrap">
+                <span className="split-val">{item.platform > 0 ? naira(item.platform) : ""}</span>
+                <div className="split-bar is-platform" title={`Platform ${naira(item.platform)}`} style={{ height: `${item.platform > 0 ? Math.max(6, (item.platform / max) * 110) : 3}px` }} />
+              </div>
+              <div className="split-bar-wrap">
+                <span className="split-val">{item.scribe > 0 ? naira(item.scribe) : ""}</span>
+                <div className="split-bar is-scribe" title={`Scribes ${naira(item.scribe)}`} style={{ height: `${item.scribe > 0 ? Math.max(6, (item.scribe / max) * 110) : 3}px` }} />
+              </div>
             </div>
-            <div className="chart-label">{item.label}</div>
+            <div className="split-label">{item.label}</div>
           </div>
         ))}
-      </div>
-      <div className="chart-legend">
-        <span><i className="chart-key" /> Platform</span>
-        <span><i className="chart-key secondary" /> Scribes</span>
       </div>
     </div>
   );
