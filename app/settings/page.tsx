@@ -9,6 +9,7 @@ import "@/app/admin/admin.css";
 import { SkeletonCard } from "@/app/components/Skeleton";
 import { toggleTheme } from "@/app/components/toggle-theme";
 import AvatarPicker from "@/app/components/AvatarPicker";
+import ExportButton from "@/app/components/ExportButton";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { REFUND_WINDOW_MINUTES } from "@/lib/pricing";
 
@@ -93,7 +94,7 @@ export default function SettingsPage() {
   }, [router]);
 
   useEffect(() => {
-    if (tab !== "contact" || adminEmail !== null) return;
+    if ((tab !== "contact" && tab !== "account") || adminEmail !== null) return;
     setContactLoading(true);
     apiFetch("/api/settings/contact")
       .then((data) => setAdminEmail(data.adminEmail))
@@ -258,6 +259,12 @@ export default function SettingsPage() {
       )}`
     : undefined;
 
+  const deleteMailtoHref = adminEmail
+    ? `mailto:${adminEmail}?subject=${encodeURIComponent("Delete my Veloce account")}&body=${encodeURIComponent(
+        `Hi,\n\nPlease delete my Veloce account. My account email is ${user.email}.\n`
+      )}`
+    : undefined;
+
   const TABS: { key: Tab; label: string; icon: ReactElement }[] = [
     { key: "about", label: "About", icon: AIcon.spark() },
     { key: "faq", label: "FAQ", icon: AIcon.list() },
@@ -374,6 +381,28 @@ export default function SettingsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        )}
+
+        {tab === "account" && (
+          <div className="panel" style={{ marginTop: 16 }}>
+            <h2 className="panel-title">{AIcon.list()} Your data</h2>
+            <p className="panel-desc">
+              Download everything we hold about you as an Excel file, one sheet per table (profile, purchases, reviews and more).
+              Passwords, security details and other people&apos;s data are never included. You can download once an hour.
+            </p>
+            <div className="form-footer">
+              <ExportButton url="/api/account/export" label="Download my data" className="btn btn-primary" />
+            </div>
+            <p className="panel-desc" style={{ marginTop: 16, marginBottom: 0 }}>
+              Want your account deleted?{" "}
+              {deleteMailtoHref ? (
+                <a href={deleteMailtoHref}>Email support</a>
+              ) : (
+                "We couldn't load the support address."
+              )}{" "}
+              Nothing is deleted automatically, and we keep the minimum transaction record the law requires.
+            </p>
           </div>
         )}
 

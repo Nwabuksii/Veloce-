@@ -7,6 +7,7 @@ import PageHeader from "@/app/components/PageHeader";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { Icon } from "@/app/components/icons";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
+import ExportButton from "@/app/components/ExportButton";
 
 interface BlockPerf {
   blockId: string;
@@ -98,6 +99,7 @@ export default function ScribeAnalyticsPage() {
         accent="analytics"
         subtitle="How your notes are performing — your scribe score, sales trend and top performers."
       >
+        <ExportButton url="/api/scribe/export" />
         <button className="btn btn-ghost" onClick={() => router.push("/scribe")}>
           {Icon.back()} Scribe Studio
         </button>

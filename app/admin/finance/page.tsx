@@ -8,6 +8,7 @@ import { AIcon } from "@/app/components/AdminIcons";
 import { SkeletonStatRow, SkeletonList } from "@/app/components/Skeleton";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
 import { toast } from "@/lib/toast";
+import ExportButton from "@/app/components/ExportButton";
 import FinanceOverview, { FinanceOverviewData } from "@/app/components/FinanceOverview";
 
 export default function AdminFinancePage() {
@@ -51,6 +52,7 @@ export default function AdminFinancePage() {
   return (
     <div className="page-wrap">
       <AdminPageHeader section="Ledger" title="Financial" serif="ledger" subtitle="Payments, payouts and refunds across the platform.">
+        <ExportButton url="/api/admin/finance/export" />
         <button className="btn btn-ghost" onClick={() => router.push("/admin/finance/analysis")}>
           {AIcon.trend()} Revenue analysis
         </button>

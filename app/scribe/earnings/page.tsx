@@ -7,6 +7,7 @@ import PageHeader from "@/app/components/PageHeader";
 import { SkeletonList } from "@/app/components/Skeleton";
 import { Icon } from "@/app/components/icons";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
+import ExportButton from "@/app/components/ExportButton";
 
 interface BlockEarning {
   blockId: string;
@@ -223,6 +224,7 @@ export default function ScribeEarningsPage() {
         accent="earnings"
         subtitle="What you've earned and been paid. Withdrawals go to your saved bank account once an admin has processed them."
       >
+        <ExportButton url="/api/scribe/export" />
         <button className="btn btn-ghost" onClick={() => router.push("/scribe/workspace")}>
           {Icon.back()} Workspace
         </button>
