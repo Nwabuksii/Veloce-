@@ -43,14 +43,18 @@ export function computeScribeCut(price: number, isRequestFulfillment: boolean): 
 }
 
 /**
- * On a normal sale, the platform keeps the rest of the actual sale after the
- * fixed ₦600 scribe payout. On an eligible request-discounted sale, the total
- * is fixed at ₦900 and the platform keeps ₦300.
+ * The platform keeps whatever was actually paid after the scribe's fixed ₦600.
+ * For the ₦900 request-discounted sale that is ₦300; for a ₦1,000 sale it is
+ * ₦400 — including when the note fulfils a request but the buyer did not vote
+ * for it and so paid the full block price (only the voters get ₦900).
+ *
+ * This used to return a flat ₦300 for every sale of a request-fulfilling note,
+ * which silently dropped ₦100 from the platform's figure on each of those
+ * non-voter sales. Now scribe cut + platform cut always equals the price paid.
  */
 export function computePlatformCut(price: number, isRequestFulfillment: boolean): number {
   if (price <= 0) return 0;
-  if (isRequestFulfillment) return REQUEST_FULFILLED_PLATFORM_CUT;
-  return Math.max(0, price - NORMAL_SCRIBE_CUT);
+  return Math.max(0, price - computeScribeCut(price, isRequestFulfillment));
 }
 
 /**

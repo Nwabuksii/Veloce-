@@ -44,9 +44,10 @@ describe("computeScribeCut", () => {
 });
 
 describe("computePlatformCut", () => {
-  it("is always exactly 300 for a request-fulfillment sale, regardless of price", () => {
+  it("is 300 on the ₦900 request-fulfillment sale, and the rest of the price when the buyer paid full price", () => {
     expect(computePlatformCut(900, true)).toBe(300);
-    expect(computePlatformCut(1000, true)).toBe(300);
+    // A request-fulfilling note bought by someone who did not vote on the request: they pay ₦1,000, so the platform keeps ₦400.
+    expect(computePlatformCut(1000, true)).toBe(400);
   });
 
   it("is the remainder of the actual sale after the scribe cut for a normal sale", () => {
@@ -61,8 +62,7 @@ describe("computePlatformCut", () => {
       for (const isFulfillment of [true, false]) {
         const scribeCut = computeScribeCut(amount, isFulfillment);
         const platformCut = computePlatformCut(amount, isFulfillment);
-        const expectedTotal = isFulfillment ? 900 : amount;
-        expect(scribeCut + platformCut).toBe(expectedTotal);
+        expect(scribeCut + platformCut).toBe(amount); // nothing paid goes unaccounted for
       }
     }
   });
