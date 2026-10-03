@@ -49,7 +49,7 @@ function shortcutsFor(mode: Role, realRole: Role): { label: string; items: Short
   const items: Shortcut[] = [
     { label: "Request a Block", href: "/requests" },
     { label: "My Requests", href: "/requests/mine" },
-    { label: "My Library", href: "/purchases" },
+    { label: "My Purchases", href: "/purchases" },
     { label: "Following", href: "/following" },
   ];
   if (realRole === "STUDENT") {

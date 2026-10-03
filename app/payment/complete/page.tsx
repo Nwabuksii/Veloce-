@@ -83,12 +83,12 @@ function CompleteContent() {
           <>
             {done && (
               <p className="pc-text">
-                Your note is in your Library. Refunds can be requested within {minutes} minutes of buying; this purchase's window has closed or a request is already in.
+                Your note is in your Purchases. Refunds can be requested within {minutes} minutes of buying; this purchase's window has closed or a request is already in.
               </p>
             )}
             <div className="pc-actions">
               <Link href="/purchases" className="btn btn-primary">
-                Go to Library
+                Go to Purchases
               </Link>
               <Link href="/dashboard" className="btn btn-ghost">
                 Back to dashboard

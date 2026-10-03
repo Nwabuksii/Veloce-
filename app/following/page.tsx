@@ -154,7 +154,7 @@ export default function FollowingPage() {
               </div>
               <div className="header-actions">
                 <button className="btn btn-ghost" onClick={() => router.push("/purchases")}>
-                  {Icon.back()} My Library
+                  {Icon.back()} My Purchases
                 </button>
               </div>
             </div>

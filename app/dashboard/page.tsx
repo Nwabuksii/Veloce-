@@ -299,7 +299,7 @@ function CatalogPage() {
             name="q"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search by course code, title, or department…"
+            placeholder="Search by course code or title…"
             aria-label="Search notes"
           />
         </form>

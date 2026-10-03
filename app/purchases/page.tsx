@@ -174,9 +174,9 @@ export default function PurchasesPage() {
             <div className="page-header-left">
               <span className="eyebrow">Your Collection</span>
               <h1>
-                My <span className="serif">library</span>
+                My <span className="serif">purchases</span>
               </h1>
-              <p>Every note you've bought, watermarked to you and available offline in the reader.</p>
+              <p>Every note you've bought, watermarked to you and readable in the reader.</p>
             </div>
             <div className="page-header-right">
               <div className="stat-strip">
@@ -196,9 +196,9 @@ export default function PurchasesPage() {
           <div className="library-toolbar">
             <div className="library-search">
               {Icon.search()}
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search your library by code, title, or scribe…" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search your purchases by code, title, or scribe…" />
             </div>
-            <select className="library-sort" value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} aria-label="Sort library">
+            <select className="library-sort" value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} aria-label="Sort purchases">
               <option value="recent">Most recent</option>
               <option value="oldest">Oldest first</option>
               <option value="title">Title A–Z</option>

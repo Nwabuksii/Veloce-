@@ -89,7 +89,7 @@ export default function SiteHeader() {
         { label: "Requests", href: "/requests", icon: Icon.plus(), active: pathname === "/requests" },
         { label: "My Requests", href: "/requests/mine", icon: Icon.list(), active: is("/requests/mine") },
         {
-          label: "Library",
+          label: "Purchases",
           href: "/purchases",
           icon: Icon.book(),
           active: is("/purchases") || is("/notes"),
