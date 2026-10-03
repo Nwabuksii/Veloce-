@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, FormEvent, ReactElement } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getStoredUser, saveUser, StoredUser } from "@/lib/client-session";
 import AdminPageHeader from "@/app/components/AdminPageHeader";
@@ -10,33 +11,139 @@ import { SkeletonCard } from "@/app/components/Skeleton";
 import { toggleTheme } from "@/app/components/toggle-theme";
 import AvatarPicker from "@/app/components/AvatarPicker";
 import { apiFetch, friendlyErrorMessage } from "@/lib/api-client";
+import { SUPPORT_EMAIL } from "@/lib/support-contact";
 
 type Tab = "about" | "faq" | "contact" | "account" | "display";
 
-const FAQ_ITEMS: { q: string; a: string }[] = [
+const FAQ_GROUPS: { title: string; items: { q: string; a: string }[] }[] = [
   {
-    q: "How do I become a Scribe?",
-    a: "Open the menu and choose \"Become a scribe,\" tell us why you'd be a good fit, and an admin will review your application. If it's rejected, you can apply again after 14 days.",
+    title: "Getting started",
+    items: [
+      {
+        q: "Who can use Veloce, and how do I verify my account?",
+        a: "Veloce is for students of the university you register under. After signing up, open the verification link we email you within 10 minutes. If it expires or never arrives, ask for a new link and check your spam folder.",
+      },
+      {
+        q: "I forgot my password. What do I do?",
+        a: "Use \"Forgot password\" on the login page and follow the link we email you. Passwords need at least 8 characters, with at least one letter and one number.",
+      },
+    ],
   },
   {
-    q: "What happens if I'm removed as a Scribe?",
-    a: "You keep your existing uploads and sales history, but you can no longer upload new notes. You can submit one reinstatement appeal per month from the \"Appeal reinstatement\" menu item.",
+    title: "Buying and reading notes",
+    items: [
+      {
+        q: "How much do notes cost and how do I pay?",
+        a: "The price is shown before you buy. A standard note is ₦1,000. A note written to fulfil a student request is ₦900 for the students who voted for that request. Payment is handled by Paystack and your note unlocks as soon as it's confirmed. If you have credit, it's used automatically first.",
+      },
+      {
+        q: "Can I download or screenshot a note?",
+        a: "No. Notes are read inside Veloce and can't be downloaded. Every page is stamped with your name and email, so any screenshot, photo or shared copy can be traced to your account. Sharing or reselling notes can get your account banned.",
+      },
+      {
+        q: "I was charged but I don't see my note.",
+        a: "Wait a minute, then refresh your Purchases page. If it's still missing, email " + SUPPORT_EMAIL + " with your payment reference and the email you signed up with. Please don't pay a second time.",
+      },
+      {
+        q: "Can I get a refund?",
+        a: "Yes, but only within 30 minutes of buying. Go to your Purchases page and request a refund there. An admin reviews every request; it isn't automatic. If it's approved, you lose access to the note and get credit for everything you paid. If it's declined, the purchase stands. After 30 minutes the refund option closes.",
+      },
+      {
+        q: "What is credit, and can I withdraw it?",
+        a: "Credit is what you receive when a refund is approved. It's applied automatically to your next purchases, never expires, and any leftover is kept for later. It is not cash — it can't be withdrawn or transferred, so only request a refund if you're happy to get credit.",
+      },
+      {
+        q: "Should I dispute a charge with my bank instead?",
+        a: "Please don't. A bank dispute (chargeback) immediately removes your access to the note, gives you no credit, and repeated chargebacks can lead to a ban. Use the refund request on your Purchases page instead.",
+      },
+      {
+        q: "Why are there notes I can't find for my course?",
+        a: "Use the Requests page to ask for a topic. Other students can vote for it, and when a scribe writes it, the voters get the ₦900 request price.",
+      },
+    ],
   },
   {
-    q: "How do payments work?",
-    a: "Payments are processed securely through Paystack. Once a payment is confirmed, the notes unlock immediately and you can download them from their page.",
+    title: "Scribes and earnings",
+    items: [
+      {
+        q: "How do I become a Scribe?",
+        a: "Open the menu and choose \"Become a scribe,\" tell us why you'd be a good fit, and an admin will review your application. If it's rejected, you can apply again after 14 days.",
+      },
+      {
+        q: "How much does a scribe earn on a sale?",
+        a: "A fixed ₦600 per sale, whether the note sold for ₦1,000 or ₦900. Veloce keeps the rest. This is worked out on the full price, whether the buyer paid with cash, credit or both.",
+      },
+      {
+        q: "When can I withdraw my earnings?",
+        a: "A sale becomes yours about 31 minutes after it's made, if the buyer hasn't asked for a refund. If they have, the money stays on hold until an admin decides. You can request one withdrawal per calendar month, during the first 7 days of the month, for at least ₦2,000 and up to your available balance. Withdrawals are approved by an admin and paid to your bank account, so double-check your account number.",
+      },
+      {
+        q: "What can't I upload?",
+        a: "Only your own original notes. Don't upload lecturers' slides, textbook pages, past exam papers, or anything copied from someone else. Uploads go through an automated check and admin review. A flag means a person will look at it; it isn't automatically a rejection.",
+      },
+      {
+        q: "What happens if I'm removed as a Scribe?",
+        a: "You keep your existing uploads and sales history, but you can no longer upload new notes. You can appeal for reinstatement from the \"Appeal reinstatement\" menu item. If an appeal is rejected, you can submit another after 30 days.",
+      },
+    ],
   },
   {
-    q: "Can I get a refund?",
-    a: "Refunds are handled case by case — use the Contact tab here to reach an admin at your university and explain the situation.",
+    title: "Leaderboard and badges",
+    items: [
+      {
+        q: "How is the leaderboard worked out?",
+        a: "Scribes are scored on verified buyer ratings, purchases, notes read, followers and recent activity. The score rewards doing well across many notes rather than one viral note. Only live notes count, and refunded, disputed and self-made purchases don't. There's an all-time view and a per-semester view that resets when a new semester starts.",
+      },
+      {
+        q: "Why hasn't my score changed yet?",
+        a: "The leaderboard refreshes about once a day, not instantly, so new sales and ratings show up on the next refresh.",
+      },
+      {
+        q: "How do I earn badges?",
+        a: "Finish in the top 3 of your department, your school, or (when there's more than one school) globally, or in the top 3 for a category like Highest Rated or Top Seller. Each badge is dated by the semester or year you earned it, and you can display up to 5 on your profile. The Badges page explains each one.",
+      },
+      {
+        q: "Does cheating the leaderboard work?",
+        a: "No. Buying your own notes, fake accounts, trading reviews or follows, and similar tricks are against the rules. Those results can be removed, along with badges, payouts and the account itself.",
+      },
+      {
+        q: "I've graduated. Do I keep my badges?",
+        a: "Yes. Graduated scribes leave the rankings, but badges you've already earned stay on your profile.",
+      },
+    ],
   },
   {
-    q: "What if a block's notes are wrong, stolen, or low quality?",
-    a: "Open the block's page and click \"Report.\" An admin will review it and can remove the content if needed.",
-  },
-  {
-    q: "What if someone is behaving maliciously toward me?",
-    a: "Visit their profile page and click \"Report user,\" describing what happened. Reports go straight to your university's admins.",
+    title: "Your account and safety",
+    items: [
+      {
+        q: "How do I change my email or password?",
+        a: "Go to the Account tab. You'll need your current password. When you change your email, your old address is told, and can undo the change for 7 days. Your name can't be changed here, so email " + SUPPORT_EMAIL + " if it's wrong.",
+      },
+      {
+        q: "How long do I stay logged in?",
+        a: "Up to 7 days on a device. Log out when you use a shared or public computer.",
+      },
+      {
+        q: "What if a block's notes are wrong, stolen, or low quality?",
+        a: "Open the block's page and click \"Report.\" An admin will review it and can remove the content if needed.",
+      },
+      {
+        q: "What if someone is behaving maliciously toward me?",
+        a: "Visit their profile page and click \"Report user,\" describing what happened. Reports go straight to your university's admins.",
+      },
+      {
+        q: "How do I stay safe from scams?",
+        a: "Never share your password or a verification code with anyone, including people who say they're from Veloce. We never ask for either. Only request refunds through your Purchases page, and only pay through the Veloce checkout.",
+      },
+      {
+        q: "How do I delete my account or get a copy of my data?",
+        a: "Email " + SUPPORT_EMAIL + " from the email on your account, or use the Feedback page. Scribes should withdraw their earnings first, and unspent credit can't be paid out. We remove your personal details, but keep the basic purchase and payment records that the law and other users' records require. See the Privacy Policy for details.",
+      },
+      {
+        q: "How do I reach someone?",
+        a: "Use the Contact tab for your university's admin, or email " + SUPPORT_EMAIL + ". For feature ideas or bugs, the Feedback page works best.",
+      },
+    ],
   },
 ];
 
@@ -293,7 +400,13 @@ export default function SettingsPage() {
                 Built for students, by a student who got tired of scrambling for good notes before exams — Veloce started as a way to make that easier for everyone else too.
               </p>
               <p>
-                Have feedback or an idea for what&apos;s next? Use the <strong>Contact</strong> tab — we read every message.
+                <strong>Good to know:</strong> notes are read inside Veloce and can&apos;t be downloaded, and every page carries your name and email. Refunds can be requested within 30 minutes of buying and come back as credit, which is not cash. Scribes earn a fixed ₦600 per sale and can withdraw once a month, in the first 7 days of the month.
+              </p>
+              <p>
+                Have feedback or an idea for what&apos;s next? Use the <strong>Contact</strong> tab or the <Link href="/feedback">Feedback</Link> page — we read every message. You can also email <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
+              </p>
+              <p>
+                Read our <Link href="/terms">Terms of Service</Link> and <Link href="/privacy">Privacy Policy</Link>.
               </p>
             </div>
           </div>
@@ -302,15 +415,31 @@ export default function SettingsPage() {
         {tab === "faq" && (
           <div className="panel">
             <h2 className="panel-title">{AIcon.list()} Frequently asked</h2>
-            <p className="panel-desc">Everything students and scribes ask us most often.</p>
-            <div className="faq-list">
-              {FAQ_ITEMS.map((item, i) => (
-                <details key={i} className="faq-item">
-                  <summary>{item.q}</summary>
-                  <div className="faq-body">{item.a}</div>
-                </details>
-              ))}
-            </div>
+            <p className="panel-desc">Everything students and scribes ask us most often. Still stuck? Use the Contact tab.</p>
+            {FAQ_GROUPS.map((group) => (
+              <div key={group.title} style={{ marginTop: "1.25rem" }}>
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    letterSpacing: "1.6px",
+                    textTransform: "uppercase",
+                    color: "var(--text-muted)",
+                    marginBottom: 8,
+                  }}
+                >
+                  {group.title}
+                </div>
+                <div className="faq-list">
+                  {group.items.map((item) => (
+                    <details key={item.q} className="faq-item">
+                      <summary>{item.q}</summary>
+                      <div className="faq-body">{item.a}</div>
+                    </details>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
@@ -373,6 +502,12 @@ export default function SettingsPage() {
                 </button>
               </div>
             </form>
+
+            <div className="prose" style={{ marginTop: "1.5rem" }}>
+              <p>
+                <strong>Your data and sessions.</strong> You stay logged in on a device for up to 7 days, so log out on shared computers. To get a copy of your data or close your account, email <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> from this account&apos;s email address. Scribes should withdraw their earnings first, and unspent credit can&apos;t be paid out. See the <Link href="/privacy">Privacy Policy</Link> and <Link href="/terms">Terms</Link>.
+              </p>
+            </div>
           </div>
         )}
 
