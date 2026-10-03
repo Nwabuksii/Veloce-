@@ -5,7 +5,7 @@ const JWT_SECRET = process.env.JWT_SECRET!;
 const TOKEN_EXPIRY = "7d";
 const TOKEN_EXPIRY_SECONDS = 60 * 60 * 24 * 7;
 
-export type UserRole = "STUDENT" | "SCRIBE" | "ADMIN";
+export type UserRole = "STUDENT" | "SCRIBE" | "ADMIN" | "DELETED";
 
 export interface TokenPayload {
   sub: string; // user id
@@ -68,6 +68,7 @@ export function verifyToken(token: string): TokenPayload | null {
 // A role "has access" to anything at or below its own level.
 
 const ROLE_RANK: Record<UserRole, number> = {
+  DELETED: -1, // below Student: a removed account passes no role check
   STUDENT: 0,
   SCRIBE: 1,
   ADMIN: 2,

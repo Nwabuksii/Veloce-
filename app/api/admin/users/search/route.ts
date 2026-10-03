@@ -6,7 +6,8 @@ import { isUserOnline } from "@/lib/online";
 export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
   const searchParams = new URL(req.url).searchParams;
   const q = searchParams.get("q")?.trim() || "";
-  const role = searchParams.get("role")?.trim() || "all";
+  const rawRole = searchParams.get("role")?.trim() || "all";
+  const role = ["STUDENT", "SCRIBE", "ADMIN", "DELETED"].includes(rawRole) ? rawRole : "all";
   const online = searchParams.get("online")?.trim() || "all";
   // Pagination is opt-in: callers that don't send `page` (e.g. the admin
   // messages picker) keep the old "first N matches" behaviour.
@@ -17,7 +18,8 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
   const onlineSince = new Date(Date.now() - 5 * 60 * 1000);
   const baseWhere: any = {
     universityId: adminUser.universityId,
-    ...(role !== "all" ? { role } : {}),
+    // "All roles" leaves out deleted accounts; pick "Deleted" to see them.
+    ...(role !== "all" ? { role } : { role: { not: "DELETED" as const } }),
   };
 
   if (q) {
@@ -58,7 +60,7 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
     ? { skip: (page - 1) * pageSize, take: pageSize }
     : { take: q ? 10 : 50 };
 
-  const [users, totalUsers, loggedInUsers, studentUsers, scribeUsers, adminUsers] = await Promise.all([
+  const [users, totalUsers, loggedInUsers, studentUsers, scribeUsers, adminUsers, deletedUsers] = await Promise.all([
     prisma.user.findMany({
       where,
       select: {
@@ -86,11 +88,12 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
       ...pageArgs,
       orderBy: [{ fullName: "asc" }, { id: "asc" }],
     }),
-    prisma.user.count({ where: { universityId: adminUser.universityId } }),
-    prisma.user.count({ where: { universityId: adminUser.universityId, lastLoginAt: { not: null } } }),
+    prisma.user.count({ where: { universityId: adminUser.universityId, role: { not: "DELETED" } } }),
+    prisma.user.count({ where: { universityId: adminUser.universityId, role: { not: "DELETED" }, lastLoginAt: { not: null } } }),
     prisma.user.count({ where: { universityId: adminUser.universityId, role: "STUDENT" } }),
     prisma.user.count({ where: { universityId: adminUser.universityId, role: "SCRIBE" } }),
     prisma.user.count({ where: { universityId: adminUser.universityId, role: "ADMIN" } }),
+    prisma.user.count({ where: { universityId: adminUser.universityId, role: "DELETED" } }),
   ]);
 
   return NextResponse.json({
@@ -101,6 +104,7 @@ export const GET = requireRole("ADMIN", async (req: NextRequest, adminUser) => {
       students: studentUsers,
       scribes: scribeUsers,
       admins: adminUsers,
+      deleted: deletedUsers,
     },
     users: users.map((u) => ({
       ...u,

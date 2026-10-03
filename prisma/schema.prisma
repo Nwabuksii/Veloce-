@@ -119,6 +119,9 @@ enum UserRole {
   STUDENT
   SCRIBE
   ADMIN
+  // Accounts removed with scripts/delete-user.js. Kept as a row so purchases,
+  // reviews and earnings stay correct, but out of every student/scribe list.
+  DELETED
 }
 
 // Which catalog a user has chosen to see — see User.catalogScope. Unused

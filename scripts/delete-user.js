@@ -64,7 +64,7 @@ async function main() {
       console.error("Refusing to delete an admin account.");
       process.exit(1);
     }
-    if (user.email.endsWith(`@${DELETED_DOMAIN}`)) {
+    if (user.role === "DELETED" || user.email.endsWith(`@${DELETED_DOMAIN}`)) {
       console.error("That account is already deleted.");
       process.exit(1);
     }
@@ -72,7 +72,7 @@ async function main() {
     const c = user._count;
     console.log(`${user.fullName} <${user.email}> (${user.role})`);
     console.log(`Records that STAY: ${c.purchases} purchases, ${c.notes} notes, ${c.reviews} reviews, ${c.feedback} feedback, ${c.following} follows, ${c.followers} followers.`);
-    console.log("Removed: name, email, photo, bank details, password, two-factor, sign-in. Pending scribe application (if any) is rejected.");
+    console.log("Removed: name, email, photo, bank details, password, two-factor, sign-in. Role becomes DELETED. Pending scribe application (if any) is rejected.");
     if (!commit) {
       console.log("Dry run. Re-run with --commit to delete this person.");
       return;
@@ -91,6 +91,7 @@ async function main() {
         data: {
           // email and fullNameNormalized are unique, so each needs a value that is unique to this user.
           email: `deleted-${user.id}@${DELETED_DOMAIN}`,
+          role: "DELETED", // out of the student/scribe lists
           fullName: "Deleted user",
           fullNameNormalized: `deleted-user-${user.id}`,
           passwordHash: unusablePasswordHash(),

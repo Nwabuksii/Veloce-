@@ -65,6 +65,7 @@ interface UserStats {
   students: number;
   scribes: number;
   admins: number;
+  deleted: number;
 }
 
 interface Pagination {
@@ -80,7 +81,7 @@ export default function AdminUsersPage() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [onlineFilter, setOnlineFilter] = useState("all");
   const [results, setResults] = useState<UserResult[]>([]);
-  const [stats, setStats] = useState<UserStats>({ total: 0, loggedIn: 0, students: 0, scribes: 0, admins: 0 });
+  const [stats, setStats] = useState<UserStats>({ total: 0, loggedIn: 0, students: 0, scribes: 0, admins: 0, deleted: 0 });
   const [searching, setSearching] = useState(false);
   const [page, setPage] = useState(1);
   const [pageInput, setPageInput] = useState("1");
@@ -220,7 +221,7 @@ export default function AdminUsersPage() {
         .then(applyPageData)
         .catch(() => {
           setResults([]);
-          setStats({ total: 0, loggedIn: 0, students: 0, scribes: 0, admins: 0 });
+          setStats({ total: 0, loggedIn: 0, students: 0, scribes: 0, admins: 0, deleted: 0 });
           setPagination({ page: 1, pageSize: 20, totalPages: 1, totalMatching: 0 });
         })
         .finally(() => setSearching(false));
@@ -333,6 +334,7 @@ export default function AdminUsersPage() {
           { label: "Students", value: stats.students },
           { label: "Scribes", value: stats.scribes },
           { label: "Admins", value: stats.admins },
+          { label: "Deleted", value: stats.deleted },
         ].map((card) => (
           <div key={card.label} className="stat-tile">
             <div className="label">{card.label}</div>
@@ -415,6 +417,7 @@ export default function AdminUsersPage() {
             <option value="STUDENT">Students</option>
             <option value="SCRIBE">Scribes</option>
             <option value="ADMIN">Admins</option>
+            <option value="DELETED">Deleted users</option>
           </select>
         </div>
         <div className="form-field" style={{ margin: 0, minWidth: 180 }}>
@@ -441,7 +444,7 @@ export default function AdminUsersPage() {
 
       <div className="stack-10">
         {results.map((u) => {
-          const isBanned = Boolean(u.bannedAt);
+          const isBanned = Boolean(u.bannedAt) && u.role !== "DELETED"; // deleted accounts carry an internal ban flag
           const online = isUserOnline(u.lastSeenAt);
           return (
             <div key={u.id} className={`person-card${isBanned ? " is-banned" : online ? " is-online" : ""}`}>
@@ -449,7 +452,7 @@ export default function AdminUsersPage() {
               <div className="person-info">
                 <div className="person-name-row">
                   <span className="person-name">{u.fullName}</span>
-                  <span className="status">{u.role}</span>
+                  <span className="status">{u.role === "DELETED" ? "Deleted" : u.role}</span>
                   {isBanned && <span className="status danger">Banned</span>}
                   <span className={`person-meta${online ? " is-on" : ""}`}>
                     <span className={`dot${online ? " on" : ""}`}></span>
@@ -487,6 +490,8 @@ export default function AdminUsersPage() {
                 </button>
                 {u.role === "ADMIN" ? (
                   <span className="status">Admin protected</span>
+                ) : u.role === "DELETED" ? (
+                  <span className="status">Account removed</span>
                 ) : isBanned ? (
                   <button className="btn btn-success" onClick={() => handleUnban(u.id)} disabled={busyId === u.id}>
                     Unban

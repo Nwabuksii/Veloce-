@@ -25,6 +25,9 @@ export const POST = requireRole<RouteContext>("ADMIN", async (req: NextRequest, 
   if (target.role === "ADMIN") {
     return NextResponse.json({ error: "This user is already an admin" }, { status: 409 });
   }
+  if (target.role === "DELETED") {
+    return NextResponse.json({ error: "This account has been deleted" }, { status: 409 });
+  }
 
   const updated = await prisma.user.update({
     where: { id: target.id },
